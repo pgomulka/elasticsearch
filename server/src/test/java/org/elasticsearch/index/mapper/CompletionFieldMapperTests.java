@@ -182,6 +182,25 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
         assertEquals("failed to parse [completion]: expected text or object, but got VALUE_NUMBER", e.getCause().getMessage());
     }
 
+    public void testCompletionTypeWithFieldsParsingFailure() throws Exception {
+        String mapping = Strings.toString(jsonBuilder().startObject().startObject("type1")
+            .startObject("properties").startObject("completion")
+            .field("type", "completion")
+            .startObject("fields")
+                .startObject("analyzed")
+                    .field("type", "completion")
+                .endObject()
+            .endObject()
+            .endObject().endObject()
+            .endObject().endObject()
+        );
+
+        MapperParsingException e = expectThrows(MapperParsingException.class, () ->
+            createIndex("test").mapperService().documentMapperParser().parse("type1", new CompressedXContent(mapping)));
+
+        assertEquals("completion type fields do not support multi-fields", e.getMessage());
+    }
+
     public void testParsingMultiValued() throws Exception {
         String mapping = Strings.toString(jsonBuilder().startObject().startObject("type1")
                 .startObject("properties").startObject("completion")
@@ -529,4 +548,6 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
         );
         assertThat(e.getMessage(), containsString("name cannot be empty string"));
     }
+
+
 }

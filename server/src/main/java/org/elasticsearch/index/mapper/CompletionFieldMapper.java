@@ -147,7 +147,7 @@ public class CompletionFieldMapper extends FieldMapper implements ArrayValueMapp
                     builder.contextMappings(ContextMappings.load(fieldNode, parserContext.indexVersionCreated()));
                     iterator.remove();
                 } else if (parseMultiField(builder, name, parserContext, fieldName, fieldNode)) {
-                    iterator.remove();
+                    throw new MapperParsingException("completion type fields do not support multi-fields");
                 }
             }
 
