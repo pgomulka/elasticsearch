@@ -20,7 +20,9 @@
 package org.elasticsearch.client;
 
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
 import org.elasticsearch.protocol.xpack.migration.IndexUpgradeInfoRequest;
+import org.elasticsearch.protocol.xpack.migration.IndexUpgradeRequest;
 
 public class MigrationRequestConverters {
 
@@ -32,6 +34,17 @@ public class MigrationRequestConverters {
         Request request = new Request(HttpGet.METHOD_NAME, endpoint);
         RequestConverters.Params parameters = new RequestConverters.Params(request);
         parameters.withIndicesOptions(indexUpgradeInfoRequest.indicesOptions());
+        return request;
+    }
+
+    static Request migrate(IndexUpgradeRequest indexUpgradeInfoRequest) {
+        RequestConverters.EndpointBuilder endpointBuilder = new RequestConverters.EndpointBuilder()
+            .addPathPartAsIs("_xpack/migration/upgrade")
+            .addCommaSeparatedPathParts(indexUpgradeInfoRequest.indices());
+        String endpoint = endpointBuilder.build();
+        Request request = new Request(HttpPost.METHOD_NAME, endpoint);
+        RequestConverters.Params parameters = new RequestConverters.Params(request);
+//        parameters.withIndicesOptions(indexUpgradeInfoRequest.indicesOptions());
         return request;
     }
 }
