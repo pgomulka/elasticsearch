@@ -19,8 +19,11 @@
 
 package org.elasticsearch.client;
 
+import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.protocol.xpack.migration.IndexUpgradeInfoRequest;
 import org.elasticsearch.protocol.xpack.migration.IndexUpgradeInfoResponse;
+import org.elasticsearch.protocol.xpack.migration.IndexUpgradeRequest;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -51,5 +54,15 @@ public final class MigrationClient {
     public IndexUpgradeInfoResponse getAssistance(IndexUpgradeInfoRequest request, RequestOptions options) throws IOException {
         return restHighLevelClient.performRequestAndParseEntity(request, MigrationRequestConverters::getMigrationAssistance, options,
             IndexUpgradeInfoResponse::fromXContent, Collections.emptySet());
+    }
+
+    public BulkByScrollResponse upgrade(IndexUpgradeRequest request, RequestOptions options) throws IOException {
+        return restHighLevelClient.performRequestAndParseEntity(request, MigrationRequestConverters::migrate, options,
+            BulkByScrollResponse::fromXContent, Collections.emptySet());
+    }
+
+    public void upgradeAsync(IndexUpgradeRequest request, RequestOptions options, ActionListener<BulkByScrollResponse> listener)  {
+        restHighLevelClient.performRequestAsyncAndParseEntity(request, MigrationRequestConverters::migrate, options,
+            BulkByScrollResponse::fromXContent, listener, Collections.emptySet());
     }
 }

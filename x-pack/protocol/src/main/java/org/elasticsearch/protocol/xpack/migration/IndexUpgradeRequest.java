@@ -28,20 +28,18 @@ import org.elasticsearch.common.io.stream.StreamOutput;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.EnumSet;
 import java.util.Objects;
 
-public class IndexUpgradeInfoRequest extends MasterNodeReadRequest<IndexUpgradeInfoRequest> implements IndicesRequest.Replaceable {
+public class IndexUpgradeRequest extends MasterNodeReadRequest<IndexUpgradeRequest> implements IndicesRequest.Replaceable {
 
     private String[] indices = Strings.EMPTY_ARRAY;
     private IndicesOptions indicesOptions = IndicesOptions.fromOptions(false, true, true, true);
 
-    public IndexUpgradeInfoRequest(String... indices) {
+    public IndexUpgradeRequest(String... indices) {
         indices(indices);
     }
 
-    public IndexUpgradeInfoRequest(StreamInput in) throws IOException {
+    public IndexUpgradeRequest(StreamInput in) throws IOException {
         super(in);
         indices = in.readStringArray();
         indicesOptions = IndicesOptions.readIndicesOptions(in);
@@ -60,7 +58,7 @@ public class IndexUpgradeInfoRequest extends MasterNodeReadRequest<IndexUpgradeI
     }
 
     @Override
-    public IndexUpgradeInfoRequest indices(String... indices) {
+    public IndexUpgradeRequest indices(String... indices) {
         this.indices = Objects.requireNonNull(indices, "indices cannot be null");
         return this;
     }
@@ -88,7 +86,7 @@ public class IndexUpgradeInfoRequest extends MasterNodeReadRequest<IndexUpgradeI
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        IndexUpgradeInfoRequest request = (IndexUpgradeInfoRequest) o;
+        IndexUpgradeRequest request = (IndexUpgradeRequest) o;
         return Arrays.equals(indices, request.indices) &&
                 Objects.equals(indicesOptions.toString(), request.indicesOptions.toString());
     }

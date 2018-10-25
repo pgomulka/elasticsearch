@@ -20,10 +20,20 @@
 package org.elasticsearch.client;
 
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
+import org.elasticsearch.common.bytes.BytesArray;
+import org.elasticsearch.common.bytes.BytesReference;
+import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.protocol.xpack.migration.IndexUpgradeInfoRequest;
 import org.elasticsearch.protocol.xpack.migration.IndexUpgradeInfoResponse;
+import org.elasticsearch.protocol.xpack.migration.IndexUpgradeRequest;
+import org.elasticsearch.protocol.xpack.watcher.PutWatchRequest;
+import org.elasticsearch.protocol.xpack.watcher.PutWatchResponse;
 
 import java.io.IOException;
+
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
 
 public class MigrationIT extends ESRestHighLevelClientTestCase {
 
@@ -40,4 +50,37 @@ public class MigrationIT extends ESRestHighLevelClientTestCase {
             assertEquals(0, response.getActions().size());
         }
     }
+
+    public void testGetAssistanceFor() throws IOException {
+            createWatch();
+            IndexUpgradeInfoResponse response = highLevelClient().migration().getAssistance(new IndexUpgradeInfoRequest(), RequestOptions.DEFAULT);
+            assertEquals(1, response.getActions().size());
+    }
+
+
+    public void testUpgrade() throws IOException {
+        createWatch();
+
+        BulkByScrollResponse resposne = highLevelClient().migration().upgrade(
+            new IndexUpgradeRequest(".watches"), RequestOptions.DEFAULT);
+
+        assertThat(resposne.getCreated(), equalTo(1L));
+    }
+
+
+    private PutWatchResponse createWatch() throws IOException {
+        String json = "{ \n" +
+            "  \"trigger\": { \"schedule\": { \"interval\": \"10h\" } },\n" +
+            "  \"input\": { \"none\": {} },\n" +
+            "  \"actions\": { \"logme\": { \"logging\": { \"text\": \"{{ctx.payload}}\" } } }\n" +
+            "}";
+        BytesReference bytesReference = new BytesArray(json);
+        String watchId = randomAlphaOfLength(10);
+
+        PutWatchRequest putWatchRequest = new PutWatchRequest(watchId, bytesReference, XContentType.JSON);
+        PutWatchResponse putWatchResponse = highLevelClient().watcher().putWatch(putWatchRequest, RequestOptions.DEFAULT);
+        assertThat(putWatchResponse.isCreated(), is(true));
+        return putWatchResponse;
+    }
+
 }
