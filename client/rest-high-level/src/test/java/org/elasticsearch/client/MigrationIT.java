@@ -54,7 +54,7 @@ public class MigrationIT extends ESRestHighLevelClientTestCase {
     public void testGetAssistanceFor() throws IOException {
             createWatch();
             IndexUpgradeInfoResponse response = highLevelClient().migration().getAssistance(new IndexUpgradeInfoRequest(), RequestOptions.DEFAULT);
-            assertEquals(0, response.getActions().size());
+            assertEquals(1, response.getActions().size());
     }
 
 
