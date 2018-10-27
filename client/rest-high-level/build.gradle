@@ -57,7 +57,7 @@ dependencies {
   testCompile "org.elasticsearch.test:framework:${version}"
   testCompile "com.carrotsearch.randomizedtesting:randomizedtesting-runner:${versions.randomizedrunner}"
   testCompile "junit:junit:${versions.junit}"
-  testCompile "org.hamcrest:hamcrest-all:${versions.hamcrest}"
+  testCompile "org.hamcrest:java-hamcrest:${versions.hamcrest}"
   //this is needed to make RestHighLevelClientTests#testApiNamingConventions work from IDEs
   testCompile "org.elasticsearch:rest-api-spec:${version}"
 }
@@ -69,6 +69,8 @@ dependencyLicenses {
     it.group.startsWith('org.elasticsearch') == false
   }
 }
+
+compileTestJava.options.compilerArgs << "-Xlint:-unchecked"
 
 forbiddenApisMain {
   // core does not depend on the httpclient for compile so we add the signatures here. We don't add them for test as they are already
