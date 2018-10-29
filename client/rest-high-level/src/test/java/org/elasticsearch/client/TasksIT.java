@@ -19,17 +19,27 @@
 
 package org.elasticsearch.client;
 
+import org.elasticsearch.ElasticsearchStatusException;
 import org.elasticsearch.action.admin.cluster.node.tasks.cancel.CancelTasksRequest;
 import org.elasticsearch.action.admin.cluster.node.tasks.cancel.CancelTasksResponse;
+import org.elasticsearch.action.admin.cluster.node.tasks.get.GetTaskRequest;
+import org.elasticsearch.action.admin.cluster.node.tasks.get.GetTaskResponse;
 import org.elasticsearch.action.admin.cluster.node.tasks.list.ListTasksRequest;
 import org.elasticsearch.action.admin.cluster.node.tasks.list.ListTasksResponse;
 import org.elasticsearch.action.admin.cluster.node.tasks.list.TaskGroup;
+import org.elasticsearch.client.ml.DeleteJobRequest;
+import org.elasticsearch.client.ml.DeleteJobResponse;
+import org.elasticsearch.client.ml.PutJobRequest;
+import org.elasticsearch.client.ml.job.config.Job;
+import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.tasks.TaskId;
 import org.elasticsearch.tasks.TaskInfo;
 
 import java.io.IOException;
 
 import static java.util.Collections.emptyList;
+import static org.elasticsearch.client.MachineLearningGetResultsIT.buildJob;
+import static org.elasticsearch.client.ml.job.config.JobTests.randomValidJobId;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.notNullValue;
@@ -82,5 +92,49 @@ public class TasksIT extends ESRestHighLevelClientTestCase {
         // Since the task may or may not have been cancelled, assert that we received a response only
         // The actual testing of task cancellation is covered by TasksIT.testTasksCancellation
         assertThat(response, notNullValue());
+    }
+
+    public void testGetTask() throws IOException {
+        TaskId taskId = new TaskId(randomAlphaOfLength(5), randomNonNegativeLong());
+
+        GetTaskRequest getTaskRequest = new GetTaskRequest().setTaskId(taskId);
+
+        ElasticsearchStatusException exception = expectThrows(ElasticsearchStatusException.class,
+            () -> highLevelClient().tasks().get(getTaskRequest, RequestOptions.DEFAULT));
+
+        assertThat(exception.status(), equalTo(RestStatus.NOT_FOUND));
+
+
+        ListTasksRequest request = new ListTasksRequest();
+        ListTasksResponse response = execute(request, highLevelClient().tasks()::list, highLevelClient().tasks()::listAsync);
+
+        assertThat(response, notNullValue());
+
+    }
+
+    public void testGetTaskFoundWithError() throws IOException {
+
+        String jobId = randomValidJobId();
+        Job job = MachineLearningIT.buildJob(jobId);
+        MachineLearningClient machineLearningClient = highLevelClient().machineLearning();
+        machineLearningClient.putJob(new PutJobRequest(job), RequestOptions.DEFAULT);
+
+        TaskId taskId = submitTask(jobId);
+
+
+        GetTaskRequest getTaskRequest = new GetTaskRequest().setTaskId(taskId);
+
+        GetTaskResponse getTaskResponse = highLevelClient().tasks().get(getTaskRequest, RequestOptions.DEFAULT);
+
+        assertTrue(getTaskResponse.getTask().isCompleted());
+    }
+
+    private TaskId submitTask(String jobId) throws IOException {
+        DeleteJobRequest deleteJobRequest = new DeleteJobRequest(jobId);
+        deleteJobRequest.setWaitForCompletion(false);
+        MachineLearningClient machineLearningClient = highLevelClient().machineLearning();
+        DeleteJobResponse response = execute(deleteJobRequest, machineLearningClient::deleteJob, machineLearningClient::deleteJobAsync);
+
+        return response.getTask();
     }
 }

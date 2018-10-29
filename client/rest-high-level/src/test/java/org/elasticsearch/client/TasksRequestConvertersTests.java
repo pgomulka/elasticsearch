@@ -22,6 +22,7 @@ package org.elasticsearch.client;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.elasticsearch.action.admin.cluster.node.tasks.cancel.CancelTasksRequest;
+import org.elasticsearch.action.admin.cluster.node.tasks.get.GetTaskRequest;
 import org.elasticsearch.action.admin.cluster.node.tasks.list.ListTasksRequest;
 import org.elasticsearch.tasks.TaskId;
 import org.elasticsearch.test.ESTestCase;
@@ -111,5 +112,17 @@ public class TasksRequestConvertersTests extends ESTestCase {
                 -> TasksRequestConverters.listTasks(request));
             assertEquals("TaskId cannot be used for list tasks request", exception.getMessage());
         }
+    }
+
+    public void testGetTasks() {
+        GetTaskRequest request = new GetTaskRequest();
+        TaskId taskId = new TaskId(randomAlphaOfLength(5), randomNonNegativeLong());
+        request.setTaskId(taskId);
+
+        Request httpRequest = TasksRequestConverters.getTask(request);
+        assertThat(httpRequest, notNullValue());
+        assertThat(httpRequest.getMethod(), equalTo(HttpGet.METHOD_NAME));
+        assertThat(httpRequest.getEntity(), nullValue());
+        assertThat(httpRequest.getEndpoint(), equalTo("/_tasks/"+taskId.toString()));
     }
 }
