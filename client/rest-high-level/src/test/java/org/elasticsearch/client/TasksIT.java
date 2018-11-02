@@ -27,19 +27,22 @@ import org.elasticsearch.action.admin.cluster.node.tasks.get.GetTaskResponse;
 import org.elasticsearch.action.admin.cluster.node.tasks.list.ListTasksRequest;
 import org.elasticsearch.action.admin.cluster.node.tasks.list.ListTasksResponse;
 import org.elasticsearch.action.admin.cluster.node.tasks.list.TaskGroup;
-import org.elasticsearch.client.ml.DeleteJobRequest;
-import org.elasticsearch.client.ml.DeleteJobResponse;
-import org.elasticsearch.client.ml.PutJobRequest;
-import org.elasticsearch.client.ml.job.config.Job;
+import org.elasticsearch.client.migration.IndexUpgradeRequest;
+import org.elasticsearch.client.migration.IndexUpgradeSubmissionResponse;
+import org.elasticsearch.common.CheckedSupplier;
+import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.tasks.TaskId;
 import org.elasticsearch.tasks.TaskInfo;
 
 import java.io.IOException;
+import java.util.Map;
+import java.util.function.BooleanSupplier;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import static java.util.Collections.emptyList;
-import static org.elasticsearch.client.MachineLearningGetResultsIT.buildJob;
-import static org.elasticsearch.client.ml.job.config.JobTests.randomValidJobId;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.notNullValue;
@@ -112,29 +115,38 @@ public class TasksIT extends ESRestHighLevelClientTestCase {
 
     }
 
-    public void testGetTaskFoundWithError() throws IOException {
+    public void testGetTaskFoundWithError() throws IOException, InterruptedException {
+        createIndex("test", Settings.EMPTY);
 
-        String jobId = randomValidJobId();
-        Job job = MachineLearningIT.buildJob(jobId);
-        MachineLearningClient machineLearningClient = highLevelClient().machineLearning();
-        machineLearningClient.putJob(new PutJobRequest(job), RequestOptions.DEFAULT);
+        IndexUpgradeSubmissionResponse submissionResult = highLevelClient().migration()
+            .submitUpgradeTask(new IndexUpgradeRequest("test"), RequestOptions.DEFAULT);
 
-        TaskId taskId = submitTask(jobId);
+        GetTaskRequest getTaskRequest = new GetTaskRequest().setTaskId(submissionResult.getTask());
 
+        CheckedSupplier<GetTaskResponse, IOException> getTaskResponse =
+            () -> highLevelClient().tasks().get(getTaskRequest, RequestOptions.DEFAULT);
+        Predicate<GetTaskResponse> isCompleted = r -> r.getTask().isCompleted();
 
-        GetTaskRequest getTaskRequest = new GetTaskRequest().setTaskId(taskId);
-
-        GetTaskResponse getTaskResponse = highLevelClient().tasks().get(getTaskRequest, RequestOptions.DEFAULT);
-
-        assertTrue(getTaskResponse.getTask().isCompleted());
+        GetTaskResponse response = await(getTaskResponse, isCompleted);
+        Map<String, Object> errorAsMap = response.getTask().getErrorAsMap();
+        assertThat((String) errorAsMap.get("reason"), containsString("cannot be upgraded"));
     }
 
-    private TaskId submitTask(String jobId) throws IOException {
-        DeleteJobRequest deleteJobRequest = new DeleteJobRequest(jobId);
-        deleteJobRequest.setWaitForCompletion(false);
-        MachineLearningClient machineLearningClient = highLevelClient().machineLearning();
-        DeleteJobResponse response = execute(deleteJobRequest, machineLearningClient::deleteJob, machineLearningClient::deleteJobAsync);
+    private GetTaskResponse await(CheckedSupplier<GetTaskResponse, IOException> supplier, Predicate<GetTaskResponse> predicate)
+        throws InterruptedException {
+        BooleanSupplier isCompleted = () -> predicate.test(call(supplier).get());
+        awaitBusy(isCompleted);
+        return call(supplier).get();
+    }
 
-        return response.getTask();
+    private Supplier<GetTaskResponse> call(CheckedSupplier<GetTaskResponse, IOException> supplier) {
+        return () -> {
+            try {
+                return supplier.get();
+            } catch (IOException e) {
+                logger.warn("Exception while fetching task response", e);
+                return null;
+            }
+        };
     }
 }
