@@ -20,11 +20,17 @@
 package org.elasticsearch.action.admin.cluster.node.tasks.get;
 
 import org.elasticsearch.action.ActionResponse;
+import org.elasticsearch.action.admin.cluster.node.tasks.cancel.CancelTasksResponse;
+import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
+import org.elasticsearch.common.xcontent.ConstructingObjectParser;
+import org.elasticsearch.common.xcontent.ObjectParser;
 import org.elasticsearch.common.xcontent.ToXContentObject;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.tasks.TaskId;
 import org.elasticsearch.tasks.TaskResult;
 
 import java.io.IOException;
@@ -74,5 +80,10 @@ public class GetTaskResponse extends ActionResponse implements ToXContentObject 
     @Override
     public String toString() {
         return Strings.toString(this);
+    }
+
+    public static GetTaskResponse fromXContent(XContentParser parser) {
+        TaskResult result = TaskResult.PARSER.apply(parser, null);
+        return new GetTaskResponse(result);
     }
 }

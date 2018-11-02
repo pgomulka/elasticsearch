@@ -19,17 +19,30 @@
 
 package org.elasticsearch.client;
 
+import org.elasticsearch.ElasticsearchStatusException;
 import org.elasticsearch.action.admin.cluster.node.tasks.cancel.CancelTasksRequest;
 import org.elasticsearch.action.admin.cluster.node.tasks.cancel.CancelTasksResponse;
+import org.elasticsearch.action.admin.cluster.node.tasks.get.GetTaskRequest;
+import org.elasticsearch.action.admin.cluster.node.tasks.get.GetTaskResponse;
 import org.elasticsearch.action.admin.cluster.node.tasks.list.ListTasksRequest;
 import org.elasticsearch.action.admin.cluster.node.tasks.list.ListTasksResponse;
 import org.elasticsearch.action.admin.cluster.node.tasks.list.TaskGroup;
+import org.elasticsearch.client.migration.IndexUpgradeRequest;
+import org.elasticsearch.client.migration.IndexUpgradeSubmissionResponse;
+import org.elasticsearch.common.CheckedSupplier;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.tasks.TaskId;
 import org.elasticsearch.tasks.TaskInfo;
 
 import java.io.IOException;
+import java.util.Map;
+import java.util.function.BooleanSupplier;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import static java.util.Collections.emptyList;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.notNullValue;
@@ -82,5 +95,58 @@ public class TasksIT extends ESRestHighLevelClientTestCase {
         // Since the task may or may not have been cancelled, assert that we received a response only
         // The actual testing of task cancellation is covered by TasksIT.testTasksCancellation
         assertThat(response, notNullValue());
+    }
+
+    public void testGetTask() throws IOException {
+        TaskId taskId = new TaskId(randomAlphaOfLength(5), randomNonNegativeLong());
+
+        GetTaskRequest getTaskRequest = new GetTaskRequest().setTaskId(taskId);
+
+        ElasticsearchStatusException exception = expectThrows(ElasticsearchStatusException.class,
+            () -> highLevelClient().tasks().get(getTaskRequest, RequestOptions.DEFAULT));
+
+        assertThat(exception.status(), equalTo(RestStatus.NOT_FOUND));
+
+
+        ListTasksRequest request = new ListTasksRequest();
+        ListTasksResponse response = execute(request, highLevelClient().tasks()::list, highLevelClient().tasks()::listAsync);
+
+        assertThat(response, notNullValue());
+
+    }
+
+    public void testGetTaskFoundWithError() throws IOException, InterruptedException {
+        createIndex("test", Settings.EMPTY);
+
+        IndexUpgradeSubmissionResponse submissionResult = highLevelClient().migration()
+            .submitUpgradeTask(new IndexUpgradeRequest("test"), RequestOptions.DEFAULT);
+
+        GetTaskRequest getTaskRequest = new GetTaskRequest().setTaskId(submissionResult.getTask());
+
+        CheckedSupplier<GetTaskResponse, IOException> getTaskResponse =
+            () -> highLevelClient().tasks().get(getTaskRequest, RequestOptions.DEFAULT);
+        Predicate<GetTaskResponse> isCompleted = r -> r.getTask().isCompleted();
+
+        GetTaskResponse response = await(getTaskResponse, isCompleted);
+        Map<String, Object> errorAsMap = response.getTask().getErrorAsMap();
+        assertThat((String) errorAsMap.get("reason"), containsString("cannot be upgraded"));
+    }
+
+    private GetTaskResponse await(CheckedSupplier<GetTaskResponse, IOException> supplier, Predicate<GetTaskResponse> predicate)
+        throws InterruptedException {
+        BooleanSupplier isCompleted = () -> predicate.test(call(supplier).get());
+        awaitBusy(isCompleted);
+        return call(supplier).get();
+    }
+
+    private Supplier<GetTaskResponse> call(CheckedSupplier<GetTaskResponse, IOException> supplier) {
+        return () -> {
+            try {
+                return supplier.get();
+            } catch (IOException e) {
+                logger.warn("Exception while fetching task response", e);
+                return null;
+            }
+        };
     }
 }

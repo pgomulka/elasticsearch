@@ -22,6 +22,7 @@ package org.elasticsearch.client;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.elasticsearch.action.admin.cluster.node.tasks.cancel.CancelTasksRequest;
+import org.elasticsearch.action.admin.cluster.node.tasks.get.GetTaskRequest;
 import org.elasticsearch.action.admin.cluster.node.tasks.list.ListTasksRequest;
 
 final class TasksRequestConverters {
@@ -53,5 +54,13 @@ final class TasksRequestConverters {
             .withActions(listTaskRequest.getActions())
             .putParam("group_by", "none");
         return request;
+    }
+
+    public static Request getTask(GetTaskRequest req) {
+        String endpoint = new RequestConverters.EndpointBuilder()
+            .addPathPartAsIs("_tasks")
+            .addPathPart(req.getTaskId().toString())
+            .build();
+        return new Request(HttpGet.METHOD_NAME, endpoint);
     }
 }
