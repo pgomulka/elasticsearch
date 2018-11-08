@@ -20,7 +20,6 @@ import org.elasticsearch.xpack.core.ml.datafeed.extractor.ExtractorUtils;
 import org.elasticsearch.xpack.ml.datafeed.delayeddatacheck.DelayedDataDetectorFactory.BucketWithMissingData;
 import org.elasticsearch.xpack.core.ml.job.results.Bucket;
 import org.elasticsearch.xpack.core.ml.utils.Intervals;
-import org.joda.time.DateTime;
 
 import java.time.ZonedDateTime;
 import java.util.Collections;
