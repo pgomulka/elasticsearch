@@ -8,10 +8,11 @@ package org.elasticsearch.xpack.ml.datafeed.extractor.fields;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.fetch.subphase.DocValueFieldsContext;
 import org.elasticsearch.test.ESTestCase;
-import org.elasticsearch.xpack.ml.datafeed.extractor.fields.ExtractedField;
 import org.elasticsearch.xpack.ml.test.SearchHitBuilder;
-import org.joda.time.DateTime;
 
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Arrays;
 
 import static org.hamcrest.Matchers.equalTo;
@@ -100,7 +101,8 @@ public class ExtractedFieldTests extends ESTestCase {
 
     public void testValueGivenTimeField() {
         final long millis = randomLong();
-        final SearchHit hit = new SearchHitBuilder(randomInt()).addField("time", new DateTime(millis)).build();
+        ZonedDateTime zonedDateTime = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault());
+        final SearchHit hit = new SearchHitBuilder(randomInt()).addField("time", zonedDateTime).build();
         final ExtractedField timeField = ExtractedField.newTimeField("time", ExtractedField.ExtractionMethod.DOC_VALUE);
         assertThat(timeField.value(hit), equalTo(new Object[] { millis }));
     }
