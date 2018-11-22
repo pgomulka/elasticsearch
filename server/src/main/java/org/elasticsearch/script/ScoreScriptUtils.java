@@ -25,7 +25,10 @@ import org.elasticsearch.common.Randomness;
 import org.elasticsearch.common.geo.GeoDistance;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.geo.GeoUtils;
+import org.elasticsearch.common.joda.FormatDateTimeFormatter;
+import org.elasticsearch.common.joda.Joda;
 import org.elasticsearch.common.joda.JodaDateMathParser;
+import org.elasticsearch.common.time.DateMathParser;
 import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.mapper.DateFieldMapper;
@@ -204,7 +207,7 @@ public final class ScoreScriptUtils {
      *
      */
     private static final ZoneId defaultZoneId = ZoneId.of("UTC");
-    private static final JodaDateMathParser dateParser =  new JodaDateMathParser(DateFieldMapper.DEFAULT_DATE_TIME_FORMATTER);
+    private static final DateMathParser dateParser =  DateFieldMapper.DEFAULT_DATE_TIME_FORMATTER.toDateMathParser();
 
     public static final class DecayDateLinear {
         long origin;
@@ -212,7 +215,7 @@ public final class ScoreScriptUtils {
         double scaling;
 
         public DecayDateLinear(String originStr, String scaleStr, String offsetStr, double decay) {
-            this.origin = dateParser.parse(originStr, null, false, defaultZoneId);
+            this.origin = dateParser.parse(originStr, null, false, defaultZoneId).toEpochMilli();
             long scale = TimeValue.parseTimeValue(scaleStr, TimeValue.timeValueHours(24), getClass().getSimpleName() + ".scale")
                 .getMillis();
             this.offset = TimeValue.parseTimeValue(offsetStr, TimeValue.timeValueHours(24), getClass().getSimpleName() + ".offset")
@@ -235,7 +238,7 @@ public final class ScoreScriptUtils {
         double scaling;
 
         public DecayDateExp(String originStr, String scaleStr, String offsetStr, double decay) {
-            this.origin = dateParser.parse(originStr, null, false, defaultZoneId);
+            this.origin = dateParser.parse(originStr, null, false, defaultZoneId).toEpochMilli();
             long scale = TimeValue.parseTimeValue(scaleStr, TimeValue.timeValueHours(24), getClass().getSimpleName() + ".scale")
                 .getMillis();
             this.offset = TimeValue.parseTimeValue(offsetStr, TimeValue.timeValueHours(24), getClass().getSimpleName() + ".offset")
@@ -258,7 +261,7 @@ public final class ScoreScriptUtils {
         double scaling;
 
         public DecayDateGauss(String originStr, String scaleStr, String offsetStr, double decay) {
-            this.origin = dateParser.parse(originStr, null, false, defaultZoneId);
+            this.origin = dateParser.parse(originStr, null, false, defaultZoneId).toEpochMilli();
             long scale = TimeValue.parseTimeValue(scaleStr, TimeValue.timeValueHours(24), getClass().getSimpleName() + ".scale")
                 .getMillis();
             this.offset = TimeValue.parseTimeValue(offsetStr, TimeValue.timeValueHours(24), getClass().getSimpleName() + ".offset")
