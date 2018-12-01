@@ -54,11 +54,11 @@ public class TestUtils {
     private static final DateTimeFormatter dateTimeFormatter = formatDateTimeFormatter.printer();
 
     public static String dateMathString(String time, final long now) {
-        return dateTimeFormatter.print(dateMathParser.parse(time, () -> now));
+        return dateTimeFormatter.print(dateMathParser.parse(time, () -> now).toEpochMilli());
     }
 
     public static long dateMath(String time, final long now) {
-        return dateMathParser.parse(time, () -> now);
+        return dateMathParser.parse(time, () -> now).toEpochMilli();
     }
 
     public static LicenseSpec generateRandomLicenseSpec(int version) {

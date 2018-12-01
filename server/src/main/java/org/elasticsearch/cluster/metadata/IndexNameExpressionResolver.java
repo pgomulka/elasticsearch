@@ -30,6 +30,7 @@ import org.elasticsearch.common.regex.Regex;
 import org.elasticsearch.common.time.DateFormatter;
 import org.elasticsearch.common.time.DateFormatters;
 import org.elasticsearch.common.time.DateMathParser;
+import org.elasticsearch.common.time.DateUtils;
 import org.elasticsearch.common.time.JavaDateMathParser;
 import org.elasticsearch.common.util.set.Sets;
 import org.elasticsearch.index.Index;
@@ -913,18 +914,19 @@ public class IndexNameExpressionResolver {
                                     int formatPatternTimeZoneSeparatorIndex = patternAndTZid.indexOf(TIME_ZONE_BOUND);
                                     if (formatPatternTimeZoneSeparatorIndex != -1) {
                                         dateFormatterPattern = patternAndTZid.substring(0, formatPatternTimeZoneSeparatorIndex);
-                                        timeZone = ZoneId.of(patternAndTZid.substring(formatPatternTimeZoneSeparatorIndex + 1));
+                                        timeZone = DateUtils.of(patternAndTZid.substring(formatPatternTimeZoneSeparatorIndex + 1));
                                     } else {
                                         dateFormatterPattern = patternAndTZid;
                                         timeZone = ZoneOffset.UTC;
                                     }
                                     dateFormatter = DateFormatters.forPattern(dateFormatterPattern);
                                 }
+
                                 DateFormatter formatter = dateFormatter.withZone(timeZone);
                                 DateMathParser dateMathParser = new JavaDateMathParser(formatter);
-                                long millis = dateMathParser.parse(mathExpression, context::getStartTime, false, timeZone);
+                                Instant instant = dateMathParser.parse(mathExpression, context::getStartTime, false, timeZone);
 
-                                String time = formatter.format(Instant.ofEpochMilli(millis));
+                                String time = formatter.format(instant);
                                 beforePlaceHolderSb.append(time);
                                 inPlaceHolderSb = new StringBuilder();
                                 inPlaceHolder = false;

@@ -19,6 +19,8 @@
 
 package org.elasticsearch.common.time;
 
+import org.elasticsearch.ElasticsearchParseException;
+
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
@@ -48,27 +50,33 @@ class JavaDateFormatter implements DateFormatter {
         if (distinctLocales > 1) {
             throw new IllegalArgumentException("formatters must have the same locale");
         }
+        this.printer = printer;
+        this.format = format;
         if (parsers.length == 0) {
             this.parsers = new DateTimeFormatter[]{printer};
         } else {
             this.parsers = parsers;
         }
-        this.format = format;
-        this.printer = printer;
     }
 
     @Override
     public TemporalAccessor parse(String input) {
-        DateTimeParseException failure = null;
+        ElasticsearchParseException failure = null;
         for (int i = 0; i < parsers.length; i++) {
             try {
                 return parsers[i].parse(input);
             } catch (DateTimeParseException e) {
                 if (failure == null) {
-                    failure = e;
-                } else {
-                    failure.addSuppressed(e);
+                    String msg = "could not parse input [" + input + "] with date formatter [" + format + "]";
+                    if (getLocale().equals(Locale.ROOT) == false) {
+                        msg += " and locale [" + getLocale() + "]";
+                    }
+                    if (e.getErrorIndex() > 0) {
+                        msg += "at position [" + e.getErrorIndex() + "]";
+                    }
+                    failure = new ElasticsearchParseException(msg);
                 }
+                failure.addSuppressed(e);
             }
         }
 
@@ -117,23 +125,6 @@ class JavaDateFormatter implements DateFormatter {
     }
 
     @Override
-    public DateFormatter parseDefaulting(Map<TemporalField, Long> fields) {
-        final DateTimeFormatterBuilder parseDefaultingBuilder = new DateTimeFormatterBuilder().append(printer);
-        fields.forEach(parseDefaultingBuilder::parseDefaulting);
-        if (parsers.length == 1 && parsers[0].equals(printer)) {
-            return new JavaDateFormatter(format, parseDefaultingBuilder.toFormatter(Locale.ROOT));
-        } else {
-            final DateTimeFormatter[] parsersWithDefaulting = new DateTimeFormatter[parsers.length];
-            for (int i = 0; i < parsers.length; i++) {
-                DateTimeFormatterBuilder builder = new DateTimeFormatterBuilder().append(parsers[i]);
-                fields.forEach(builder::parseDefaulting);
-                parsersWithDefaulting[i] = builder.toFormatter(Locale.ROOT);
-            }
-            return new JavaDateFormatter(format, parseDefaultingBuilder.toFormatter(Locale.ROOT), parsersWithDefaulting);
-        }
-    }
-
-    @Override
     public Locale getLocale() {
         return this.printer.getLocale();
     }
@@ -141,6 +132,27 @@ class JavaDateFormatter implements DateFormatter {
     @Override
     public ZoneId getZone() {
         return this.printer.getZone();
+    }
+
+    @Override
+    public DateMathParser toDateMathParser() {
+        return new JavaDateMathParser(this);
+    }
+
+    public DateFormatter parseDefaulting(Map<TemporalField, Long> fields) {
+        final DateTimeFormatterBuilder parseDefaultingBuilder = new DateTimeFormatterBuilder().append(printer);
+        fields.forEach(parseDefaultingBuilder::parseDefaulting);
+        if (parsers.length == 1 && parsers[0].equals(printer)) {
+            return new JavaDateFormatter(format, parseDefaultingBuilder.toFormatter(getLocale()));
+        } else {
+            final DateTimeFormatter[] parsersWithDefaulting = new DateTimeFormatter[parsers.length];
+            for (int i = 0; i < parsers.length; i++) {
+                DateTimeFormatterBuilder builder = new DateTimeFormatterBuilder().append(parsers[i]);
+                fields.forEach(builder::parseDefaulting);
+                parsersWithDefaulting[i] = builder.toFormatter(getLocale());
+            }
+            return new JavaDateFormatter(format, parseDefaultingBuilder.toFormatter(getLocale()), parsersWithDefaulting);
+        }
     }
 
     @Override
@@ -157,7 +169,7 @@ class JavaDateFormatter implements DateFormatter {
 
         return Objects.equals(format, other.format) &&
                Objects.equals(getLocale(), other.getLocale()) &&
-               Objects.equals(this.printer.getZone(), other.printer.getZone());
+               Objects.equals(getZone(), other.getZone());
     }
 
     @Override

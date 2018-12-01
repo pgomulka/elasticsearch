@@ -6,6 +6,8 @@
 package org.elasticsearch.xpack.core.ml.utils.time;
 
 import org.elasticsearch.common.ParseField;
+import org.elasticsearch.common.joda.FormatDateTimeFormatter;
+import org.elasticsearch.common.joda.Joda;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.index.mapper.DateFieldMapper;
@@ -15,6 +17,9 @@ import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 public final class TimeUtils {
+
+    public static final FormatDateTimeFormatter DATE_TIME_FORMATTER = Joda.forPattern("strict_date_optional_time||epoch_millis");
+
     private TimeUtils() {
         // Do nothing
     }
@@ -54,7 +59,7 @@ public final class TimeUtils {
         }
 
         try {
-            return DateFieldMapper.DEFAULT_DATE_TIME_FORMATTER.parser().parseMillis(date);
+            return DATE_TIME_FORMATTER.parser().parseMillis(date);
         } catch (IllegalArgumentException e) {
         }
         // Could not do the conversion
