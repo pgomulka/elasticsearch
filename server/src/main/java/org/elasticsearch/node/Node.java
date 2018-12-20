@@ -447,7 +447,7 @@ public class Node implements Closeable {
             NodeIdListener nodeIdListener = new NodeIdListener();
             clusterService.addListener(nodeIdListener);
             //TODO any other way to pass cluster state listener to context factory?
-            ((MarkerLoggerContextFactory)LogManager.getFactory()).setNodeIdListener(nodeIdListener);
+//            ((MarkerLoggerContextFactory)LogManager.getFactory()).setNodeIdListener(nodeIdListener);
 
             ActionModule actionModule = new ActionModule(false, settings, clusterModule.getIndexNameExpressionResolver(),
                 settingsModule.getIndexScopedSettings(), settingsModule.getClusterSettings(), settingsModule.getSettingsFilter(),
