@@ -22,6 +22,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configurator;
+import org.apache.logging.log4j.core.impl.Log4jLogEvent;
 import org.elasticsearch.Version;
 import org.elasticsearch.cli.UserException;
 import org.elasticsearch.cluster.ClusterChangedEvent;
@@ -33,6 +34,7 @@ import org.elasticsearch.cluster.node.DiscoveryNodes;
 import org.elasticsearch.common.io.PathUtils;
 import org.elasticsearch.common.logging.LogConfigurator;
 import org.elasticsearch.common.logging.NodeAndClusterIdConverter;
+import org.elasticsearch.common.logging.NodeAndClusterIdConverter2;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.env.Environment;
@@ -59,6 +61,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Fork(3)
 @Warmup(iterations = 10)
@@ -69,32 +72,40 @@ import java.util.concurrent.TimeUnit;
 @SuppressWarnings("unused") //invoked by benchmarking framework
 public class LoggerBenchmark {
 
+
+
+    NodeAndClusterIdConverter nodeAndClusterIdConverter1 = new NodeAndClusterIdConverter();
+    NodeAndClusterIdConverter2 nodeAndClusterIdConverter2 = new NodeAndClusterIdConverter2();
+
     @Setup(Level.Trial)
     public void init() throws IOException, UserException {
         LogConfigurator.setNodeName("sample-name");
         setupLogging("log4j2.properties");
     }
 
-    @Benchmark
-    @Threads(2)
-    public void readOnlyThreadLocal() {
-        Logger logger = LogManager.getLogger("testLoggerName");
-
-        NodeAndClusterIdConverter nodeAndClusterIdConverter = NodeAndClusterIdConverter.newInstance(null);
-        ClusterChangedEvent clusterChangedEvent = event();
-        nodeAndClusterIdConverter.clusterChanged(clusterChangedEvent);
-
-        for(int i=0;i<100;i++)
-            logger.info("sample message");
-
+    @Setup(Level.Iteration)
+    public void perTest() {
+        nodeAndClusterIdConverter1.clusterChanged(event());
+        nodeAndClusterIdConverter1.format(new Log4jLogEvent(), new StringBuilder());
+        nodeAndClusterIdConverter2.clusterChanged(event());
+        nodeAndClusterIdConverter2.format(new Log4jLogEvent(), new StringBuilder());
     }
 
     @Benchmark
-    @Threads(2)
-    public void readAtomicAndThreadLocal() {
-        Logger logger = LogManager.getLogger("testLoggerName");
-        for(int i=0;i<100;i++)
-            logger.info("sample message");
+    @Threads(1)
+    public StringBuilder readThreadLocal() {
+        StringBuilder stringBuilder = new StringBuilder();
+        nodeAndClusterIdConverter1.format(new Log4jLogEvent(), stringBuilder);
+        return stringBuilder;
+    }
+
+    @Benchmark
+    @Threads(1)
+    public StringBuilder readAtomicRef() {
+        StringBuilder stringBuilder = new StringBuilder();
+        nodeAndClusterIdConverter2.format(new Log4jLogEvent(), stringBuilder);
+        return stringBuilder;
+
     }
 
     private ClusterChangedEvent event() {
@@ -104,7 +115,7 @@ public class LoggerBenchmark {
                                                                   .build())
                                                 .nodes(DiscoveryNodes.builder()
                                                                      .localNodeId("localNodeId")
-                                                                     .add(new DiscoveryNode("localNodeId" , buildNewFakeTransportAddress(),  Collections.emptyMap(), Collections.emptySet(),
+                                                                     .add(new DiscoveryNode("localNodeId", buildNewFakeTransportAddress(), Collections.emptyMap(), Collections.emptySet(),
                                                                          Version.CURRENT))
                                                                      .build()
                                                 )
@@ -119,6 +130,7 @@ public class LoggerBenchmark {
     public static TransportAddress buildNewFakeTransportAddress() {
         return new TransportAddress(TransportAddress.META_ADDRESS, 1);
     }
+
     private void setupLogging(final String config, final Settings settings) throws IOException, UserException {
         assert !Environment.PATH_HOME_SETTING.exists(settings);
         final Path configDir = getDataPath(config);

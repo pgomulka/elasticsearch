@@ -24,7 +24,6 @@ import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.pattern.ConverterKeys;
 import org.apache.logging.log4j.core.pattern.LogEventPatternConverter;
 import org.apache.logging.log4j.core.pattern.PatternConverter;
-import org.apache.lucene.util.CloseableThreadLocal;
 import org.elasticsearch.cluster.ClusterChangedEvent;
 import org.elasticsearch.cluster.ClusterStateListener;
 import org.elasticsearch.cluster.node.DiscoveryNode;
@@ -36,10 +35,10 @@ import java.util.concurrent.atomic.AtomicReference;
 
 @Plugin(category = PatternConverter.CATEGORY, name = "NodeAndClusterIdConverter")
 @ConverterKeys({"node_and_cluster_id"})
-public final class NodeAndClusterIdConverter extends LogEventPatternConverter implements ClusterStateListener {
+public final class NodeAndClusterIdConverter2 extends LogEventPatternConverter implements ClusterStateListener {
 
-    private static LazyInitializable<NodeAndClusterIdConverter, Exception> INSTANCE =
-        new LazyInitializable(() -> new NodeAndClusterIdConverter());
+    private static LazyInitializable<NodeAndClusterIdConverter2, Exception> INSTANCE =
+        new LazyInitializable(() -> new NodeAndClusterIdConverter2());
 
     private AtomicReference<String> nodeAndClusterIdsReference = new AtomicReference<>();
 //    private CloseableThreadLocal<String> nodeAndClusterIds = new CloseableThreadLocal();
@@ -48,7 +47,7 @@ public final class NodeAndClusterIdConverter extends LogEventPatternConverter im
     /**
      * Called by log4j2 to initialize this converter.
      */
-    public static NodeAndClusterIdConverter newInstance(final String[] options) {
+    public static NodeAndClusterIdConverter2 newInstance(final String[] options) {
         try {
             return INSTANCE.getOrCompute();
         } catch (Exception e) {
@@ -56,19 +55,16 @@ public final class NodeAndClusterIdConverter extends LogEventPatternConverter im
         }
     }
 
-    public NodeAndClusterIdConverter() {
+    public NodeAndClusterIdConverter2() {
         super("NodeName", "node_and_cluster_id");
     }
 
     @Override
     public void format(LogEvent event, StringBuilder toAppendTo) {
-        if (nodeAndClusterIds.get() != null) {
-            //using local value
-            toAppendTo.append(nodeAndClusterIds.get());
-        } else if (nodeAndClusterIdsReference.get() != null) {
+        if (nodeAndClusterIdsReference.get() != null) {
             //reading a value from the listener for the first time
             toAppendTo.append(nodeAndClusterIdsReference.get());
-            nodeAndClusterIds.set(nodeAndClusterIdsReference.get());
+//            nodeAndClusterIds.set(nodeAndClusterIdsReference.get());
         }
         // nodeId/clusterUuid not received yet, not appending
     }
