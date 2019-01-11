@@ -41,6 +41,8 @@ import org.elasticsearch.env.Environment;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Group;
+import org.openjdk.jmh.annotations.GroupThreads;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
@@ -100,7 +102,10 @@ public class LoggerBenchmark {
     }
 
     @Benchmark
-    @Threads(1)
+    @BenchmarkMode(Mode.All)
+    @OutputTimeUnit(TimeUnit.SECONDS)
+    @Group("readThreadLocal")
+    @GroupThreads(5)
     public StringBuilder readThreadLocal() {
         StringBuilder stringBuilder = new StringBuilder();
         nodeAndClusterIdConverter1.format(new Log4jLogEvent(), stringBuilder);
@@ -108,7 +113,10 @@ public class LoggerBenchmark {
     }
 
     @Benchmark
-    @Threads(1)
+    @BenchmarkMode(Mode.All)
+    @OutputTimeUnit(TimeUnit.SECONDS)
+    @Group("readAtomicRef")
+    @GroupThreads(5)
     public StringBuilder readAtomicRef() {
         StringBuilder stringBuilder = new StringBuilder();
         nodeAndClusterIdConverter2.format(new Log4jLogEvent(), stringBuilder);
