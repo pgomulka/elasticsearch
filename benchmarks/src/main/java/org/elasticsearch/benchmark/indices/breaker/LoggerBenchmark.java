@@ -70,7 +70,7 @@ import java.util.concurrent.atomic.AtomicReference;
 @Measurement(iterations = 10)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
-@State(Scope.Benchmark)
+@State(Scope.Group)
 @SuppressWarnings("unused") //invoked by benchmarking framework
 public class LoggerBenchmark {
 
@@ -85,25 +85,30 @@ public class LoggerBenchmark {
     }
 
 
-    @Setup(Level.Iteration)
-    public void perTest() {
+    @Benchmark
+    @Group("readThreadLocal")
+    @GroupThreads(1)
+    public void perTest1() {
         nodeAndClusterIdConverter1.clusterChanged(event());
         nodeAndClusterIdConverter1.format(new Log4jLogEvent(), new StringBuilder());
+    }
 
+    @Benchmark
+    @Group("readAtomicRef")
+    @GroupThreads(1)
+    public void perTest2() {
         nodeAndClusterIdConverter2.clusterChanged(event());
         nodeAndClusterIdConverter2.format(new Log4jLogEvent(), new StringBuilder());
     }
 
-    @Benchmark
-    @Threads(1)
-    public StringBuilder readLocalField() {
-        String x = local;
-        return new StringBuilder(x);
-    }
+//    @Benchmark
+//    @Threads(1)
+//    public StringBuilder readLocalField() {
+//        String x = local;
+//        return new StringBuilder(x);
+//    }
 
     @Benchmark
-    @BenchmarkMode(Mode.All)
-    @OutputTimeUnit(TimeUnit.SECONDS)
     @Group("readThreadLocal")
     @GroupThreads(5)
     public StringBuilder readThreadLocal() {
@@ -113,8 +118,6 @@ public class LoggerBenchmark {
     }
 
     @Benchmark
-    @BenchmarkMode(Mode.All)
-    @OutputTimeUnit(TimeUnit.SECONDS)
     @Group("readAtomicRef")
     @GroupThreads(5)
     public StringBuilder readAtomicRef() {
