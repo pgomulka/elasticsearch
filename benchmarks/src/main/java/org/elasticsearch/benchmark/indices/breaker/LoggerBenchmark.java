@@ -73,22 +73,30 @@ import java.util.concurrent.atomic.AtomicReference;
 public class LoggerBenchmark {
 
 
-
     NodeAndClusterIdConverter nodeAndClusterIdConverter1 = new NodeAndClusterIdConverter();
     NodeAndClusterIdConverter2 nodeAndClusterIdConverter2 = new NodeAndClusterIdConverter2();
-
+    String local = "test";
     @Setup(Level.Trial)
     public void init() throws IOException, UserException {
         LogConfigurator.setNodeName("sample-name");
         setupLogging("log4j2.properties");
     }
 
+
     @Setup(Level.Iteration)
     public void perTest() {
         nodeAndClusterIdConverter1.clusterChanged(event());
         nodeAndClusterIdConverter1.format(new Log4jLogEvent(), new StringBuilder());
+
         nodeAndClusterIdConverter2.clusterChanged(event());
         nodeAndClusterIdConverter2.format(new Log4jLogEvent(), new StringBuilder());
+    }
+
+    @Benchmark
+    @Threads(1)
+    public StringBuilder readLocalField() {
+        String x = local;
+        return new StringBuilder(x);
     }
 
     @Benchmark
