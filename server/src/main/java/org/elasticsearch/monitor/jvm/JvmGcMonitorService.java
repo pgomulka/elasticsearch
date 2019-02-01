@@ -126,28 +126,28 @@ public class JvmGcMonitorService extends AbstractLifecycleComponent {
         gcThresholds.putIfAbsent("default", new GcThreshold("default", 10000, 5000, 2000));
         this.gcThresholds = unmodifiableMap(gcThresholds);
 
-        if (GC_OVERHEAD_WARN_SETTING.get(settings) <= GC_OVERHEAD_INFO_SETTING.get(settings)) {
-            final String message =
-                String.format(
-                    Locale.ROOT,
-                    "[%s] must be greater than [%s] [%d] but was [%d]",
-                    GC_OVERHEAD_WARN_SETTING.getKey(),
-                    GC_OVERHEAD_INFO_SETTING.getKey(),
-                    GC_OVERHEAD_INFO_SETTING.get(settings),
-                    GC_OVERHEAD_WARN_SETTING.get(settings));
-            throw new IllegalArgumentException(message);
-        }
-        if (GC_OVERHEAD_INFO_SETTING.get(settings) <= GC_OVERHEAD_DEBUG_SETTING.get(settings)) {
-            final String message =
-                String.format(
-                    Locale.ROOT,
-                    "[%s] must be greater than [%s] [%d] but was [%d]",
-                    GC_OVERHEAD_INFO_SETTING.getKey(),
-                    GC_OVERHEAD_DEBUG_SETTING.getKey(),
-                    GC_OVERHEAD_DEBUG_SETTING.get(settings),
-                    GC_OVERHEAD_INFO_SETTING.get(settings));
-            throw new IllegalArgumentException(message);
-        }
+//        if (GC_OVERHEAD_WARN_SETTING.get(settings) <= GC_OVERHEAD_INFO_SETTING.get(settings)) {
+//            final String message =
+//                String.format(
+//                    Locale.ROOT,
+//                    "[%s] must be greater than [%s] [%d] but was [%d]",
+//                    GC_OVERHEAD_WARN_SETTING.getKey(),
+//                    GC_OVERHEAD_INFO_SETTING.getKey(),
+//                    GC_OVERHEAD_INFO_SETTING.get(settings),
+//                    GC_OVERHEAD_WARN_SETTING.get(settings));
+//            throw new IllegalArgumentException(message);
+//        }
+//        if (GC_OVERHEAD_INFO_SETTING.get(settings) <= GC_OVERHEAD_DEBUG_SETTING.get(settings)) {
+//            final String message =
+//                String.format(
+//                    Locale.ROOT,
+//                    "[%s] must be greater than [%s] [%d] but was [%d]",
+//                    GC_OVERHEAD_INFO_SETTING.getKey(),
+//                    GC_OVERHEAD_DEBUG_SETTING.getKey(),
+//                    GC_OVERHEAD_DEBUG_SETTING.get(settings),
+//                    GC_OVERHEAD_INFO_SETTING.get(settings));
+//            throw new IllegalArgumentException(message);
+//        }
 
         this.gcOverheadThreshold = new GcOverheadThreshold(
             GC_OVERHEAD_WARN_SETTING.get(settings),
@@ -314,20 +314,24 @@ public class JvmGcMonitorService extends AbstractLifecycleComponent {
         switch (threshold) {
             case WARN:
                 if (logger.isWarnEnabled()) {
-                    logger.warn(OVERHEAD_LOG_MESSAGE, seq, TimeValue.timeValueMillis(current), TimeValue.timeValueMillis(elapsed));
+                    logger.warn(OVERHEAD_LOG_MESSAGE, seq, formatTime(current), formatTime(elapsed));
                 }
                 break;
             case INFO:
                 if (logger.isInfoEnabled()) {
-                    logger.info(OVERHEAD_LOG_MESSAGE, seq, TimeValue.timeValueMillis(current), TimeValue.timeValueMillis(elapsed));
+                    logger.info(OVERHEAD_LOG_MESSAGE, seq, formatTime(current), formatTime(elapsed));
                 }
                 break;
             case DEBUG:
                 if (logger.isDebugEnabled()) {
-                    logger.debug(OVERHEAD_LOG_MESSAGE, seq, TimeValue.timeValueMillis(current), TimeValue.timeValueMillis(elapsed));
+                    logger.debug(OVERHEAD_LOG_MESSAGE, seq, formatTime(current), formatTime(elapsed));
                 }
                 break;
         }
+    }
+
+    private static String formatTime(long millis) {
+        return TimeValue.timeValueMillis(millis).getStringRep();
     }
 
     @Override

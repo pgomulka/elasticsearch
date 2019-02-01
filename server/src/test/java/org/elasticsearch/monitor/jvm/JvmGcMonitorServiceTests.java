@@ -149,24 +149,24 @@ public class JvmGcMonitorServiceTests extends ESTestCase {
                 verify(logger).warn(
                     "[gc][{}] overhead, spent [{}] collecting in the last [{}]",
                     seq,
-                    TimeValue.timeValueMillis(current),
-                    TimeValue.timeValueMillis(elapsed));
+                    TimeValue.timeValueMillis(current).getStringRep(),
+                    TimeValue.timeValueMillis(elapsed).getStringRep());
                 break;
             case INFO:
                 verify(logger).isInfoEnabled();
                 verify(logger).info(
                     "[gc][{}] overhead, spent [{}] collecting in the last [{}]",
                     seq,
-                    TimeValue.timeValueMillis(current),
-                    TimeValue.timeValueMillis(elapsed));
+                    TimeValue.timeValueMillis(current).getStringRep(),
+                    TimeValue.timeValueMillis(elapsed).getStringRep());
                 break;
             case DEBUG:
                 verify(logger).isDebugEnabled();
                 verify(logger).debug(
                     "[gc][{}] overhead, spent [{}] collecting in the last [{}]",
                     seq,
-                    TimeValue.timeValueMillis(current),
-                    TimeValue.timeValueMillis(elapsed));
+                    TimeValue.timeValueMillis(current).getStringRep(),
+                    TimeValue.timeValueMillis(elapsed).getStringRep());
                 break;
         }
         verifyNoMoreInteractions(logger);
