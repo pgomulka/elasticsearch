@@ -344,14 +344,19 @@ public class JavaJodaTimeDuellingTests extends ESTestCase {
     }
 
     public void testCompositeParsing(){
-        //in all these examples the second pattern will be used
+        //in all these examples the yyyy-MM-dd'T'HH:mm:ss.SSS pattern will be used
+        assertSameDate("2014-06-06T12:01:02.123", "yyyy-MM-dd'T'HH:mm:ss.SSS||yyyy-MM-dd'T'HH:mm:ss");
         assertSameDate("2014-06-06T12:01:02.123", "yyyy-MM-dd'T'HH:mm:ss||yyyy-MM-dd'T'HH:mm:ss.SSS");
         assertSameDate("2014-06-06T12:01:02.123", "strictDateTimeNoMillis||yyyy-MM-dd'T'HH:mm:ss.SSS");
         assertSameDate("2014-06-06T12:01:02.123", "yyyy-MM-dd'T'HH:mm:ss+HH:MM||yyyy-MM-dd'T'HH:mm:ss.SSS");
+
+        assertSameDate("2014-06-06T12:01:02.123", "yyyy-MM-dd'T'HH:mm:ss||strictDateTimeNoMillis||yyyy-MM-dd'T'HH:mm:ss.SSS");
+        assertSameDate("2014-06-06T12:01:02.123", "yyyy-MM-dd'T'HH:mm:ss||yyyy-MM-dd'T'HH:mm:ss.SSS||strictDateTimeNoMillis");
     }
 
     public void testExceptionWhenCompositeParsingFails(){
         assertParseException("2014-06-06T12:01:02.123", "yyyy-MM-dd'T'HH:mm:ss||yyyy-MM-dd'T'HH:mm:ss.SS");
+        assertParseException("2014-06-06T12:01:02.123", "yyyy-MM-dd'T'HH:mm:ss||yyyy-MM-dd'T'HH:mm:ss.SS||strictDateTimeNoMillis");
     }
 
     public void testDuelingStrictParsing() {
