@@ -41,6 +41,7 @@ import java.time.ZonedDateTime;
 import java.util.Collection;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
 public class DateFieldMapperTests extends ESSingleNodeTestCase {
@@ -374,6 +375,33 @@ public class DateFieldMapperTests extends ESSingleNodeTestCase {
             () -> indexService.mapperService().merge("movie", new CompressedXContent(updateFormatMapping),
                 MapperService.MergeReason.MAPPING_UPDATE));
         assertThat(e.getMessage(), containsString("[mapper [release_date] has different [format] values]"));
+    }
+
+    public void testUpdateMappingToJavaTime() throws IOException {
+        String initMapping = Strings.toString(XContentFactory.jsonBuilder().startObject().startObject("movie")
+            .startObject("properties")
+            .startObject("release_date").field("type", "date").field("format", "epoch_second||YYYY/MM/dd").endObject()
+            .endObject().endObject().endObject());
+        indexService.mapperService().merge("movie", new CompressedXContent(initMapping),
+            MapperService.MergeReason.MAPPING_UPDATE, randomBoolean());
+
+        assertThat(indexService.mapperService().fullName("release_date"), notNullValue());
+        assertFalse(indexService.mapperService().fullName("release_date").stored());
+        assertWarnings("Use of 'Y' (year-of-era) will change to 'y' in the next major version of Elasticsearch. Prefix your date format with '8' to use the new specifier.");
+
+
+        String updateFormatMapping = Strings.toString(XContentFactory.jsonBuilder().startObject().startObject("movie")
+            .startObject("properties")
+            .startObject("release_date").field("type", "date").field("format", "epoch_second||8yyyy/MM/dd").endObject()
+            .endObject().endObject().endObject());
+
+        indexService.mapperService().merge("movie", new CompressedXContent(updateFormatMapping),
+            MapperService.MergeReason.MAPPING_UPDATE, randomBoolean());
+        DateFieldMapper.DateFieldType release_date = (DateFieldMapper.DateFieldType) indexService.mapperService().fullName("release_date");
+        assertThat(release_date.dateTimeFormatter().pattern(), equalTo("epoch_second||8yyyy/MM/dd"));
+        assertFalse(release_date.stored());
+
+
     }
 
     public void testMergeText() throws Exception {

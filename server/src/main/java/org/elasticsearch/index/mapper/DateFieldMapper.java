@@ -293,7 +293,9 @@ public final class DateFieldMapper extends FieldMapper {
         public void checkCompatibility(MappedFieldType fieldType, List<String> conflicts) {
             super.checkCompatibility(fieldType, conflicts);
             DateFieldType other = (DateFieldType) fieldType;
-            if (Objects.equals(dateTimeFormatter.pattern(), other.dateTimeFormatter.pattern()) == false) {
+            if (Objects.equals(dateTimeFormatter.pattern(), other.dateTimeFormatter.pattern()) == false &&
+                other.dateTimeFormatter.pattern().startsWith("8") == false // only allow changes to 8
+                ) {
                 conflicts.add("mapper [" + name() + "] has different [format] values");
             }
             if (Objects.equals(dateTimeFormatter.locale(), other.dateTimeFormatter.locale()) == false) {
