@@ -25,6 +25,7 @@ import org.elasticsearch.common.time.DateFormatters;
 import org.elasticsearch.test.ESTestCase;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.ISODateTimeFormat;
 
 import java.time.ZoneOffset;
@@ -37,6 +38,40 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 
 public class JavaJodaTimeDuellingTests extends ESTestCase {
+
+    public void testxxx(){
+
+        ZonedDateTime utc = ZonedDateTime.now().withZoneSameInstant(ZoneOffset.UTC);
+
+//        ZonedDateTime time1 = ZonedDateTime.parse(time, changetimeParser_z);
+        System.out.println(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.000Z").format(utc));
+        System.out.println(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.000z").format(utc));
+        System.out.println(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.000X").format(utc));
+        System.out.println(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.000XX").format(utc));
+        System.out.println(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.000ZZ").format(utc));
+        System.out.println("joda");
+        DateTime now = DateTime.now(DateTimeZone.UTC);
+        System.out.println(DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.000Z").print(now));
+        System.out.println(DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.000z").print(now));
+        System.out.println(DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.000zz").print(now));
+        System.out.println(DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.000ZZ").print(now));
+    }
+
+    public void testparsing(){
+
+        String t = "2019-05-06T10:56:25.000Z";
+
+//        System.out.println(DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.000z").parseDateTime(t));
+//        System.out.println(DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.000ZZ").parseDateTime(t));
+
+//        ZoneText(SHORT)
+        System.out.println(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.000zz").parse(t));
+        System.out.println(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.000XXX").parse(t));
+         t = "2019-05-06T10:56:25.000Z";
+        System.out.println(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.000zz").parse(t));
+//        System.out.println(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.000ZZ").parse(t));
+
+    }
 
     public void testTimeZoneFormatting() {
         assertSameDate("2001-01-01T00:00:00Z", "date_time_no_millis");
