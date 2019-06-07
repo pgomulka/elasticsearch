@@ -98,6 +98,7 @@ public final class SearchRequest extends ActionRequest implements IndicesRequest
 
     private IndicesOptions indicesOptions = DEFAULT_INDICES_OPTIONS;
 
+    private Boolean someNewFlag = null;
     public SearchRequest() {
         this.localClusterAlias = null;
         this.absoluteStartMillis = DEFAULT_ABSOLUTE_START_MILLIS;
@@ -637,5 +638,13 @@ public final class SearchRequest extends ActionRequest implements IndicesRequest
                 ", getOrCreateAbsoluteStartMillis=" + absoluteStartMillis +
                 ", ccsMinimizeRoundtrips=" + ccsMinimizeRoundtrips +
                 ", source=" + source + '}';
+    }
+
+    public Boolean getSomeNewFlag() {
+        return someNewFlag;
+    }
+
+    public void setSomeNewFlag(Boolean someNewFlag) {
+        this.someNewFlag = someNewFlag;
     }
 }

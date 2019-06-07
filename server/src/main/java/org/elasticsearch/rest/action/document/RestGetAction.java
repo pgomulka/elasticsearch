@@ -28,6 +28,7 @@ import org.elasticsearch.common.logging.DeprecationLogger;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.VersionType;
 import org.elasticsearch.rest.BaseRestHandler;
+import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
@@ -36,6 +37,7 @@ import org.elasticsearch.rest.action.RestToXContentListener;
 import org.elasticsearch.search.fetch.subphase.FetchSourceContext;
 
 import java.io.IOException;
+import java.util.List;
 
 import static org.elasticsearch.rest.RestRequest.Method.GET;
 import static org.elasticsearch.rest.RestRequest.Method.HEAD;
@@ -62,6 +64,16 @@ public class RestGetAction extends BaseRestHandler {
     public String getName() {
         return "document_get_action";
     }
+
+//    @Override
+//    protected RestRequest fixRequest(RestRequest request) {
+//        List<String> allHeaderValues = request.getAllHeaderValues("Content-Type");
+//        if(allHeaderValues.contains("application/vnd.elasticsearch.v8+json")){
+//            return request;
+//        }else{
+//            return request;
+//        }
+//    }
 
     @Override
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {

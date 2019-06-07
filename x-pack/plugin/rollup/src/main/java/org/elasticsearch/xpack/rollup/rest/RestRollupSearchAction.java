@@ -13,6 +13,7 @@ import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.action.RestToXContentListener;
 import org.elasticsearch.rest.action.search.RestSearchAction;
+import org.elasticsearch.rest.action.search.SearchRequestFactoryV7;
 import org.elasticsearch.xpack.core.rollup.action.RollupSearchAction;
 
 import java.io.IOException;
@@ -34,7 +35,7 @@ public class RestRollupSearchAction extends BaseRestHandler {
     protected RestChannelConsumer prepareRequest(RestRequest restRequest, NodeClient client) throws IOException {
         SearchRequest searchRequest = new SearchRequest();
         restRequest.withContentOrSourceParamParserOrNull(parser ->
-                RestSearchAction.parseSearchRequest(searchRequest, restRequest, parser, size -> searchRequest.source().size(size)));
+                SearchRequestFactoryV7.parseSearchRequest(searchRequest, restRequest, parser, size -> searchRequest.source().size(size)));
         RestSearchAction.checkRestTotalHits(restRequest, searchRequest);
         return channel -> client.execute(RollupSearchAction.INSTANCE, searchRequest, new RestToXContentListener<>(channel));
     }
