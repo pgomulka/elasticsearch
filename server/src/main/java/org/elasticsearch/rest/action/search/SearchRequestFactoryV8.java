@@ -63,10 +63,7 @@ public class SearchRequestFactoryV8 implements SearchRequestFactory{
     public static void parseSearchRequest(SearchRequest searchRequest, RestRequest request,
                                           XContentParser requestContentParser,
                                           IntConsumer setSize) throws IOException {
-        if(searchRequest.getSomeNewFlag() == null)
-        {
-            searchRequest.setSomeNewFlag(false);
-        }
+
         if (searchRequest.source() == null) {
             searchRequest.source(new SearchSourceBuilder());
         }

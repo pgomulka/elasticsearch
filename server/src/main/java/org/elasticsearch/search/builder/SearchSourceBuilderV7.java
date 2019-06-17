@@ -73,15 +73,14 @@ import static org.elasticsearch.search.internal.SearchContext.TRACK_TOTAL_HITS_D
 /**
  * A search source builder allowing to easily build search source. Simple
  * construction using
- * {@link org.elasticsearch.search.builder.SearchSourceBuilder#searchSource()}.
+ * {@link SearchSourceBuilderV7#searchSource()}.
  *
  * @see org.elasticsearch.action.search.SearchRequest#source(SearchSourceBuilder)
  */
-public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewriteable<SearchSourceBuilder> {
+public final class SearchSourceBuilderV7 extends  SearchSourceBuilder implements Writeable, ToXContentObject, Rewriteable<SearchSourceBuilder> {
     private static final DeprecationLogger deprecationLogger =
-        new DeprecationLogger(LogManager.getLogger(SearchSourceBuilder.class));
+        new DeprecationLogger(LogManager.getLogger(SearchSourceBuilderV7.class));
 
-    public static final ParseField NEW_FIELD = new ParseField("newField");
     public static final ParseField FROM_FIELD = new ParseField("from");
     public static final ParseField SIZE_FIELD = new ParseField("size");
     public static final ParseField TIMEOUT_FIELD = new ParseField("timeout");
@@ -114,12 +113,12 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
     public static final ParseField COLLAPSE = new ParseField("collapse");
     public static final ParseField SLICE = new ParseField("slice");
 
-    public static SearchSourceBuilder fromXContent(XContentParser parser) throws IOException {
+    public static SearchSourceBuilderV7 fromXContent(XContentParser parser) throws IOException {
         return fromXContent(parser, true);
     }
 
-    public static SearchSourceBuilder fromXContent(XContentParser parser, boolean checkTrailingTokens) throws IOException {
-        SearchSourceBuilder builder = new SearchSourceBuilder();
+    public static SearchSourceBuilderV7 fromXContent(XContentParser parser, boolean checkTrailingTokens) throws IOException {
+        SearchSourceBuilderV7 builder = new SearchSourceBuilderV7();
         builder.parseXContent(parser, checkTrailingTokens);
         return builder;
     }
@@ -127,8 +126,8 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
     /**
      * A static factory method to construct a new search source.
      */
-    public static SearchSourceBuilder searchSource() {
-        return new SearchSourceBuilder();
+    public static SearchSourceBuilderV7 searchSource() {
+        return new SearchSourceBuilderV7();
     }
 
     /**
@@ -142,7 +141,6 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
 
     private QueryBuilder postQueryBuilder;
 
-    private Boolean newField ;
     private int from = -1;
 
     private int size = -1;
@@ -191,16 +189,16 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
 
     private CollapseBuilder collapse = null;
 
-    /**∂
+    /**
      * Constructs a new search source builder.
      */
-    public SearchSourceBuilder() {
+    public SearchSourceBuilderV7() {
     }
 
     /**
      * Read from a stream.
      */
-    public SearchSourceBuilder(StreamInput in) throws IOException {
+    public SearchSourceBuilderV7(StreamInput in) throws IOException {
         aggregations = in.readOptionalWriteable(AggregatorFactories.Builder::new);
         explain = in.readOptionalBoolean();
         fetchSourceContext = in.readOptionalWriteable(FetchSourceContext::new);
@@ -306,7 +304,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
      *
      * @see org.elasticsearch.index.query.QueryBuilders
      */
-    public SearchSourceBuilder query(QueryBuilder query) {
+    public SearchSourceBuilderV7 query(QueryBuilder query) {
         this.queryBuilder = query;
         return this;
     }
@@ -323,7 +321,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
      * only has affect on the search hits (not aggregations). This filter is
      * always executed as last filtering mechanism.
      */
-    public SearchSourceBuilder postFilter(QueryBuilder postFilter) {
+    public SearchSourceBuilderV7 postFilter(QueryBuilder postFilter) {
         this.postQueryBuilder = postFilter;
         return this;
     }
@@ -338,7 +336,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
     /**
      * From index to start the search from. Defaults to {@code 0}.
      */
-    public SearchSourceBuilder from(int from) {
+    public SearchSourceBuilderV7 from(int from) {
         if (from < 0) {
             throw new IllegalArgumentException("[from] parameter cannot be negative");
         }
@@ -356,7 +354,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
     /**
      * The number of search hits to return. Defaults to {@code 10}.
      */
-    public SearchSourceBuilder size(int size) {
+    public SearchSourceBuilderV7 size(int size) {
         if (size < 0) {
             throw new IllegalArgumentException("[size] parameter cannot be negative, found [" + size + "]");
         }
@@ -374,7 +372,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
     /**
      * Sets the minimum score below which docs will be filtered out.
      */
-    public SearchSourceBuilder minScore(float minScore) {
+    public SearchSourceBuilderV7 minScore(float minScore) {
         this.minScore = minScore;
         return this;
     }
@@ -390,7 +388,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
      * Should each {@link org.elasticsearch.search.SearchHit} be returned with
      * an explanation of the hit (ranking).
      */
-    public SearchSourceBuilder explain(Boolean explain) {
+    public SearchSourceBuilderV7 explain(Boolean explain) {
         this.explain = explain;
         return this;
     }
@@ -407,7 +405,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
      * Should each {@link org.elasticsearch.search.SearchHit} be returned with a
      * version associated with it.
      */
-    public SearchSourceBuilder version(Boolean version) {
+    public SearchSourceBuilderV7 version(Boolean version) {
         this.version = version;
         return this;
     }
@@ -424,7 +422,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
      * Should each {@link org.elasticsearch.search.SearchHit} be returned with the
      * sequence number and primary term of the last modification of the document.
      */
-    public SearchSourceBuilder seqNoAndPrimaryTerm(Boolean seqNoAndPrimaryTerm) {
+    public SearchSourceBuilderV7 seqNoAndPrimaryTerm(Boolean seqNoAndPrimaryTerm) {
         this.seqNoAndPrimaryTerm = seqNoAndPrimaryTerm;
         return this;
     }
@@ -440,7 +438,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
     /**
      * An optional timeout to control how long search is allowed to take.
      */
-    public SearchSourceBuilder timeout(TimeValue timeout) {
+    public SearchSourceBuilderV7 timeout(TimeValue timeout) {
         this.timeout = timeout;
         return this;
     }
@@ -456,7 +454,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
      * An optional terminate_after to terminate the search after collecting
      * <code>terminateAfter</code> documents
      */
-    public  SearchSourceBuilder terminateAfter(int terminateAfter) {
+    public SearchSourceBuilderV7 terminateAfter(int terminateAfter) {
         if (terminateAfter < 0) {
             throw new IllegalArgumentException("terminateAfter must be > 0");
         }
@@ -479,7 +477,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
      * @param order
      *            The sort ordering
      */
-    public SearchSourceBuilder sort(String name, SortOrder order) {
+    public SearchSourceBuilderV7 sort(String name, SortOrder order) {
         if (name.equals(ScoreSortBuilder.NAME)) {
             return sort(SortBuilders.scoreSort().order(order));
         }
@@ -492,7 +490,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
      * @param name
      *            The name of the field to sort by
      */
-    public SearchSourceBuilder sort(String name) {
+    public SearchSourceBuilderV7 sort(String name) {
         if (name.equals(ScoreSortBuilder.NAME)) {
             return sort(SortBuilders.scoreSort());
         }
@@ -502,7 +500,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
     /**
      * Adds a sort builder.
      */
-    public SearchSourceBuilder sort(SortBuilder<?> sort) {
+    public SearchSourceBuilderV7 sort(SortBuilder<?> sort) {
             if (sorts == null) {
                 sorts = new ArrayList<>();
             }
@@ -521,7 +519,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
      * Applies when sorting, and controls if scores will be tracked as well.
      * Defaults to {@code false}.
      */
-    public SearchSourceBuilder trackScores(boolean trackScores) {
+    public SearchSourceBuilderV7 trackScores(boolean trackScores) {
         this.trackScores = trackScores;
         return this;
     }
@@ -536,7 +534,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
     /**
      * Indicates if the total hit count for the query should be tracked.
      */
-    public SearchSourceBuilder trackTotalHits(boolean trackTotalHits) {
+    public SearchSourceBuilderV7 trackTotalHits(boolean trackTotalHits) {
         this.trackTotalHitsUpTo = trackTotalHits ? TRACK_TOTAL_HITS_ACCURATE : TRACK_TOTAL_HITS_DISABLED;
         return this;
     }
@@ -550,7 +548,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
         return trackTotalHitsUpTo;
     }
 
-    public SearchSourceBuilder trackTotalHitsUpTo(int trackTotalHitsUpTo) {
+    public SearchSourceBuilderV7 trackTotalHitsUpTo(int trackTotalHitsUpTo) {
         if (trackTotalHitsUpTo < TRACK_TOTAL_HITS_DISABLED) {
             throw new IllegalArgumentException("[track_total_hits] parameter must be positive or equals to -1, " +
                 "got " + trackTotalHitsUpTo);
@@ -575,7 +573,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
     /**
      * Set the sort values that indicates which docs this request should "search after".
      */
-    public SearchSourceBuilder searchAfter(Object[] values) {
+    public SearchSourceBuilderV7 searchAfter(Object[] values) {
         this.searchAfterBuilder = new SearchAfterBuilder().setSortValues(values);
         return this;
     }
@@ -584,7 +582,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
      * Sets a filter that will restrict the search hits, the top hits and the aggregations to a slice of the results
      * of the main query.
      */
-    public SearchSourceBuilder slice(SliceBuilder builder) {
+    public SearchSourceBuilderV7 slice(SliceBuilder builder) {
         this.sliceBuilder = builder;
         return this;
     }
@@ -601,7 +599,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
         return collapse;
     }
 
-    public SearchSourceBuilder collapse(CollapseBuilder collapse) {
+    public SearchSourceBuilderV7 collapse(CollapseBuilder collapse) {
         this.collapse = collapse;
         return this;
     }
@@ -609,7 +607,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
     /**
      * Add an aggregation to perform as part of the search.
      */
-    public SearchSourceBuilder aggregation(AggregationBuilder aggregation) {
+    public SearchSourceBuilderV7 aggregation(AggregationBuilder aggregation) {
         if (aggregations == null) {
             aggregations = AggregatorFactories.builder();
         }
@@ -620,7 +618,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
     /**
      * Add an aggregation to perform as part of the search.
      */
-    public SearchSourceBuilder aggregation(PipelineAggregationBuilder aggregation) {
+    public SearchSourceBuilderV7 aggregation(PipelineAggregationBuilder aggregation) {
         if (aggregations == null) {
             aggregations = AggregatorFactories.builder();
         }
@@ -638,7 +636,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
     /**
      * Adds highlight to perform as part of the search.
      */
-    public SearchSourceBuilder highlighter(HighlightBuilder highlightBuilder) {
+    public SearchSourceBuilderV7 highlighter(HighlightBuilder highlightBuilder) {
         this.highlightBuilder = highlightBuilder;
         return this;
     }
@@ -650,7 +648,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
         return highlightBuilder;
     }
 
-    public SearchSourceBuilder suggest(SuggestBuilder suggestBuilder) {
+    public SearchSourceBuilderV7 suggest(SuggestBuilder suggestBuilder) {
         this.suggestBuilder = suggestBuilder;
         return this;
     }
@@ -662,7 +660,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
         return suggestBuilder;
     }
 
-    public SearchSourceBuilder addRescorer(RescorerBuilder<?> rescoreBuilder) {
+    public SearchSourceBuilderV7 addRescorer(RescorerBuilder<?> rescoreBuilder) {
             if (rescoreBuilders == null) {
                 rescoreBuilders = new ArrayList<>();
             }
@@ -670,7 +668,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
             return this;
     }
 
-    public SearchSourceBuilder clearRescorers() {
+    public SearchSourceBuilderV7 clearRescorers() {
         rescoreBuilders = null;
         return this;
     }
@@ -678,7 +676,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
     /**
      * Should the query be profiled. Defaults to {@code false}
      */
-    public SearchSourceBuilder profile(boolean profile) {
+    public SearchSourceBuilderV7 profile(boolean profile) {
         this.profile = profile;
         return this;
     }
@@ -702,7 +700,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
      * Indicates whether the response should contain the stored _source for
      * every hit
      */
-    public SearchSourceBuilder fetchSource(boolean fetch) {
+    public SearchSourceBuilderV7 fetchSource(boolean fetch) {
         FetchSourceContext fetchSourceContext = this.fetchSourceContext != null ? this.fetchSourceContext
             : FetchSourceContext.FETCH_SOURCE;
         this.fetchSourceContext = new FetchSourceContext(fetch, fetchSourceContext.includes(), fetchSourceContext.excludes());
@@ -721,7 +719,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
      *            An optional exclude (optionally wildcarded) pattern to filter
      *            the returned _source
      */
-    public SearchSourceBuilder fetchSource(@Nullable String include, @Nullable String exclude) {
+    public SearchSourceBuilderV7 fetchSource(@Nullable String include, @Nullable String exclude) {
         return fetchSource(include == null ? Strings.EMPTY_ARRAY : new String[] { include }, exclude == null ? Strings.EMPTY_ARRAY
                 : new String[] { exclude });
     }
@@ -738,7 +736,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
      *            An optional list of exclude (optionally wildcarded) pattern to
      *            filter the returned _source
      */
-    public SearchSourceBuilder fetchSource(@Nullable String[] includes, @Nullable String[] excludes) {
+    public SearchSourceBuilderV7 fetchSource(@Nullable String[] includes, @Nullable String[] excludes) {
         FetchSourceContext fetchSourceContext = this.fetchSourceContext != null ? this.fetchSourceContext
             : FetchSourceContext.FETCH_SOURCE;
         this.fetchSourceContext = new FetchSourceContext(fetchSourceContext.fetchSource(), includes, excludes);
@@ -748,7 +746,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
     /**
      * Indicate how the _source should be fetched.
      */
-    public SearchSourceBuilder fetchSource(@Nullable FetchSourceContext fetchSourceContext) {
+    public SearchSourceBuilderV7 fetchSource(@Nullable FetchSourceContext fetchSourceContext) {
         this.fetchSourceContext = fetchSourceContext;
         return this;
     }
@@ -766,7 +764,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
      * search request. If none are specified, the source of the document will be
      * return.
      */
-    public SearchSourceBuilder storedField(String name) {
+    public SearchSourceBuilderV7 storedField(String name) {
         return storedFields(Collections.singletonList(name));
     }
 
@@ -774,7 +772,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
      * Sets the stored fields to load and return as part of the search request. If none
      * are specified, the source of the document will be returned.
      */
-    public SearchSourceBuilder storedFields(List<String> fields) {
+    public SearchSourceBuilderV7 storedFields(List<String> fields) {
         if (storedFieldsContext == null) {
             storedFieldsContext = StoredFieldsContext.fromList(fields);
         } else {
@@ -786,7 +784,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
     /**
      * Indicates how the stored fields should be fetched.
      */
-    public SearchSourceBuilder storedFields(StoredFieldsContext context) {
+    public SearchSourceBuilderV7 storedFields(StoredFieldsContext context) {
         storedFieldsContext = context;
         return this;
     }
@@ -809,7 +807,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
      * Adds a field to load from the doc values and return as part of the
      * search request.
      */
-    public SearchSourceBuilder docValueField(String name, @Nullable String format) {
+    public SearchSourceBuilderV7 docValueField(String name, @Nullable String format) {
         if (docValueFields == null) {
             docValueFields = new ArrayList<>();
         }
@@ -821,7 +819,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
      * Adds a field to load from the doc values and return as part of the
      * search request.
      */
-    public SearchSourceBuilder docValueField(String name) {
+    public SearchSourceBuilderV7 docValueField(String name) {
         return docValueField(name, null);
     }
 
@@ -833,7 +831,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
      * @param script
      *            The script
      */
-    public SearchSourceBuilder scriptField(String name, Script script) {
+    public SearchSourceBuilderV7 scriptField(String name, Script script) {
         scriptField(name, script, false);
         return this;
     }
@@ -846,7 +844,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
      * @param script
      *            The script
      */
-    public SearchSourceBuilder scriptField(String name, Script script, boolean ignoreFailure) {
+    public SearchSourceBuilderV7 scriptField(String name, Script script, boolean ignoreFailure) {
         if (scriptFields == null) {
             scriptFields = new ArrayList<>();
         }
@@ -854,12 +852,12 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
         return this;
     }
 
-    /**
-     * Gets the script fields.
-     */
-    public List<ScriptField> scriptFields() {
-        return scriptFields;
-    }
+//    /**
+//     * Gets the script fields.
+//     */
+//    public List<ScriptField> scriptFields() {
+//        return scriptFields;
+//    }
 
     /**
      * Sets the boost a specific index or alias will receive when the query is executed
@@ -870,7 +868,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
      * @param indexBoost
      *            The boost to apply to the index
      */
-    public SearchSourceBuilder indexBoost(String index, float indexBoost) {
+    public SearchSourceBuilderV7 indexBoost(String index, float indexBoost) {
         Objects.requireNonNull(index, "index must not be null");
         this.indexBoosts.add(new IndexBoost(index, indexBoost));
         return this;
@@ -880,14 +878,14 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
      * Gets the boost a specific indices or aliases will receive when the query is
      * executed against them.
      */
-    public List<IndexBoost> indexBoosts() {
-        return indexBoosts;
-    }
+//    public List<IndexBoost> indexBoosts() {
+//        return indexBoosts;
+//    }
 
     /**
      * The stats groups this request will be aggregated under.
      */
-    public SearchSourceBuilder stats(List<String> statsGroups) {
+    public SearchSourceBuilderV7 stats(List<String> statsGroups) {
         this.stats = statsGroups;
         return this;
     }
@@ -899,7 +897,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
         return stats;
     }
 
-    public SearchSourceBuilder ext(List<SearchExtBuilder> searchExtBuilders) {
+    public SearchSourceBuilderV7 ext(List<SearchExtBuilder> searchExtBuilders) {
         this.extBuilders = Objects.requireNonNull(searchExtBuilders, "searchExtBuilders must not be null");
         return this;
     }
@@ -923,7 +921,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
      * infinitely.
      */
     @Override
-    public SearchSourceBuilder rewrite(QueryRewriteContext context) throws IOException {
+    public SearchSourceBuilderV7 rewrite(QueryRewriteContext context) throws IOException {
         assert (this.equals(shallowCopy(queryBuilder, postQueryBuilder, aggregations, sliceBuilder, sorts, rescoreBuilders,
             highlightBuilder)));
         QueryBuilder queryBuilder = null;
@@ -958,7 +956,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
     /**
      * Create a shallow copy of this builder with a new slice configuration.
      */
-    public SearchSourceBuilder copyWithNewSlice(SliceBuilder slice) {
+    public SearchSourceBuilderV7 copyWithNewSlice(SliceBuilder slice) {
         return shallowCopy(queryBuilder, postQueryBuilder, aggregations, slice, sorts, rescoreBuilders, highlightBuilder);
     }
 
@@ -966,10 +964,10 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
      * Create a shallow copy of this source replaced {@link #queryBuilder}, {@link #postQueryBuilder}, and {@link #sliceBuilder}. Used by
      * {@link #rewrite(QueryRewriteContext)} and {@link #copyWithNewSlice(SliceBuilder)}.
      */
-    private SearchSourceBuilder shallowCopy(QueryBuilder queryBuilder, QueryBuilder postQueryBuilder,
-                                            AggregatorFactories.Builder aggregations, SliceBuilder slice, List<SortBuilder<?>> sorts,
-                                            List<RescorerBuilder> rescoreBuilders, HighlightBuilder highlightBuilder) {
-        SearchSourceBuilder rewrittenBuilder = new SearchSourceBuilder();
+    private SearchSourceBuilderV7 shallowCopy(QueryBuilder queryBuilder, QueryBuilder postQueryBuilder,
+                                              AggregatorFactories.Builder aggregations, SliceBuilder slice, List<SortBuilder<?>> sorts,
+                                              List<RescorerBuilder> rescoreBuilders, HighlightBuilder highlightBuilder) {
+        SearchSourceBuilderV7 rewrittenBuilder = new SearchSourceBuilderV7();
         rewrittenBuilder.aggregations = aggregations;
         rewrittenBuilder.explain = explain;
         rewrittenBuilder.extBuilders = extBuilders;
@@ -1024,9 +1022,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
             if (token == XContentParser.Token.FIELD_NAME) {
                 currentFieldName = parser.currentName();
             } else if (token.isValue()) {
-                if (NEW_FIELD.match(currentFieldName, parser.getDeprecationHandler())) {
-                    newField = parser.booleanValue();
-                } else if (FROM_FIELD.match(currentFieldName, parser.getDeprecationHandler())) {
+                if (FROM_FIELD.match(currentFieldName, parser.getDeprecationHandler())) {
                     from = parser.intValue();
                 } else if (SIZE_FIELD.match(currentFieldName, parser.getDeprecationHandler())) {
                     size = parser.intValue();
@@ -1055,7 +1051,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
                     fetchSourceContext = FetchSourceContext.fromXContent(parser);
                 } else if (STORED_FIELDS_FIELD.match(currentFieldName, parser.getDeprecationHandler())) {
                     storedFieldsContext =
-                        StoredFieldsContext.fromXContent(SearchSourceBuilder.STORED_FIELDS_FIELD.getPreferredName(), parser);
+                        StoredFieldsContext.fromXContent(SearchSourceBuilderV7.STORED_FIELDS_FIELD.getPreferredName(), parser);
                 } else if (SORT_FIELD.match(currentFieldName, parser.getDeprecationHandler())) {
                     sort(parser.text());
                 } else if (PROFILE_FIELD.match(currentFieldName, parser.getDeprecationHandler())) {
@@ -1173,6 +1169,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
                 throw new ParsingException(parser.getTokenLocation(), "Unexpected token [" + token + "] found after the main object.");
             }
         }
+
     }
 
     public XContentBuilder innerToXContent(XContentBuilder builder, Params params) throws IOException {
@@ -1540,7 +1537,7 @@ public  class SearchSourceBuilder implements Writeable, ToXContentObject, Rewrit
         if (obj.getClass() != getClass()) {
             return false;
         }
-        SearchSourceBuilder other = (SearchSourceBuilder) obj;
+        SearchSourceBuilderV7 other = (SearchSourceBuilderV7) obj;
         return Objects.equals(aggregations, other.aggregations)
                 && Objects.equals(explain, other.explain)
                 && Objects.equals(fetchSourceContext, other.fetchSourceContext)

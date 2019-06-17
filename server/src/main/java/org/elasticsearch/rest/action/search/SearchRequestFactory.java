@@ -9,7 +9,7 @@ import java.util.List;
 interface  SearchRequestFactory {
     static SearchRequestFactory forRequestVersion(RestRequest request) {
         List<String> allHeaderValues = request.getAllHeaderValues("Content-Type");
-        if(allHeaderValues.contains("application/vnd.elasticsearch.v8+json")){
+        if(allHeaderValues.contains("application/json.v8")){
             return new SearchRequestFactoryV8();
         }else{
             return new SearchRequestFactoryV7();

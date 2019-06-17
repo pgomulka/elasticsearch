@@ -145,7 +145,7 @@ public enum XContentType {
     public static XContentType fromMediaType(String mediaType) {
         final String lowercaseMediaType = Objects.requireNonNull(mediaType, "mediaType cannot be null").toLowerCase(Locale.ROOT);
         for (XContentType type : values()) {
-            if (type.mediaTypeWithoutParameters().equals(lowercaseMediaType)) {
+            if (lowercaseMediaType.contains(type.mediaTypeWithoutParameters())) {
                 return type;
             }
         }

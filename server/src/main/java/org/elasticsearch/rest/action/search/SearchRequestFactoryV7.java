@@ -10,6 +10,7 @@ import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.action.RestActions;
 import org.elasticsearch.search.Scroll;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.elasticsearch.search.builder.SearchSourceBuilderV7;
 import org.elasticsearch.search.fetch.StoredFieldsContext;
 import org.elasticsearch.search.fetch.subphase.FetchSourceContext;
 import org.elasticsearch.search.internal.SearchContext;
@@ -56,12 +57,13 @@ public class SearchRequestFactoryV7 implements SearchRequestFactory{
     public static void parseSearchRequest(SearchRequest searchRequest, RestRequest request,
                                           XContentParser requestContentParser,
                                           IntConsumer setSize) throws IOException {
-        if(searchRequest.getSomeNewFlag() == null)
-        {
-            searchRequest.setSomeNewFlag(false);
-        }
+        //TODO PG ===== default here in the builder
+//        if(searchRequest.getSomeNewFlag() == null)
+//        {
+//            searchRequest.setSomeNewFlag(false);
+//        }
         if (searchRequest.source() == null) {
-            searchRequest.source(new SearchSourceBuilder());
+            searchRequest.source(new SearchSourceBuilderV7());
         }
         searchRequest.indices(Strings.splitStringByCommaToArray(request.param("index")));
         if (requestContentParser != null) {
