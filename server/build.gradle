@@ -98,6 +98,11 @@ dependencies {
   compile "org.apache.lucene:lucene-spatial-extras:${versions.lucene}"
   compile "org.apache.lucene:lucene-spatial3d:${versions.lucene}"
   compile "org.apache.lucene:lucene-suggest:${versions.lucene}"
+  compile "io.swagger.core.v3:swagger-annotations:2.0.8"
+  compile "io.swagger.core.v3:swagger-jaxrs2:2.0.8"
+  compile "javax.ws.rs:javax.ws.rs-api:2.0"
+
+//  compile group: 'io.swagger.core.v3', name: 'swagger-jaxrs2', version: '2.0.8'
 
   // utilities
   compile project(":libs:elasticsearch-cli")
