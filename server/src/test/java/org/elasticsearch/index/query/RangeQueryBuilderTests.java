@@ -458,6 +458,39 @@ public class RangeQueryBuilderTests extends AbstractQueryTestCase<RangeQueryBuil
         assertThat(rewrittenRange.timeZone(), equalTo(null));
         assertThat(rewrittenRange.format(), equalTo(null));
     }
+    public void testZoneDateTime() throws IOException {
+        String fieldName = DATE_FIELD_NAME;
+        RangeQueryBuilder query = new RangeQueryBuilder(fieldName) {
+            @Override
+            protected MappedFieldType.Relation getRelation(QueryRewriteContext queryRewriteContext) {
+                return Relation.WITHIN;
+            }
+        };
+        ZonedDateTime queryFromValue = ZonedDateTime.parse("2007-12-03T10:15:30+01:00[Europe/Paris]");
+        query.from(queryFromValue);
+        query.to(null);
+        query.doToQuery(createShardContext());
+        /**
+         * ElasticsearchParseException[failed to parse date field [2007-12-03T10:15:30+01:00[Europe/Paris]] with format [strict_date_optional_time||epoch_millis]: [failed to parse date field [2007-12-03T10:15:30+01:00[Europe/Paris]] with format [strict_date_optional_time||epoch_millis]]]; nested: IllegalArgumentException[failed to parse date field [2007-12-03T10:15:30+01:00[Europe/Paris]] with format [strict_date_optional_time||epoch_millis]]; nested: DateTimeParseException[Failed to parse with all enclosed parsers];
+         * 	at org.elasticsearch.common.time.JavaDateMathParser.parseDateTime(JavaDateMathParser.java:235)
+         * 	at org.elasticsearch.common.time.JavaDateMathParser.parse(JavaDateMathParser.java:76)
+         * 	at org.elasticsearch.index.mapper.DateFieldMapper$DateFieldType.parseToLong(DateFieldMapper.java:401)
+         * 	at org.elasticsearch.index.mapper.DateFieldMapper$DateFieldType.rangeQuery(DateFieldMapper.java:367)
+         * 	at org.elasticsearch.index.query.RangeQueryBuilder.doToQuery(RangeQueryBuilder.java:507)
+         * 	at org.elasticsearch.index.query.RangeQueryBuilderTests.testZoneDateTime(RangeQueryBuilderTests.java:478)
+         * 	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+         * 	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+         * 	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+         * 	at java.base/java.lang.reflect.Method.invoke(Method.java:567)
+         * 	at com.carrotsearch.randomizedtesting.RandomizedRunner.invoke(RandomizedRunner.java:1750)
+         * 	at com.carrotsearch.randomizedtesting.RandomizedRunner$8.evaluate(RandomizedRunner.java:938)
+         * 	at com.carrotsearch.randomizedtesting.RandomizedRunner$9.evaluate(RandomizedRunner.java:974)
+         * 	at com.carrotsearch.randomizedtesting.RandomizedRunner$10.evaluate(RandomizedRunner.java:988)
+         * 	at com.carrotsearch.randomizedtesting.rules.StatementAdapter.evaluate(StatementAdapter.java:36)
+         * 	at org.apache.lucene.util.TestRuleSetupTeardownChained$1.evaluate(TestRuleSetupTeardownChained.java:49)
+         * 	at
+          */
+    }
 
     public void testRewriteDateToMatchNone() throws IOException {
         String fieldName = randomAlphaOfLengthBetween(1, 20);
