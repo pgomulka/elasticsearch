@@ -1,8 +1,8 @@
 ---
 setup:
   - skip:
-      version: " - 7.99.99" #TODO change this after backport
-      reason:  "not backported yet"
+      version: "all"
+      reason: "This test can fail in jdk 1.8 - awaits fix https://github.com/elastic/elasticsearch/issues/45393"
 
   - do:
         indices.create:
