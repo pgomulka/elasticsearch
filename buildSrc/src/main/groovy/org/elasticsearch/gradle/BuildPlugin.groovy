@@ -419,6 +419,7 @@ class BuildPlugin implements Plugin<Project> {
             // such that we don't have to pass hardcoded files to gradle
             repos.mavenLocal()
         }
+        repos.gradlePluginPortal()
         repos.jcenter()
         repos.ivy { IvyArtifactRepository repo ->
             repo.name = 'elasticsearch'
