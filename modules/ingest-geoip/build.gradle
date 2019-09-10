@@ -36,8 +36,8 @@ dependencies {
 }
 
 task copyDefaultGeoIp2DatabaseFiles(type: Copy) {
-  from { zipTree(configurations.testCompile.files.find { it.name.contains('geolite2-databases')}) }
-  into "${project.buildDir}/ingest-geoip"
+//  from { zipTree(configurations.testCompile.files.find { it.name.contains('geolite2-databases')}) }
+//  into "${project.buildDir}/ingest-geoip"
   include "*.mmdb"
 }
 
