@@ -1,3 +1,4 @@
+
 apply plugin: 'nebula.optional-base'
 apply plugin: 'nebula.maven-base-publish'
 apply plugin: 'nebula.maven-scm'
@@ -9,84 +10,56 @@ buildscript {
         }
     }
     dependencies {
+        classpath group: 'org.slf4j', name: 'slf4j-jdk14', version: '1.6.1'
+        classpath group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.25'
         classpath "io.swagger.core.v3:swagger-gradle-plugin:2.0.9.1"
     }
 }
-
+repositories {
+    maven {
+        url "https://plugins.gradle.org/m2/"
+    }
+}
 apply plugin: "io.swagger.core.v3.swagger-gradle-plugin"
 group = 'org.elasticsearch.api'
 archivesBaseName = 'elasticsearch-api'
 configurations.all {
     resolutionStrategy.force 'com.fasterxml.jackson.core:jackson-annotations:2.9.0'
+    resolutionStrategy.force 'org.slf4j:slf4j-api:1.7.25'
+
 }
 
 tasks.withType(Javadoc).all { enabled = false }
 
+//
+//resolve {
+//
+////    def task = new ResolveTask()
+//    task.classpath = sourceSets.main.allJava
+////    task.resolve();
+//    outputFileName = 'PetStoreAPI'
+//    outputFormat = 'JSON'
+//    prettyPrint = 'TRUE'
+//    classpath = sourceSets.main.allJava
+//    outputPath = 'spec'
+//}
 
 resolve {
     outputFileName = 'PetStoreAPI'
     outputFormat = 'JSON'
     prettyPrint = 'TRUE'
-    classpath = sourceSets.main.allJava
-    outputPath = 'spec'
+    classpath =  sourceSets.main.runtimeClasspath//List.of(file("$buildDir/classes/java/main").listFiles())
+    resourcePackages = ["api"]
+    resourceClasses = ["api.ClusterHealthApi"]
+    outputPath = 'test'
 }
 
 dependencies {
+    compile "io.swagger.core.v3:swagger-gradle-plugin:2.0.9.1"
+
     compile group: 'io.swagger.core.v3', name: 'swagger-jaxrs2', version: '2.0.9'
     compile group: 'io.swagger.core.v3', name: 'swagger-jaxrs2-servlet-initializer', version: '2.0.9'
-    compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.6.1'
+    runtimeClasspath group: 'org.slf4j', name: 'slf4j-jdk14', version: '1.6.1'
+    compile group: 'javax.ws.rs', name: 'javax.ws.rs-api', version: '2.0'
 
-//    compile project (':server')
-//    compile group: 'io.swagger.core.v3', name: 'swagger-jaxrs2', version: '2.0.9'
-////    compile group: 'io.swagger.core.v3', name: 'swagger-jaxrs2-servlet-initializer', version: '2.0.9'
-//    compile 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:jar:2.9.9'
-//    compile 'io.swagger.core.v3:swagger-core:jar:2.0.9'
-//    compile 'org.apache.maven:maven-repository-metadata:jar:3.5.0'
-//    compile 'org.apache.maven:maven-builder-support:jar:3.5.0'
-//    compile 'com.google.inject:guice:jar:4.0'
-//    compile 'org.eclipse.sisu:org.eclipse.sisu.inject:jar:0.3.3'
-//    compile 'aopalliance:aopalliance:jar:1.0'
-//    compile 'io.swagger.core.v3:swagger-annotations:jar:2.0.9'
-//    compile 'com.fasterxml.jackson.module:jackson-module-jaxb-annotations:jar:2.9.9'
-//    compile 'org.apache.commons:commons-lang3:jar:3.7'
-//    compile 'com.fasterxml.jackson.core:jackson-core:jar:2.9.9'
-//    compile 'javax.enterprise:cdi-api:jar:1.0'
-//    compile 'org.codehaus.plexus:plexus-component-annotations:jar:1.5.5'
-//    compile 'org.apache.maven.resolver:maven-resolver-spi:jar:1.0.3'
-//    compile 'org.apache.maven:maven-artifact:jar:3.5.0'
-//    compile 'javax.xml.bind:jaxb-api:jar:2.3.0'
-//    compile 'org.apache.maven:maven-compat:jar:3.5.0'
-//    compile 'javax.annotation:jsr250-api:jar:1.0'
-//    compile 'org.apache.maven:maven-model-builder:jar:3.5.0'
-//    compile 'org.codehaus.plexus:plexus-utils:jar:3.0.24'
-//    compile 'org.apache.maven.resolver:maven-resolver-util:jar:1.0.3'
-//    compile 'org.apache.maven:maven-model:jar:3.5.0'
-//    compile 'org.yaml:snakeyaml:jar:1.18'
-//    compile 'javax.validation:validation-api:jar:1.1.0.Final'
-//    compile 'org.sonatype.plexus:plexus-cipher:jar:1.4'
-//    compile 'org.apache.maven.resolver:maven-resolver-impl:jar:1.0.3'
-//    compile 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:jar:2.9.9'
-//    compile 'io.swagger.core.v3:swagger-integration:jar:2.0.9'
-//    compile 'org.apache.maven.shared:maven-shared-utils:jar:3.1.0'
-//    compile 'org.codehaus.plexus:plexus-interpolation:jar:1.24'
-//    compile 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-base:jar:2.9.9'
-//    compile 'org.javassist:javassist:jar:3.22.0-GA'
-//    compile 'org.sonatype.plexus:plexus-sec-dispatcher:jar:1.4'
-//    compile 'com.fasterxml.jackson.core:jackson-databind:jar:2.9.9'
-//    compile 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:jar:2.9.9'
-//    compile 'org.codehaus.plexus:plexus-classworlds:jar:2.5.2'
-//    compile 'org.apache.maven:maven-core:jar:3.5.0'
-//    compile 'io.swagger.core.v3:swagger-models:jar:2.0.9'
-//    compile 'org.eclipse.sisu:org.eclipse.sisu.plexus:jar:0.3.3'
-//    compile 'org.apache.maven.resolver:maven-resolver-api:jar:1.0.3'
-//    compile 'com.fasterxml.jackson.core:jackson-annotations:jar:2.9.9'
-//    compile 'org.apache.maven:maven-settings-builder:jar:3.5.0'
-//    compile 'javax.inject:javax.inject:jar:1'
-//    compile 'org.apache.maven.wagon:wagon-provider-api:jar:2.12'
-//    compile 'org.apache.maven:maven-settings:jar:3.5.0'
-//    compile 'org.apache.maven:maven-plugin-api:jar:3.5.0'
-//    compile 'org.slf4j:slf4j-api:jar:1.7.25'
-//    compile 'io.swagger.core.v3:swagger-jaxrs2:jar:2.0.9'
-//    compile 'org.apache.maven:maven-resolver-provider:jar:3.5.0'
-//    compile 'io.github.classgraph:classgraph:jar:4.6.32'
 }

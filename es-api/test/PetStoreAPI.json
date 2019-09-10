@@ -1,0 +1,27 @@
+{
+  "openapi" : "3.0.1",
+  "info" : {
+    "title" : "ES api",
+    "description" : "ESf API",
+    "version" : "0.0"
+  },
+  "paths" : {
+    "/{username}" : {
+      "get" : {
+        "summary" : "Get user by user name",
+        "operationId" : "prepareRequest",
+        "responses" : {
+          "default" : {
+            "description" : "The user",
+            "content" : {
+              "application/json" : { }
+            }
+          },
+          "400" : {
+            "description" : "User not found"
+          }
+        }
+      }
+    }
+  }
+}
