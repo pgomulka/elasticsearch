@@ -25,14 +25,7 @@ import java.io.IOException;
 /**
  * Test
  */
-@OpenAPIDefinition(
-    info = @Info(
-        title = "ES api",
-        version = "0.0",
-        description = "ESf API"
-    )
 
-)
 public class ClusterHealthApi {
 
     @GET

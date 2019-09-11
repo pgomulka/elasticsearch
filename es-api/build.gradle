@@ -10,56 +10,57 @@ buildscript {
         }
     }
     dependencies {
-        classpath group: 'org.slf4j', name: 'slf4j-jdk14', version: '1.6.1'
+//        classpath group: 'org.slf4j', name: 'slf4j-api', version: '1.7.25'
+//        classpath group: 'org.slf4j', name: 'slf4j-jdk14', version: '1.6.1'
+//        classpath group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.25'
         classpath group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.25'
         classpath "io.swagger.core.v3:swagger-gradle-plugin:2.0.9.1"
+        classpath "org.apache.logging.log4j:log4j-api:2.11.1"
+//        classpath project(':server')
     }
 }
+
 repositories {
     maven {
         url "https://plugins.gradle.org/m2/"
     }
 }
+
 apply plugin: "io.swagger.core.v3.swagger-gradle-plugin"
 group = 'org.elasticsearch.api'
 archivesBaseName = 'elasticsearch-api'
-configurations.all {
-    resolutionStrategy.force 'com.fasterxml.jackson.core:jackson-annotations:2.9.0'
-    resolutionStrategy.force 'org.slf4j:slf4j-api:1.7.25'
 
+configurations.all {
+    resolutionStrategy.force 'com.fasterxml.jackson.core:jackson-annotations:2.9.9'
+    resolutionStrategy.force 'com.fasterxml.jackson.core:jackson-core:2.9.9'
+    resolutionStrategy.force 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.9.9'
+    resolutionStrategy.force 'org.yaml:snakeyaml:1.23'
+    resolutionStrategy.force "org.slf4j:slf4j-api:${versions.slf4j}"
 }
 
 tasks.withType(Javadoc).all { enabled = false }
-
-//
-//resolve {
-//
-////    def task = new ResolveTask()
-//    task.classpath = sourceSets.main.allJava
-////    task.resolve();
-//    outputFileName = 'PetStoreAPI'
-//    outputFormat = 'JSON'
-//    prettyPrint = 'TRUE'
-//    classpath = sourceSets.main.allJava
-//    outputPath = 'spec'
-//}
 
 resolve {
     outputFileName = 'PetStoreAPI'
     outputFormat = 'JSON'
     prettyPrint = 'TRUE'
     classpath =  sourceSets.main.runtimeClasspath//List.of(file("$buildDir/classes/java/main").listFiles())
-    resourcePackages = ["api"]
-    resourceClasses = ["api.ClusterHealthApi"]
+    resourcePackages = ["api", "org.elasticsearch.rest.action.admin.indices"]
+    resourceClasses = ["api.ClusterHealthApi", "org.elasticsearch.rest.action.admin.indices.RestCreateIndexAction"]
     outputPath = 'test'
 }
+//, "org.elasticsearch.rest.action.admin.indicesRestCreateIndexAction"
 
 dependencies {
     compile "io.swagger.core.v3:swagger-gradle-plugin:2.0.9.1"
 
-    compile group: 'io.swagger.core.v3', name: 'swagger-jaxrs2', version: '2.0.9'
+    compile  'com.fasterxml.jackson.core:jackson-annotations:2.9.9'
+    compile (group: 'io.swagger.core.v3', name: 'swagger-jaxrs2', version: '2.0.9') {
+        exclude group: 'com.fasterxml.jackson.core' , module: 'jackson-annotations'
+    }
     compile group: 'io.swagger.core.v3', name: 'swagger-jaxrs2-servlet-initializer', version: '2.0.9'
-    runtimeClasspath group: 'org.slf4j', name: 'slf4j-jdk14', version: '1.6.1'
+//    runtimeClasspath "org.slf4j:slf4j-api:${versions.slf4j}"
     compile group: 'javax.ws.rs', name: 'javax.ws.rs-api', version: '2.0'
 
+    compile project(':server')
 }

@@ -1,3 +1,22 @@
 {
-  "openapi" : "3.0.1"
+  "openapi" : "3.0.1",
+  "paths" : {
+    "/{username}" : {
+      "get" : {
+        "summary" : "Get user by user name",
+        "operationId" : "prepareRequest",
+        "responses" : {
+          "default" : {
+            "description" : "The user",
+            "content" : {
+              "application/json" : { }
+            }
+          },
+          "400" : {
+            "description" : "User not found"
+          }
+        }
+      }
+    }
+  }
 }

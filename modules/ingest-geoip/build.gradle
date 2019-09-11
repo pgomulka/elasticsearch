@@ -23,7 +23,10 @@ esplugin {
   description 'Ingest processor that uses looksup geo data based on ip adresses using the Maxmind geo database'
   classname 'org.elasticsearch.ingest.geoip.IngestGeoIpPlugin'
 }
-
+configurations.all {
+  resolutionStrategy.force 'com.fasterxml.jackson.core:jackson-databind:2.8.11.3'
+  resolutionStrategy.force 'com.fasterxml.jackson.core:jackson-core:2.8.10'
+}
 dependencies {
   // Upgrade to 2.10.0 or higher when jackson-core gets upgraded to 2.9.x. Blocked by #27032
   compile ('com.maxmind.geoip2:geoip2:2.9.0')

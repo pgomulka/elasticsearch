@@ -19,6 +19,9 @@
 
 package org.elasticsearch.rest.action.admin.indices;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.apache.logging.log4j.LogManager;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.support.ActiveShardCount;
@@ -32,6 +35,8 @@ import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.action.RestToXContentListener;
 
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -52,6 +57,14 @@ public class RestCreateIndexAction extends BaseRestHandler {
         return "create_index_action";
     }
 
+    @GET
+    @Path("ff5/{userffname}")
+    @Operation(summary = "Get user by user name",
+        responses = {
+            @ApiResponse(description = "The user",
+                content = @Content(mediaType = "application/json"/*,
+                    schema = @Schema(implementation = ClusterHealthAction.class)*/)),
+            @ApiResponse(responseCode = "400", description = "ddddddd")})
     @Override
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
         final boolean includeTypeName = request.paramAsBoolean(INCLUDE_TYPE_NAME_PARAMETER,

@@ -28,7 +28,9 @@ versions << [
   'poi': '4.0.1',
   'mime4j': '0.8.3'
 ]
-
+configurations.all {
+  resolutionStrategy.force 'org.apache.commons:commons-lang3:3.9'
+}
 dependencies {
   // mandatory for tika
   compile "org.apache.tika:tika-core:${versions.tika}"

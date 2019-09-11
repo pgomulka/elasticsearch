@@ -1,10 +1,5 @@
 {
   "openapi" : "3.0.1",
-  "info" : {
-    "title" : "ES api",
-    "description" : "ESf API",
-    "version" : "0.0"
-  },
   "paths" : {
     "/{username}" : {
       "get" : {
