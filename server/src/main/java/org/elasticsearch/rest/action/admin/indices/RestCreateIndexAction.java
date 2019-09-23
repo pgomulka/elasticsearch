@@ -20,13 +20,18 @@
 package org.elasticsearch.rest.action.admin.indices;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.apache.logging.log4j.LogManager;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.support.ActiveShardCount;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.logging.DeprecationLogger;
+import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.LoggingDeprecationHandler;
 import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.index.mapper.MapperService;
@@ -35,7 +40,7 @@ import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.action.RestToXContentListener;
 
-import javax.ws.rs.GET;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import java.io.IOException;
 import java.util.Collections;
@@ -57,14 +62,24 @@ public class RestCreateIndexAction extends BaseRestHandler {
         return "create_index_action";
     }
 
-    @GET
-    @Path("ff5/{userffname}")
-    @Operation(summary = "Get user by user name",
+    @PUT
+    @Path("/{indexName}")
+    @Operation(summary = "Creates a new index",
+        method = "PUT",
+        parameters = {
+            @Parameter(in = ParameterIn.PATH, name = "include_type_name", required = false),
+            @Parameter(in = ParameterIn.PATH, name = "wait_for_active_shards", required = false)
+        },
+        requestBody = @RequestBody(content = {@Content(
+            mediaType = "application/json",
+            schema = @Schema(implementation = Settings.class)
+
+        )}),
         responses = {
             @ApiResponse(description = "The user",
                 content = @Content(mediaType = "application/json"/*,
-                    schema = @Schema(implementation = ClusterHealthAction.class)*/)),
-            @ApiResponse(responseCode = "400", description = "ddddddd")})
+                    schema = @Schema(implementation = ClusterHealthAction.class)*/)
+            )})
     @Override
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
         final boolean includeTypeName = request.paramAsBoolean(INCLUDE_TYPE_NAME_PARAMETER,

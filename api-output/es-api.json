@@ -1,0 +1,206 @@
+{
+  "openapi" : "3.0.1",
+  "paths" : {
+    "/{indexName}" : {
+      "put" : {
+        "summary" : "Creates a new index",
+        "operationId" : "prepareRequest",
+        "parameters" : [ {
+          "name" : "include_type_name",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "wait_for_active_shards",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Settings"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "default" : {
+            "description" : "The user",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RestChannelConsumer"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "ddddddd"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "Settings" : {
+        "type" : "object",
+        "properties" : {
+          "empty" : {
+            "type" : "boolean"
+          },
+          "asGroups" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "$ref" : "#/components/schemas/Settings"
+            }
+          },
+          "fragment" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "RestChannelConsumer" : {
+        "type" : "object"
+      },
+      "HttpChannel" : {
+        "type" : "object",
+        "properties" : {
+          "remoteAddress" : {
+            "type" : "object",
+            "properties" : {
+              "address" : {
+                "type" : "object",
+                "properties" : {
+                  "canonicalHostName" : {
+                    "type" : "string"
+                  },
+                  "hostAddress" : {
+                    "type" : "string"
+                  },
+                  "address" : {
+                    "type" : "array",
+                    "items" : {
+                      "type" : "string",
+                      "format" : "byte"
+                    }
+                  },
+                  "hostName" : {
+                    "type" : "string"
+                  },
+                  "multicastAddress" : {
+                    "type" : "boolean"
+                  },
+                  "anyLocalAddress" : {
+                    "type" : "boolean"
+                  },
+                  "loopbackAddress" : {
+                    "type" : "boolean"
+                  },
+                  "linkLocalAddress" : {
+                    "type" : "boolean"
+                  },
+                  "siteLocalAddress" : {
+                    "type" : "boolean"
+                  },
+                  "mcglobal" : {
+                    "type" : "boolean"
+                  },
+                  "mcnodeLocal" : {
+                    "type" : "boolean"
+                  },
+                  "mclinkLocal" : {
+                    "type" : "boolean"
+                  },
+                  "mcsiteLocal" : {
+                    "type" : "boolean"
+                  },
+                  "mcorgLocal" : {
+                    "type" : "boolean"
+                  }
+                }
+              },
+              "port" : {
+                "type" : "integer",
+                "format" : "int32"
+              },
+              "unresolved" : {
+                "type" : "boolean"
+              },
+              "hostName" : {
+                "type" : "string"
+              },
+              "hostString" : {
+                "type" : "string"
+              }
+            }
+          },
+          "open" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "HttpRequest" : {
+        "type" : "object",
+        "properties" : {
+          "headers" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "array",
+              "items" : {
+                "type" : "string"
+              }
+            }
+          }
+        }
+      },
+      "NamedXContentRegistry" : {
+        "type" : "object"
+      },
+      "RestRequest" : {
+        "type" : "object",
+        "properties" : {
+          "headers" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "array",
+              "items" : {
+                "type" : "string"
+              }
+            }
+          },
+          "httpRequest" : {
+            "$ref" : "#/components/schemas/HttpRequest"
+          },
+          "httpChannel" : {
+            "$ref" : "#/components/schemas/HttpChannel"
+          },
+          "contentConsumed" : {
+            "type" : "boolean"
+          },
+          "xcontentType" : {
+            "type" : "string",
+            "enum" : [ "JSON", "SMILE", "YAML", "CBOR" ]
+          },
+          "xcontentRegistry" : {
+            "$ref" : "#/components/schemas/NamedXContentRegistry"
+          }
+        }
+      },
+      "NodeClient" : {
+        "type" : "object",
+        "properties" : {
+          "localNodeId" : {
+            "type" : "string"
+          }
+        }
+      }
+    }
+  }
+}

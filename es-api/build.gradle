@@ -10,9 +10,8 @@ buildscript {
         }
     }
     dependencies {
-//        classpath group: 'org.slf4j', name: 'slf4j-api', version: '1.7.25'
-//        classpath group: 'org.slf4j', name: 'slf4j-jdk14', version: '1.6.1'
-//        classpath group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.25'
+        classpath group: 'org.slf4j', name: 'slf4j-api', version: '1.7.25'
+        classpath group: 'org.slf4j', name: 'slf4j-jdk14', version: '1.6.1'
         classpath group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.25'
         classpath "io.swagger.core.v3:swagger-gradle-plugin:2.0.9.1"
         classpath "org.apache.logging.log4j:log4j-api:2.11.1"
@@ -47,7 +46,7 @@ resolve {
     classpath =  sourceSets.main.runtimeClasspath//List.of(file("$buildDir/classes/java/main").listFiles())
     resourcePackages = ["api", "org.elasticsearch.rest.action.admin.indices"]
     resourceClasses = ["api.ClusterHealthApi", "org.elasticsearch.rest.action.admin.indices.RestCreateIndexAction"]
-    outputPath = 'test'
+    outputPath = 'api-output'
 }
 //, "org.elasticsearch.rest.action.admin.indicesRestCreateIndexAction"
 
@@ -63,4 +62,8 @@ dependencies {
     compile group: 'javax.ws.rs', name: 'javax.ws.rs-api', version: '2.0'
 
     compile project(':server')
+
+    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.25'
+    compile group: 'org.slf4j', name: 'slf4j-jdk14', version: '1.6.1'
+//    compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.25'
 }

@@ -82,6 +82,10 @@ public class JavaJodaTimeDuellingTests extends ESTestCase {
 //        assertJavaTimeParseException("2001-01-01T00:00:00.123,123Z", "strict_date_optional_time_nanos");
     }
 
+    public void testx(){
+       assertSameDate("2019-09-09T", "strict_date_optional_time");
+    }
+
     public void testTimeZoneFormatting() {
         assertSameDate("2001-01-01T00:00:00Z", "date_time_no_millis");
         // the following fail under java 8 but work under java 10, needs investigation
