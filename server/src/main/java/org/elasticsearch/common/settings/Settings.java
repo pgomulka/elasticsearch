@@ -19,6 +19,7 @@
 
 package org.elasticsearch.common.settings;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.lucene.util.SetOnce;
@@ -45,6 +46,10 @@ import org.elasticsearch.common.xcontent.XContentParserUtils;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.core.internal.io.IOUtils;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -78,10 +83,12 @@ import static org.elasticsearch.common.unit.TimeValue.parseTimeValue;
 /**
  * An immutable settings implementation.
  */
+
 public final class Settings implements ToXContentFragment {
 
     public static final Settings EMPTY = new Builder().build();
 
+    @Schema(title = "he", name = "Settings")
     /** The raw settings from the full key to raw string value. */
     private final Map<String, Object> settings;
 

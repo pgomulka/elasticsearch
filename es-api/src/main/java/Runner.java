@@ -12,10 +12,11 @@ public class Runner {
     public static void main(String[] args) throws Exception {
 //        RestCreateIndexAction rest = new RestCreateIndexAction();
         SwaggerLoader swaggerLoader  = new SwaggerLoader();
-        swaggerLoader.setResourcePackages("api,org.elasticsearch.rest.action.admin.indices");
-        swaggerLoader.setResourceClasses(/*api.ClusterHealthApi,*/"org.elasticsearch.rest.action.admin.indices.RestCreateIndexAction");
+        swaggerLoader.setResourcePackages("api,org.elasticsearch.rest.action.admin.indices,org.elasticsearch");
+//        swaggerLoader.setResourceClasses(/*api.ClusterHealthApi,*/"org.elasticsearch.rest.action.admin.indices.RestCreateIndexAction");
         swaggerLoader.setPrettyPrint(true);
         swaggerLoader.setOutputFormat("JSON");
+        swaggerLoader.setScannerClass("io.swagger.v3.jaxrs2.integration.JaxrsAnnotationScanner");
         Map<String, String> specs = swaggerLoader.resolve();
 
         String outputPath = "api-output";

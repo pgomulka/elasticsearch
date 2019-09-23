@@ -47,6 +47,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+@Path("/")
 public class RestCreateIndexAction extends BaseRestHandler {
     private static final DeprecationLogger deprecationLogger = new DeprecationLogger(
         LogManager.getLogger(RestCreateIndexAction.class));
@@ -76,7 +77,7 @@ public class RestCreateIndexAction extends BaseRestHandler {
 
         )}),
         responses = {
-            @ApiResponse(description = "The user",
+            @ApiResponse(description = "Ack",
                 content = @Content(mediaType = "application/json"/*,
                     schema = @Schema(implementation = ClusterHealthAction.class)*/)
             )})
