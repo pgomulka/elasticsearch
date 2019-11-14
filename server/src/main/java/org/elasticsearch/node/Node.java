@@ -277,6 +277,7 @@ public abstract class Node implements Closeable {
     protected Node(
             final Environment environment, Collection<Class<? extends Plugin>> classpathPlugins, boolean forbidPrivateIndexSettings) {
         logger = LogManager.getLogger(Node.class);
+        logger.info("pgomulka 6.8 he");
         final List<Closeable> resourcesToClose = new ArrayList<>(); // register everything we need to release in the case of an error
         boolean success = false;
         try {
