@@ -80,6 +80,43 @@ public class CreateIndexRequestTests extends ESTestCase {
                 () -> {request.source(createIndex, XContentType.JSON);});
         assertEquals("unknown key [FOO_SHOULD_BE_ILLEGAL_HERE] for create index", e.getMessage());
     }
+    public void testx() throws IOException {
+        CreateIndexRequest request2 = new CreateIndexRequest("bar");
+        XContentBuilder builder = XContentFactory.contentBuilder(randomFrom(XContentType.values()));
+        builder.startObject();
+        {
+            builder.startObject("properties");
+            {
+                builder.startObject("field1");
+                {
+                    builder.field("type", "text");
+                    builder.startObject("fields");
+                    {
+                        builder.startObject("raw");
+                        {
+                            builder.field("type", "keyword");
+                            builder.startObject("fields");
+                            {
+                                builder.startObject("raw2");
+                                {
+                                    builder.field("type", "keyword");
+                                }
+                                builder.endObject();
+                            }
+                            builder.endObject();
+                        }
+                        builder.endObject();
+                    }
+                    builder.endObject();
+                }
+                builder.endObject();
+            }
+            builder.endObject();
+        }
+        builder.endObject();
+        request2.mapping("type1", builder);
+
+    }
 
     public void testMappingKeyedByType() throws IOException {
         CreateIndexRequest request1 = new CreateIndexRequest("foo");

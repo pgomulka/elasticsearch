@@ -1,0 +1,17 @@
+---
+"Create index with mappings":
+
+  - do:
+      indices.create:
+        index: test_index
+        body:
+          mappings:
+            properties:
+              field:
+                type: text
+
+  - do:
+      indices.get_mapping:
+        index: test_index
+
+  - is_true: test_index.mappings

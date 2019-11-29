@@ -47,7 +47,6 @@ import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.mapper.MapperService;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
@@ -61,13 +60,12 @@ import static org.elasticsearch.common.settings.Settings.writeSettingsToStream;
 /**
  * A request to create an index. Best created with {@link org.elasticsearch.client.Requests#createIndexRequest(String)}.
  * <p>
- * The index created can optionally be created with {@link #settings(org.elasticsearch.common.settings.Settings)}.
+ * The index created can optionally be created with {@link #settings(Settings)}.
  *
- * @see org.elasticsearch.client.IndicesAdminClient#create(CreateIndexRequest)
  * @see org.elasticsearch.client.Requests#createIndexRequest(String)
  * @see CreateIndexResponse
  */
-public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> implements IndicesRequest {
+public class CreateIndexRequestV7 extends AcknowledgedRequest<CreateIndexRequestV7> implements IndicesRequest {
 
     public static final ParseField MAPPINGS = new ParseField("mappings");
     public static final ParseField SETTINGS = new ParseField("settings");
@@ -85,7 +83,7 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
 
     private ActiveShardCount waitForActiveShards = ActiveShardCount.DEFAULT;
 
-    public CreateIndexRequest(StreamInput in) throws IOException {
+    public CreateIndexRequestV7(StreamInput in) throws IOException {
         super(in);
         cause = in.readString();
         index = in.readString();
@@ -110,20 +108,20 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
         waitForActiveShards = ActiveShardCount.readFrom(in);
     }
 
-    public CreateIndexRequest() {
+    public CreateIndexRequestV7() {
     }
 
     /**
      * Constructs a new request to create an index with the specified name.
      */
-    public CreateIndexRequest(String index) {
+    public CreateIndexRequestV7(String index) {
         this(index, EMPTY_SETTINGS);
     }
 
     /**
      * Constructs a new request to create an index with the specified name and settings.
      */
-    public CreateIndexRequest(String index, Settings settings) {
+    public CreateIndexRequestV7(String index, Settings settings) {
         this.index = index;
         this.settings = settings;
     }
@@ -154,7 +152,7 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
         return index;
     }
 
-    public CreateIndexRequest index(String index) {
+    public CreateIndexRequestV7 index(String index) {
         this.index = index;
         return this;
     }
@@ -176,7 +174,7 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
     /**
      * The settings to create the index with.
      */
-    public CreateIndexRequest settings(Settings.Builder settings) {
+    public CreateIndexRequestV7 settings(Settings.Builder settings) {
         this.settings = settings.build();
         return this;
     }
@@ -184,7 +182,7 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
     /**
      * The settings to create the index with.
      */
-    public CreateIndexRequest settings(Settings settings) {
+    public CreateIndexRequestV7 settings(Settings settings) {
         this.settings = settings;
         return this;
     }
@@ -192,7 +190,7 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
     /**
      * The settings to create the index with (either json or yaml format)
      */
-    public CreateIndexRequest settings(String source, XContentType xContentType) {
+    public CreateIndexRequestV7 settings(String source, XContentType xContentType) {
         this.settings = Settings.builder().loadFromSource(source, xContentType).build();
         return this;
     }
@@ -200,7 +198,7 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
     /**
      * Allows to set the settings using a json builder.
      */
-    public CreateIndexRequest settings(XContentBuilder builder) {
+    public CreateIndexRequestV7 settings(XContentBuilder builder) {
         settings(Strings.toString(builder), builder.contentType());
         return this;
     }
@@ -208,7 +206,7 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
     /**
      * The settings to create the index with (either json/yaml/properties format)
      */
-    public CreateIndexRequest settings(Map<String, ?> source) {
+    public CreateIndexRequestV7 settings(Map<String, ?> source) {
         try {
             XContentBuilder builder = XContentFactory.contentBuilder(XContentType.JSON);
             builder.map(source);
@@ -227,7 +225,7 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
      *     .mapping("{\"_doc\":{\"properties\": ... }}")
      * </pre>
      */
-    public CreateIndexRequest mapping(String mapping) {
+    public CreateIndexRequestV7 mapping(String mapping) {
         this.mappings = mapping;
         return this;
     }
@@ -239,7 +237,7 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
      * @param source The mapping source
      * @param xContentType The content type of the source
      */
-    public CreateIndexRequest mapping(String type, String source, XContentType xContentType) {
+    public CreateIndexRequestV7 mapping(String type, String source, XContentType xContentType) {
         return mapping(type, new BytesArray(source), xContentType);
     }
 
@@ -250,7 +248,7 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
      * @param source The mapping source
      * @param xContentType the content type of the mapping source
      */
-    private CreateIndexRequest mapping(String type, BytesReference source, XContentType xContentType) {
+    private CreateIndexRequestV7 mapping(String type, BytesReference source, XContentType xContentType) {
         Objects.requireNonNull(xContentType);
         Map<String, Object> mappingAsMap = XContentHelper.convertToMap(source, false, xContentType).v2();
         return mapping(type, mappingAsMap);
@@ -259,7 +257,7 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
     /**
      * The cause for this index creation.
      */
-    public CreateIndexRequest cause(String cause) {
+    public CreateIndexRequestV7 cause(String cause) {
         this.cause = cause;
         return this;
     }
@@ -270,7 +268,7 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
      * @param type   The mapping type
      * @param source The mapping source
      */
-    public CreateIndexRequest mapping(String type, XContentBuilder source) {
+    public CreateIndexRequestV7 mapping(String type, XContentBuilder source) {
         return mapping(type, BytesReference.bytes(source), source.contentType());
     }
 
@@ -280,7 +278,7 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
      * @param type   The mapping type
      * @param source The mapping source
      */
-    public CreateIndexRequest mapping(String type, Map<String, ?> source) {
+    public CreateIndexRequestV7 mapping(String type, Map<String, ?> source) {
         // wrap it in a type map if its not
         if (source.size() != 1 || !source.containsKey(type)) {
             source = Map.of(MapperService.SINGLE_MAPPING_NAME, source);
@@ -291,7 +289,6 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
         }
         try {
             XContentBuilder builder = XContentFactory.jsonBuilder();
-            source = fix((Map<String, Object>) source);
             builder.map(source);
             return mapping(Strings.toString(builder));
         } catch (IOException e) {
@@ -299,44 +296,11 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
         }
     }
 
-    public Map<String, ?> fix(Map<String, Object> source) {
-        Map<String,Object> destination = new HashMap<>();
-        traverse(source,destination,null,false);
-        System.out.println(destination);
-        return destination;
-    }
-
-    private void traverse(Map<String, Object> current, Map<String, Object> destination, Map<String, Object> parent, boolean isWithinMultifield) {
-        for (Map.Entry<String, Object> entry : current.entrySet()) {
-            if (!(entry.getValue() instanceof Map)) {
-                destination.put(entry.getKey(), entry.getValue());
-            } else {
-                if(entry.getKey().equals("fields") ){
-                    if(isWithinMultifield){
-                        HashMap<String, Object> destination1 = new HashMap<>();
-                        traverse((Map<String, Object>) entry.getValue(), destination1, parent, true);
-                        parent.put(entry.getKey(),destination1);
-                    }else{
-                        HashMap<String, Object> destination1 = new HashMap<>();
-                        traverse((Map<String, Object>) entry.getValue(), destination1, destination, true);
-                        destination.put(entry.getKey(), destination1);
-
-                    }
-                }else {
-                    HashMap<String, Object> destination1 = new HashMap<>();
-                    traverse((Map<String, Object>) entry.getValue(), destination1, destination, isWithinMultifield);
-                    destination.put(entry.getKey(), destination1);
-                }
-            }
-        }
-
-    }
-
     /**
      * A specialized simplified mapping source method, takes the form of simple properties definition:
      * ("field1", "type=string,store=true").
      */
-    public CreateIndexRequest mapping(String type, Object... source) {
+    public CreateIndexRequestV7 mapping(String type, Object... source) {
         mapping(type, PutMappingRequest.buildFromSimplifiedDef(type, source));
         return this;
     }
@@ -344,7 +308,7 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
     /**
      * Sets the aliases that will be associated with the index when it gets created
      */
-    public CreateIndexRequest aliases(Map<String, ?> source) {
+    public CreateIndexRequestV7 aliases(Map<String, ?> source) {
         try {
             XContentBuilder builder = XContentFactory.jsonBuilder();
             builder.map(source);
@@ -357,21 +321,21 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
     /**
      * Sets the aliases that will be associated with the index when it gets created
      */
-    public CreateIndexRequest aliases(XContentBuilder source) {
+    public CreateIndexRequestV7 aliases(XContentBuilder source) {
         return aliases(BytesReference.bytes(source));
     }
 
     /**
      * Sets the aliases that will be associated with the index when it gets created
      */
-    public CreateIndexRequest aliases(String source) {
+    public CreateIndexRequestV7 aliases(String source) {
         return aliases(new BytesArray(source));
     }
 
     /**
      * Sets the aliases that will be associated with the index when it gets created
      */
-    public CreateIndexRequest aliases(BytesReference source) {
+    public CreateIndexRequestV7 aliases(BytesReference source) {
         // EMPTY is safe here because we never call namedObject
         try (XContentParser parser = XContentHelper
                 .createParser(NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE, source)) {
@@ -389,7 +353,7 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
     /**
      * Adds an alias that will be associated with the index when it gets created
      */
-    public CreateIndexRequest alias(Alias alias) {
+    public CreateIndexRequestV7 alias(Alias alias) {
         this.aliases.add(alias);
         return this;
     }
@@ -397,35 +361,35 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
     /**
      * Sets the settings and mappings as a single source.
      */
-    public CreateIndexRequest source(String source, XContentType xContentType) {
+    public CreateIndexRequestV7 source(String source, XContentType xContentType) {
         return source(new BytesArray(source), xContentType);
     }
 
     /**
      * Sets the settings and mappings as a single source.
      */
-    public CreateIndexRequest source(XContentBuilder source) {
+    public CreateIndexRequestV7 source(XContentBuilder source) {
         return source(BytesReference.bytes(source), source.contentType());
     }
 
     /**
      * Sets the settings and mappings as a single source.
      */
-    public CreateIndexRequest source(byte[] source, XContentType xContentType) {
+    public CreateIndexRequestV7 source(byte[] source, XContentType xContentType) {
         return source(source, 0, source.length, xContentType);
     }
 
     /**
      * Sets the settings and mappings as a single source.
      */
-    public CreateIndexRequest source(byte[] source, int offset, int length, XContentType xContentType) {
+    public CreateIndexRequestV7 source(byte[] source, int offset, int length, XContentType xContentType) {
         return source(new BytesArray(source, offset, length), xContentType);
     }
 
     /**
      * Sets the settings and mappings as a single source.
      */
-    public CreateIndexRequest source(BytesReference source, XContentType xContentType) {
+    public CreateIndexRequestV7 source(BytesReference source, XContentType xContentType) {
         Objects.requireNonNull(xContentType);
         source(XContentHelper.convertToMap(source, false, xContentType).v2(), LoggingDeprecationHandler.INSTANCE);
         return this;
@@ -435,7 +399,7 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
      * Sets the settings and mappings as a single source.
      */
     @SuppressWarnings("unchecked")
-    public CreateIndexRequest source(Map<String, ?> source, DeprecationHandler deprecationHandler) {
+    public CreateIndexRequestV7 source(Map<String, ?> source, DeprecationHandler deprecationHandler) {
         for (Map.Entry<String, ?> entry : source.entrySet()) {
             String name = entry.getKey();
             if (SETTINGS.match(name, deprecationHandler)) {
@@ -483,7 +447,7 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
      *
      * @param waitForActiveShards number of active shard copies to wait on
      */
-    public CreateIndexRequest waitForActiveShards(ActiveShardCount waitForActiveShards) {
+    public CreateIndexRequestV7 waitForActiveShards(ActiveShardCount waitForActiveShards) {
         this.waitForActiveShards = waitForActiveShards;
         return this;
     }
@@ -493,7 +457,7 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
      * shard count is passed in, instead of having to first call {@link ActiveShardCount#from(int)}
      * to get the ActiveShardCount.
      */
-    public CreateIndexRequest waitForActiveShards(final int waitForActiveShards) {
+    public CreateIndexRequestV7 waitForActiveShards(final int waitForActiveShards) {
         return waitForActiveShards(ActiveShardCount.from(waitForActiveShards));
     }
 
