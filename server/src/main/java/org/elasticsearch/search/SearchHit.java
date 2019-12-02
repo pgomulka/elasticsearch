@@ -80,6 +80,9 @@ import static org.elasticsearch.common.xcontent.XContentParserUtils.parseFieldsV
  */
 public final class SearchHit implements Writeable, ToXContentObject, Iterable<DocumentField> {
 
+    private static final String TYPE_FIELD_NAME = "_type";
+    private static final Text SINGLE_MAPPING_TYPE = new Text(MapperService.SINGLE_MAPPING_NAME);
+
     private final transient int docId;
 
     private static final float DEFAULT_SCORE = Float.NaN;
@@ -209,8 +212,6 @@ public final class SearchHit implements Writeable, ToXContentObject, Iterable<Do
             innerHits = null;
         }
     }
-
-    private static final Text SINGLE_MAPPING_TYPE = new Text(MapperService.SINGLE_MAPPING_NAME);
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
@@ -551,8 +552,15 @@ public final class SearchHit implements Writeable, ToXContentObject, Iterable<Do
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject();
         toInnerXContent(builder, params);
+        v7Compatibility(builder,params);
         builder.endObject();
         return builder;
+    }
+
+    private void v7Compatibility(XContentBuilder builder, Params params) throws IOException {
+        if (params.param("compatibility").equals("asdf")) {
+            builder.field(TYPE_FIELD_NAME, SINGLE_MAPPING_TYPE);
+        }
     }
 
     // public because we render hit as part of completion suggestion option
@@ -581,6 +589,7 @@ public final class SearchHit implements Writeable, ToXContentObject, Iterable<Do
         if (index != null) {
             builder.field(Fields._INDEX, RemoteClusterAware.buildRemoteIndexName(clusterAlias, index));
         }
+
         if (id != null) {
             builder.field(Fields._ID, id);
         }

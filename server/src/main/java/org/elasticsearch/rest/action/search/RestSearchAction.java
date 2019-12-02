@@ -98,7 +98,8 @@ public class RestSearchAction extends BaseRestHandler {
         IntConsumer setSize = size -> searchRequest.source().size(size);
         request.withContentOrSourceParamParserOrNull(parser ->
             parseSearchRequest(searchRequest, request, parser, setSize));
-
+        request.params().put("compatibility","asdf");
+        request.param("compatibility");
         return channel -> {
             RestStatusToXContentListener<SearchResponse> listener = new RestStatusToXContentListener<>(channel);
             HttpChannelTaskHandler.INSTANCE.execute(client, request.getHttpChannel(), searchRequest, SearchAction.INSTANCE, listener);
