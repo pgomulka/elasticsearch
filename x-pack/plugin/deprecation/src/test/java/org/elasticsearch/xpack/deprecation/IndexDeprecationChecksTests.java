@@ -506,7 +506,7 @@ public class IndexDeprecationChecksTests extends ESTestCase {
             "\"properties\" : {\n" +
             "   \"date_time_field_Y\" : {\n" +
             "       \"type\" : \"date\",\n" +
-            "       \"format\" : \"MM-YYYY\"\n" +
+            "       \"format\" : \"YYYY-mm\"\n" +
             "       },\n" +
             "   \"date_time_field_C\" : {\n" +
             "       \"type\" : \"date\",\n" +
