@@ -28,7 +28,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -128,7 +127,7 @@ public class JodaDeprecationPatterns {
     }
 
     private static String replaceInPattern(String from, String to, String text) {
-        LinkedHashMap<Integer, Integer> regions = regions(from, text);
+        LinkedHashMap<Integer, Integer> regions = regions(text);
         return replaceInRegions(text, from, to, regions);
     }
 
@@ -155,11 +154,8 @@ public class JodaDeprecationPatterns {
         return result.toString();
     }
 
-    private static LinkedHashMap<Integer, Integer> regions(String c, String text) {
-        LinkedHashMap<Integer, Integer> map = new LinkedHashMap<>();
+    private static LinkedHashMap<Integer, Integer> regions(String text) {
         List<Integer> l = new ArrayList<>();
-        boolean started = false;
-        boolean ended = false;
         for (int i = 0; i < text.length(); i++) {
             if (text.charAt(i) == '\'') {
                 l.add(i);
@@ -168,7 +164,7 @@ public class JodaDeprecationPatterns {
         if (l.size() % 2 != 0)
             l.add(text.length());
 
-
+        LinkedHashMap<Integer, Integer> map = new LinkedHashMap<>();
         int start = 0;
         int i=0;
         while(i<l.size()){
@@ -177,24 +173,6 @@ public class JodaDeprecationPatterns {
             i+=2;
         }
         map.put(start,text.length());
-//        Pattern compile = Pattern.compile("'.*['$]");
-//        Matcher matcher = compile.matcher(text);
-//        LinkedHashMap<Integer, Integer> textRegions = new LinkedHashMap<>();
-//        while (!matcher.hitEnd()) {
-//            if(matcher.find()) {
-//                MatchResult matchResult = matcher.toMatchResult();
-//
-//                textRegions.put(matchResult.start(), matchResult.end());
-//            }
-//        }
-//
-//        LinkedHashMap<Integer, Integer> map = new LinkedHashMap<>();
-//        int start = 0;
-//        for (Map.Entry<Integer, Integer> textRegion : textRegions.entrySet()) {
-//            map.put(start, textRegion.getKey());
-//            start = textRegion.getValue();
-//        }
-//        map.put(start, text.length());
         return map;
     }
 }
