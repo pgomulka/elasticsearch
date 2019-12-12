@@ -19,10 +19,14 @@
 
 package org.elasticsearch.common.joda;
 
+import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
+import org.elasticsearch.cluster.metadata.MappingMetaData;
+import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.time.DateFormatter;
 import org.elasticsearch.common.time.FormatNames;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -174,5 +178,15 @@ public class JodaDeprecationPatterns {
         }
         map.put(start,text.length());
         return map;
+    }
+
+    public static Object convert(ImmutableOpenMap<String,? extends ImmutableOpenMap<String, MappingMetaData>> mappings) {
+        Iterator<? extends ObjectObjectCursor<String, ? extends ImmutableOpenMap<String, MappingMetaData>>> iterator = mappings.iterator();
+        while(iterator.hasNext()){
+            ObjectObjectCursor<String, ? extends ImmutableOpenMap<String, MappingMetaData>> next = iterator.next();
+
+        }
+
+        return null;
     }
 }

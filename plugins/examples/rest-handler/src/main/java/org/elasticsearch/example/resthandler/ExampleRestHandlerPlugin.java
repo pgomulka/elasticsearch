@@ -46,6 +46,7 @@ public class ExampleRestHandlerPlugin extends Plugin implements ActionPlugin {
                                              final IndexNameExpressionResolver indexNameExpressionResolver,
                                              final Supplier<DiscoveryNodes> nodesInCluster) {
 
-        return singletonList(new ExampleCatAction(settings, restController));
+//        return singletonList(new ExampleCatAction(settings, restController));
+        return singletonList(new UpdateReindexAction(settings, restController));
     }
 }

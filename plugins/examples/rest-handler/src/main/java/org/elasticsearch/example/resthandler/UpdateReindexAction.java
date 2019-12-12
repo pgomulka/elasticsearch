@@ -18,9 +18,19 @@
  */
 package org.elasticsearch.example.resthandler;
 
+import org.elasticsearch.action.ActionFuture;
+import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.admin.indices.create.CreateIndexAction;
+import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
+import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
+import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsAction;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsRequestBuilder;
+import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
+import org.elasticsearch.action.admin.indices.mapping.put.PutMappingAction;
+import org.elasticsearch.action.admin.indices.mapping.put.PutMappingRequestBuilder;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.Table;
+import org.elasticsearch.common.joda.JodaDeprecationPatterns;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestController;
@@ -34,9 +44,9 @@ import static org.elasticsearch.rest.RestRequest.Method.POST;
 /**
  * Example of adding a cat action with a plugin.
  */
-public class ExampleCatAction extends AbstractCatAction {
+public class UpdateReindexAction extends AbstractCatAction {
 
-    ExampleCatAction(final Settings settings, final RestController controller) {
+    UpdateReindexAction(final Settings settings, final RestController controller) {
         super(settings);
         controller.registerHandler(GET, "/_cat/example", this);
         controller.registerHandler(POST, "/_cat/example", this);
@@ -51,7 +61,27 @@ public class ExampleCatAction extends AbstractCatAction {
     protected RestChannelConsumer doCatRequest(final RestRequest request, final NodeClient client) {
         final String message = request.param("message", "Hello from Cat Example action");
 
-        GetMappingsRequestBuilder
+        GetMappingsRequestBuilder getMappingsRequestBuilder = GetMappingsAction.INSTANCE.newRequestBuilder(client);
+        String indexName = request.param("index");
+        getMappingsRequestBuilder.addIndices(indexName);
+        ActionFuture<GetMappingsResponse> execute = getMappingsRequestBuilder.execute();
+        GetMappingsResponse getMappingsResponse = execute.actionGet();
+
+
+        String newIndexName = indexName + "_2";
+        CreateIndexRequestBuilder createIndexRequestBuilder = CreateIndexAction.INSTANCE.newRequestBuilder(client);
+        createIndexRequestBuilder.setIndex(newIndexName);
+
+        ActionFuture<CreateIndexResponse> execute1 = createIndexRequestBuilder.execute();
+        CreateIndexResponse createIndexResponse = execute1.actionGet();
+
+        PutMappingRequestBuilder putMappingRequestBuilder = PutMappingAction.INSTANCE.newRequestBuilder(client);
+        putMappingRequestBuilder.setIndices(newIndexName);
+        putMappingRequestBuilder.setSource(JodaDeprecationPatterns.convert(getMappingsResponse.getMappings()));
+//        PutMappingRequestBuilder putMappingRequestBuilder = PutMappingAction.INSTANCE.newRequestBuilder(client);
+//        putMappingRequestBuilder.setIndices(newIndexName);
+//
+
         Table table = getTableWithHeader(request);
         table.startRow();
         table.addCell(message);
