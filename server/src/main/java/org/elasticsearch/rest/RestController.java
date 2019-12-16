@@ -155,6 +155,30 @@ public class RestController implements HttpServerTransport.Dispatcher {
             (mHandlers, newMHandler) -> mHandlers.addMethods(maybeWrappedHandler, method));
     }
 
+    UnaryOperator<RestHandler> compatible = handler ->
+        new RestHandler() {
+            @Override
+            public void handleRequest(RestRequest request, RestChannel channel, NodeClient client) throws Exception {
+                handler.handleRequest(request,channel,client);
+            }
+
+            @Override
+            public boolean isCompatible() {
+                return true;
+            }
+        };
+
+
+    public void registerCompatibleHandler(RestRequest.Method method, String path, RestHandler handler) {
+        if (handler instanceof BaseRestHandler) {
+            usageService.addRestHandler((BaseRestHandler) handler);
+        }
+        final RestHandler maybeWrappedHandler = compatible.apply(handlerWrapper.apply(handler));
+        handlers.insertOrUpdate(path, new MethodHandlers(path, maybeWrappedHandler, method),
+            (mHandlers, newMHandler) -> mHandlers.addMethods(maybeWrappedHandler, method));
+
+    }
+
     @Override
     public void dispatchRequest(RestRequest request, RestChannel channel, ThreadContext threadContext) {
         if (request.rawPath().equals("/favicon.ico")) {
@@ -304,7 +328,11 @@ public class RestController implements HttpServerTransport.Dispatcher {
                       return;
                   }
                 } else {
-                    dispatchRequest(request, channel, handler);
+                    if(handler.isCompatible() == false || "7".equals(request.header("COMPATIBLE"))){
+                        dispatchRequest(request, channel, handler);
+                    } else {
+                        handleCompatibleNotAllowed(channel);
+                    }
                     return;
                 }
             }
@@ -314,6 +342,13 @@ public class RestController implements HttpServerTransport.Dispatcher {
         }
         // If request has not been handled, fallback to a bad request error.
         handleBadRequest(uri, requestMethod, channel);
+    }
+
+    private void handleCompatibleNotAllowed(RestChannel channel) throws IOException {
+        String msg = "compatible api not allowed";
+        BytesRestResponse bytesRestResponse = BytesRestResponse.createSimpleErrorResponse(channel, METHOD_NOT_ALLOWED, msg);
+
+        channel.sendResponse(bytesRestResponse);
     }
 
     Iterator<MethodHandlers> getAllHandlers(@Nullable Map<String, String> requestParamsRef, String rawPath) {
@@ -439,6 +474,8 @@ public class RestController implements HttpServerTransport.Dispatcher {
             handleUnsupportedHttpMethod(uri, null, channel, Set.of(RestRequest.Method.GET), e);
         }
     }
+
+
 
     private static final class ResourceHandlingHttpChannel implements RestChannel {
         private final RestChannel delegate;

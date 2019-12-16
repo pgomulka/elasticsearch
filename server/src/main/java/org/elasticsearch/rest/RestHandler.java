@@ -59,4 +59,8 @@ public interface RestHandler {
     default boolean allowsUnsafeBuffers() {
         return false;
     }
+
+    default boolean isCompatible(){
+        return false;
+    }
 }
