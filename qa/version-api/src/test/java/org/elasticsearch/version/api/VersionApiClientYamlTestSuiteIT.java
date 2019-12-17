@@ -25,20 +25,14 @@ import java.util.stream.Stream;
 // ./gradlew :qa:version-api:integTestRunner  -Dtests.timestamp=$(date +%S) --info
 // ./gradlew ':qa:version-api:integTestRunner' --tests "org.elasticsearch.version.api.VersionApiClientYamlTestSuiteIT.test {yaml=ingest/80_foreach/Test foreach Processor}"
 // ./gradlew ':qa:version-api:integTestRunner' -Dtests.rest.suite='get/10_basic,index/10_with_id' -Dtests.timestamp=$(date +%S) --info
+// ./gradlew ':qa:version-api:integTestRunner' -Dtests.rest.suite='mapper_size' -Dtests.timestamp=$(date +%S) --info
+// ./gradlew ':qa:version-api:integTestRunner' --tests "org.elasticsearch.version.api.VersionApiClientYamlTestSuiteIT.test {yaml=/10_basic/Test percolator basics via rest}" -Dtests.timestamp=$(date +%S) --info
 public class VersionApiClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
 
 
     //TODO: remove this ... we shouldn't need this..just here while building this out.
     static final Set<String> BLACKLISTED = Set.of(
         "repository-s3" //TODO: figure out why this breaks running a single tests .. i assume some assert or exception is thrown from here.
-    );
-
-    static boolean USE_WHITE_LIST = false;
-    //TODO: remove this ... we shouldn't need this..just here while building this out.
-    static final Set<String> WHITELISTED = Set.of(
-        "rest-api-spec",
-        "ingest-common",
-        "ingest-geoip"
     );
 
     //These are test names from the the last minor
@@ -52,8 +46,6 @@ public class VersionApiClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
 
     @ParametersFactory
     public static Iterable<Object[]> parameters() throws Exception {
-        //TODO: support a warning if indivisual tests are requested.
-        //TODO: support a JVM arg to allow picking just a single group, e.g. which index/10_basic ?
 
         List<Object[]> tests = new ArrayList<>();
         String testRoot = System.getProperty("versionApiTestRoot");
@@ -71,8 +63,7 @@ public class VersionApiClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
 
     private static void addWithChildren(Path parent, List<Object[]> tests) throws Exception {
         for (File f : Objects.requireNonNull(parent.toFile().listFiles())) {
-            Path pathToResources = Paths.get("src", "test", "resources", "rest-api-spec", "test");
-            Path root = parent.resolve(Paths.get(f.getName()).resolve(pathToResources));
+            Path root = parent.resolve(Paths.get(f.getName(), "src", "test", "resources", "rest-api-spec", "test"));
             add(root, tests);
         }
     }
@@ -80,18 +71,17 @@ public class VersionApiClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
     private static void add(Path root, List<Object[]> tests) throws Exception {
         if (BLACKLISTED.stream().anyMatch(p -> root.toString().contains(p))) {
             System.out.println("%%%%%%%%%%%%%%%%%% Skipping due to blacklist " + root.toString());
-        } else if (USE_WHITE_LIST && WHITELISTED.stream().anyMatch(p -> root.toString().contains(p)) || USE_WHITE_LIST == false) {
-            System.out.println("************* Finding tests from: " + root);
-            Iterable<Object[]> foundTests = ESClientYamlSuiteTestCase.createParameters(ExecutableSection.XCONTENT_REGISTRY, root, false);
-            foundTests.forEach(objectArray -> {
-                for (Object o : objectArray) {
-                    System.out.println("** -->" + o);
-                }
-            });
-            foundTests.forEach(tests::add);
+            return;
         }
+        System.out.println("************* Finding tests from: " + root);
+        Iterable<Object[]> foundTests = ESClientYamlSuiteTestCase.createParameters(ExecutableSection.XCONTENT_REGISTRY, root, false);
+        foundTests.forEach(objectArray -> {
+            for (Object o : objectArray) {
+                System.out.println("** -->" + o);
+            }
+        });
+        foundTests.forEach(tests::add);
     }
-
 
     @Override
     protected ClientYamlTestClient initClientYamlTestClient(ClientYamlSuiteRestSpec restSpec, RestClient restClient, List<HttpHost> hosts, Version esVersion, Version masterVersion) {
