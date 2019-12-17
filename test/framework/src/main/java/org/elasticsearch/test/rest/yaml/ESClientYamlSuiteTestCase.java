@@ -201,7 +201,7 @@ public abstract class ESClientYamlSuiteTestCase extends ESRestTestCase {
      * Create parameters for this parameterized test.
      */
     public static Iterable<Object[]> createParameters(NamedXContentRegistry executeableSectionRegistry, Path root, boolean requireRootToExist) throws Exception {
-        String[] requestedTests = resolvePathsProperty(REST_TESTS_SUITE, ""); // default to all tests under the test root
+        String[] requestedTests = resolvePathsProperty(REST_TESTS_SUITE, ""); // default to all tests
         Map<String, Set<Path>> yamlSuites = loadSuites(root, requireRootToExist, requestedTests);
         List<ClientYamlTestSuite> suites = new ArrayList<>();
         IllegalArgumentException validationException = null;
@@ -261,9 +261,7 @@ public abstract class ESClientYamlSuiteTestCase extends ESRestTestCase {
                 });
             } else {
                 path = root.resolve(strPath + ".yml");
-                if(requireFileToExist) {
-                    assert Files.exists(path); //kills the test
-                }
+                assert !requireFileToExist || Files.exists(path); //kills the test
                 if(Files.exists(path)) {
                     addSuite(root, path, files);
                 }

@@ -24,6 +24,7 @@ import java.util.stream.Stream;
 
 // ./gradlew :qa:version-api:integTestRunner  -Dtests.timestamp=$(date +%S) --info
 // ./gradlew ':qa:version-api:integTestRunner' --tests "org.elasticsearch.version.api.VersionApiClientYamlTestSuiteIT.test {yaml=ingest/80_foreach/Test foreach Processor}"
+// ./gradlew ':qa:version-api:integTestRunner' -Dtests.rest.suite='get/10_basic,index/10_with_id' -Dtests.timestamp=$(date +%S) --info
 public class VersionApiClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
 
 
@@ -32,7 +33,7 @@ public class VersionApiClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
         "repository-s3" //TODO: figure out why this breaks running a single tests .. i assume some assert or exception is thrown from here.
     );
 
-    static boolean USE_WHITE_LIST = true;
+    static boolean USE_WHITE_LIST = false;
     //TODO: remove this ... we shouldn't need this..just here while building this out.
     static final Set<String> WHITELISTED = Set.of(
         "rest-api-spec",
@@ -114,6 +115,10 @@ public class VersionApiClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
         }
 
         //TODO: support REST tests defined in THIS project too !
+
+        if(tests.isEmpty()){
+            fail("No test found to run !");
+        }
 
         return tests;
     }
