@@ -56,71 +56,40 @@ public class VersionApiClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
         //TODO: support a JVM arg to allow picking just a single group, e.g. which index/10_basic ?
 
         List<Object[]> tests = new ArrayList<>();
-        //TODO: DRY THIS .. the first one uses a slightly different path , the second two are the same
-        Path root1 = Paths.get(System.getProperty("versionApiTestRoot"), "rest-api-spec", "src", "main", "resources", "rest-api-spec", "test");
+        String testRoot = System.getProperty("versionApiTestRoot");
 
-        if (BLACKLISTED.stream().anyMatch(p -> root1.toString().contains(p))) {
-            System.out.println("%%%%%%%%%%%%%%%%%% Skipping due to blacklist " + root1.toString());
+        add(Paths.get(testRoot, "rest-api-spec", "src", "main", "resources", "rest-api-spec", "test"), tests);
+        addWithChildren(Paths.get(testRoot, "modules"), tests);
+        addWithChildren(Paths.get(testRoot, "plugins"), tests);
 
-        } else if (USE_WHITE_LIST && WHITELISTED.stream().anyMatch(p -> root1.toString().contains(p)) || USE_WHITE_LIST == false) {
-            System.out.println("************* Finding tests from: " + root1);
-            Iterable<Object[]> foundTests = ESClientYamlSuiteTestCase.createParameters(ExecutableSection.XCONTENT_REGISTRY, root1, false);
+        //TODO: support REST tests defined in THIS project too !
+        if (tests.isEmpty()) {
+            fail("No test found to run !");
+        }
+        return tests;
+    }
 
+    private static void addWithChildren(Path parent, List<Object[]> tests) throws Exception {
+        for (File f : Objects.requireNonNull(parent.toFile().listFiles())) {
+            Path pathToResources = Paths.get("src", "test", "resources", "rest-api-spec", "test");
+            Path root = parent.resolve(Paths.get(f.getName()).resolve(pathToResources));
+            add(root, tests);
+        }
+    }
+
+    private static void add(Path root, List<Object[]> tests) throws Exception {
+        if (BLACKLISTED.stream().anyMatch(p -> root.toString().contains(p))) {
+            System.out.println("%%%%%%%%%%%%%%%%%% Skipping due to blacklist " + root.toString());
+        } else if (USE_WHITE_LIST && WHITELISTED.stream().anyMatch(p -> root.toString().contains(p)) || USE_WHITE_LIST == false) {
+            System.out.println("************* Finding tests from: " + root);
+            Iterable<Object[]> foundTests = ESClientYamlSuiteTestCase.createParameters(ExecutableSection.XCONTENT_REGISTRY, root, false);
             foundTests.forEach(objectArray -> {
                 for (Object o : objectArray) {
-                    System.out.println("** --> " + o);
+                    System.out.println("** -->" + o);
                 }
             });
             foundTests.forEach(tests::add);
         }
-
-        Path groupRoot = Paths.get(System.getProperty("versionApiTestRoot"), "modules");
-        for (File f : Objects.requireNonNull(groupRoot.toFile().listFiles())) {
-            Path pathToResources = Paths.get("src", "test", "resources", "rest-api-spec", "test");
-            Path root = groupRoot.resolve(Paths.get(f.getName()).resolve(pathToResources));
-            if (BLACKLISTED.stream().anyMatch(p -> root.toString().contains(p))) {
-                System.out.println("%%%%%%%%%%%%%%%%%% Skipping due to blacklist " + root.toString());
-                continue;
-            } else if (USE_WHITE_LIST && WHITELISTED.stream().anyMatch(p -> root.toString().contains(p)) || USE_WHITE_LIST == false) {
-                System.out.println("************* Finding tests from: " + root);
-
-                Iterable<Object[]> foundTests = ESClientYamlSuiteTestCase.createParameters(ExecutableSection.XCONTENT_REGISTRY, root, false);
-                foundTests.forEach(objectArray -> {
-                    for (Object o : objectArray) {
-                        System.out.println("** -->" + o);
-                    }
-                });
-                foundTests.forEach(tests::add);
-            }
-        }
-
-        groupRoot = Paths.get(System.getProperty("versionApiTestRoot"), "plugins");
-        for (File f : Objects.requireNonNull(groupRoot.toFile().listFiles())) {
-            Path pathToResources = Paths.get("src", "test", "resources", "rest-api-spec", "test");
-            Path root = groupRoot.resolve(Paths.get(f.getName()).resolve(pathToResources));
-            if (BLACKLISTED.stream().anyMatch(p -> root.toString().contains(p))) {
-                System.out.println("%%%%%%%%%%%%%%%%%% Skipping due to blacklist " + root.toString());
-                continue;
-            } else if (USE_WHITE_LIST && WHITELISTED.stream().anyMatch(p -> root.toString().contains(p)) || USE_WHITE_LIST == false) {
-
-                System.out.println("************* Finding tests from: " + root);
-                Iterable<Object[]> foundTests = ESClientYamlSuiteTestCase.createParameters(ExecutableSection.XCONTENT_REGISTRY, root, false);
-                foundTests.forEach(objectArray -> {
-                    for (Object o : objectArray) {
-                        System.out.println("** -->" + o);
-                    }
-                });
-                foundTests.forEach(tests::add);
-            }
-        }
-
-        //TODO: support REST tests defined in THIS project too !
-
-        if(tests.isEmpty()){
-            fail("No test found to run !");
-        }
-
-        return tests;
     }
 
 
