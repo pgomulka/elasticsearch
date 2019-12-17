@@ -192,17 +192,17 @@ public abstract class ESClientYamlSuiteTestCase extends ESRestTestCase {
      * defined in {@link ExecutableSection}.
      */
     public static Iterable<Object[]> createParameters() throws Exception {
-        return createParameters(ExecutableSection.XCONTENT_REGISTRY, PathUtils.get(ESClientYamlSuiteTestCase.class.getResource(TESTS_PATH).toURI()));
+        return createParameters(ExecutableSection.XCONTENT_REGISTRY, PathUtils.get(ESClientYamlSuiteTestCase.class.getResource(TESTS_PATH).toURI()), true);
     }
     public static Iterable<Object[]> createParameters(NamedXContentRegistry executeableSectionRegistry) throws Exception{
-        return createParameters(executeableSectionRegistry, PathUtils.get(ESClientYamlSuiteTestCase.class.getResource(TESTS_PATH).toURI()));
+        return createParameters(executeableSectionRegistry, PathUtils.get(ESClientYamlSuiteTestCase.class.getResource(TESTS_PATH).toURI()), true);
     }
     /**
      * Create parameters for this parameterized test.
      */
-    public static Iterable<Object[]> createParameters(NamedXContentRegistry executeableSectionRegistry, Path root) throws Exception {
+    public static Iterable<Object[]> createParameters(NamedXContentRegistry executeableSectionRegistry, Path root, boolean requireRootToExist) throws Exception {
         String[] requestedTests = resolvePathsProperty(REST_TESTS_SUITE, ""); // default to all tests under the test root
-        Map<String, Set<Path>> yamlSuites = loadSuites(root, requestedTests);
+        Map<String, Set<Path>> yamlSuites = loadSuites(root, requireRootToExist, requestedTests);
         List<ClientYamlTestSuite> suites = new ArrayList<>();
         IllegalArgumentException validationException = null;
         // yaml suites are grouped by directory (effectively by api)
@@ -247,7 +247,7 @@ public abstract class ESClientYamlSuiteTestCase extends ESRestTestCase {
 
     /** Find all yaml suites that match the given list of paths from the root test path. */
     // pkg private for tests
-    static Map<String, Set<Path>> loadSuites(Path root, String... paths) throws Exception {
+    static Map<String, Set<Path>> loadSuites(Path root, boolean requireFileToExist, String... paths) throws Exception {
         Map<String, Set<Path>> files = new HashMap<>();
         for (String strPath : paths) {
             Path path = root.resolve(strPath);
@@ -261,8 +261,12 @@ public abstract class ESClientYamlSuiteTestCase extends ESRestTestCase {
                 });
             } else {
                 path = root.resolve(strPath + ".yml");
-                assert Files.exists(path);
-                addSuite(root, path, files);
+                if(requireFileToExist) {
+                    assert Files.exists(path); //kills the test
+                }
+                if(Files.exists(path)) {
+                    addSuite(root, path, files);
+                }
             }
         }
         return files;
