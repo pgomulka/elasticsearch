@@ -19,16 +19,19 @@
 
 package org.elasticsearch.rest.action.document;
 
+import org.apache.logging.log4j.LogManager;
 import org.elasticsearch.Version;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.support.ActiveShardCount;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.cluster.service.ClusterService;
+import org.elasticsearch.common.logging.DeprecationLogger;
 import org.elasticsearch.index.VersionType;
 import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
+import org.elasticsearch.rest.TypeWarnings;
 import org.elasticsearch.rest.action.RestActions;
 import org.elasticsearch.rest.action.RestStatusToXContentListener;
 
@@ -39,6 +42,7 @@ import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.rest.RestRequest.Method.PUT;
 
 public class RestIndexAction extends BaseRestHandler {
+
 
     private final ClusterService clusterService;
 
@@ -55,7 +59,11 @@ public class RestIndexAction extends BaseRestHandler {
         controller.registerHandler(POST, "/{index}/_create/{id}/", createHandler);
 
         // Deprecated typed endpoints.
-        controller.registerCompatibleHandler(POST, "/{index}/{type}", autoIdHandler); // auto id creation
+        controller.registerCompatibleHandler(POST, "/{index}/{type}", autoIdHandler, TypeWarnings::typesRemovalDeprecation); // auto id creation
+        controller.registerCompatibleHandler(PUT, "/{index}/{type}/{id}", this, TypeWarnings::typesRemovalDeprecation);
+        controller.registerCompatibleHandler(POST, "/{index}/{type}/{id}", this, TypeWarnings::typesRemovalDeprecation);
+        controller.registerCompatibleHandler(PUT, "/{index}/{type}/{id}/_create", createHandler, TypeWarnings::typesRemovalDeprecation);
+        controller.registerCompatibleHandler(POST, "/{index}/{type}/{id}/_create", createHandler, TypeWarnings::typesRemovalDeprecation);
     }
 
     @Override
@@ -108,16 +116,6 @@ public class RestIndexAction extends BaseRestHandler {
 
     @Override
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
-//        IndexRequest indexRequest;
-//        final String type = request.param("type");
-//        if (type != null && type.equals(MapperService.SINGLE_MAPPING_NAME) == false) {
-////            deprecationLogger.deprecatedAndMaybeLog("index_with_types", TYPES_DEPRECATION_MESSAGE);
-//            indexRequest = new IndexRequest(request.param("index") /*,type, *//*request.param("id")*/);
-//        } else {
-//            indexRequest = new IndexRequest(request.param("index"));
-//            indexRequest.id(request.param("id"));
-//        }
-
         IndexRequest indexRequest = new IndexRequest(request.param("index"));
         indexRequest.id(request.param("id"));
         indexRequest.routing(request.param("routing"));

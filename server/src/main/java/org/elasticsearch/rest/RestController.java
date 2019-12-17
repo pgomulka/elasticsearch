@@ -23,6 +23,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.Version;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.Strings;
@@ -42,6 +43,7 @@ import org.elasticsearch.usage.UsageService;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -100,7 +102,7 @@ public class RestController implements HttpServerTransport.Dispatcher {
                                             String deprecationMessage, DeprecationLogger logger) {
         assert (handler instanceof DeprecationRestHandler) == false;
 
-        registerHandler(method, path, new DeprecationRestHandler(handler, deprecationMessage, logger));
+        registerHandler(method, path, (RestHandler) new DeprecationRestHandler(handler, deprecationMessage, logger));
     }
 
     /**
@@ -147,6 +149,10 @@ public class RestController implements HttpServerTransport.Dispatcher {
      * @param method GET, POST, etc.
      */
     public void registerHandler(RestRequest.Method method, String path, RestHandler handler) {
+        registerHandler(method, path, handler, this.handlerWrapper);
+    }
+
+    private void registerHandler(RestRequest.Method method, String path, RestHandler handler, UnaryOperator<RestHandler> handlerWrapper) {
         if (handler instanceof BaseRestHandler) {
             usageService.addRestHandler((BaseRestHandler) handler);
         }
@@ -155,11 +161,20 @@ public class RestController implements HttpServerTransport.Dispatcher {
             (mHandlers, newMHandler) -> mHandlers.addMethods(maybeWrappedHandler, method));
     }
 
-    UnaryOperator<RestHandler> compatible = handler ->
+    UnaryOperator<RestHandler> COMPATIBLE_HANDLER_WRAPPER = handler ->
         new RestHandler() {
             @Override
             public void handleRequest(RestRequest request, RestChannel channel, NodeClient client) throws Exception {
-                handler.handleRequest(request,channel,client);
+                if (request.header(Version.COMPATIBLE_HEADER).equals(Version.COMPATIBLE_VERSION)) {
+
+                    request.params().put(Version.COMPATIBLE_HEADER, Version.COMPATIBLE_VERSION);
+                    request.param(Version.COMPATIBLE_HEADER);
+
+                    //consume type field even though not used
+                    request.param("type");
+                }
+
+                handler.handleRequest(request, channel, client);
             }
 
             @Override
@@ -168,15 +183,10 @@ public class RestController implements HttpServerTransport.Dispatcher {
             }
         };
 
+    public void registerCompatibleHandler(RestRequest.Method method, String path, RestHandler handler, Runnable ... warnings) {
+        Arrays.stream(warnings).forEach(Runnable::run);
 
-    public void registerCompatibleHandler(RestRequest.Method method, String path, RestHandler handler) {
-        if (handler instanceof BaseRestHandler) {
-            usageService.addRestHandler((BaseRestHandler) handler);
-        }
-        final RestHandler maybeWrappedHandler = compatible.apply(handlerWrapper.apply(handler));
-        handlers.insertOrUpdate(path, new MethodHandlers(path, maybeWrappedHandler, method),
-            (mHandlers, newMHandler) -> mHandlers.addMethods(maybeWrappedHandler, method));
-
+        registerHandler(method, path, handler, r -> COMPATIBLE_HANDLER_WRAPPER.apply(handlerWrapper.apply(r)));
     }
 
     @Override
