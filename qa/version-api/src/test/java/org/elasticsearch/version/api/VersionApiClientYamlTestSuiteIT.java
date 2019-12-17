@@ -35,6 +35,7 @@ public class VersionApiClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
     static boolean USE_WHITE_LIST = true;
     //TODO: remove this ... we shouldn't need this..just here while building this out.
     static final Set<String> WHITELISTED = Set.of(
+        "rest-api-spec",
         "ingest-common",
         "ingest-geoip"
     );
@@ -55,27 +56,24 @@ public class VersionApiClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
 
         List<Object[]> tests = new ArrayList<>();
         //TODO: DRY THIS .. the first one uses a slightly different path , the second two are the same
-        Path groupRoot = Paths.get(System.getProperty("versionApiTestRoot"), "rest-api-spec", "src", "main", "resources", "rest-api-spec", "test");
-        for (File f : Objects.requireNonNull(groupRoot.toFile().listFiles())) {
-            Path root = groupRoot.resolve(Paths.get(f.getName()));
-            if (BLACKLISTED.stream().anyMatch(p -> root.toString().contains(p))) {
-                System.out.println("%%%%%%%%%%%%%%%%%% Skipping due to blacklist " + root.toString());
-                continue;
-            } else if (USE_WHITE_LIST && WHITELISTED.stream().anyMatch(p -> root.toString().contains(p)) || USE_WHITE_LIST == false) {
+        Path root1 = Paths.get(System.getProperty("versionApiTestRoot"), "rest-api-spec", "src", "main", "resources", "rest-api-spec", "test");
 
-                System.out.println("************* Finding tests from: " + root);
-                Iterable<Object[]> foundTests = ESClientYamlSuiteTestCase.createParameters(ExecutableSection.XCONTENT_REGISTRY, root, false);
+        if (BLACKLISTED.stream().anyMatch(p -> root1.toString().contains(p))) {
+            System.out.println("%%%%%%%%%%%%%%%%%% Skipping due to blacklist " + root1.toString());
 
-                foundTests.forEach(objectArray -> {
-                    for (Object o : objectArray) {
-                        System.out.println("** --> " + o);
-                    }
-                });
-                foundTests.forEach(tests::add);
-            }
+        } else if (USE_WHITE_LIST && WHITELISTED.stream().anyMatch(p -> root1.toString().contains(p)) || USE_WHITE_LIST == false) {
+            System.out.println("************* Finding tests from: " + root1);
+            Iterable<Object[]> foundTests = ESClientYamlSuiteTestCase.createParameters(ExecutableSection.XCONTENT_REGISTRY, root1, false);
+
+            foundTests.forEach(objectArray -> {
+                for (Object o : objectArray) {
+                    System.out.println("** --> " + o);
+                }
+            });
+            foundTests.forEach(tests::add);
         }
 
-        groupRoot = Paths.get(System.getProperty("versionApiTestRoot"), "modules");
+        Path groupRoot = Paths.get(System.getProperty("versionApiTestRoot"), "modules");
         for (File f : Objects.requireNonNull(groupRoot.toFile().listFiles())) {
             Path pathToResources = Paths.get("src", "test", "resources", "rest-api-spec", "test");
             Path root = groupRoot.resolve(Paths.get(f.getName()).resolve(pathToResources));
