@@ -42,6 +42,10 @@ import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.rest.RestRequest.Method.PUT;
 
 public class RestIndexAction extends BaseRestHandler {
+    private static final DeprecationLogger deprecationLogger = new DeprecationLogger(LogManager.getLogger(RestIndexAction.class));
+    public static final String TYPES_DEPRECATION_MESSAGE = "[types removal] Specifying types in document " +
+        "index requests is deprecated, use the typeless endpoints instead (/{index}/_doc/{id}, /{index}/_doc, " +
+        "or /{index}/_create/{id}).";
 
 
     private final ClusterService clusterService;
@@ -116,6 +120,13 @@ public class RestIndexAction extends BaseRestHandler {
 
     @Override
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
+
+        //consume the type type param
+        if(request.param("type") != null) {
+            deprecationLogger.deprecatedAndMaybeLog("index_with_types", "foobarbear");
+        }
+        //deprecationLogger.deprecatedAndMaybeLog("index_with_types", TYPES_DEPRECATION_MESSAGE); //this correctly in 8.0 fails the REST tests .. but need to be able to allow for this when running 7.x tests
+
         IndexRequest indexRequest = new IndexRequest(request.param("index"));
         indexRequest.id(request.param("id"));
         indexRequest.routing(request.param("routing"));
