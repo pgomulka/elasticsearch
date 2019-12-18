@@ -54,9 +54,9 @@ public class RestIndexAction extends BaseRestHandler {
         this.clusterService = clusterService;
 
         AutoIdHandler autoIdHandler = new AutoIdHandler();
-        controller.registerHandler(POST, "/{index}/_doc", autoIdHandler); // auto id creation
-        controller.registerHandler(PUT, "/{index}/_doc/{id}", this);
-        controller.registerHandler(POST, "/{index}/_doc/{id}", this);
+        controller.registerCompatibleHandler(POST, "/{index}/_doc", autoIdHandler); // auto id creation
+        controller.registerCompatibleHandler(PUT, "/{index}/_doc/{id}", this);
+        controller.registerCompatibleHandler(POST, "/{index}/_doc/{id}", this);
 
         CreateHandler createHandler = new CreateHandler();
         controller.registerHandler(PUT, "/{index}/_create/{id}", createHandler);

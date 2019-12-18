@@ -166,8 +166,7 @@ public class RestController implements HttpServerTransport.Dispatcher {
             @Override
             public void handleRequest(RestRequest request, RestChannel channel, NodeClient client) throws Exception {
                 if (request.header(Version.COMPATIBLE_HEADER).equals(Version.COMPATIBLE_VERSION)) {
-
-                    request.params().put(Version.COMPATIBLE_HEADER, Version.COMPATIBLE_VERSION);
+                    request.params().put(Version.COMPATIBLE_HEADER, request.header(Version.COMPATIBLE_HEADER));
                     request.param(Version.COMPATIBLE_HEADER);
 
                     //consume type field even though not used
