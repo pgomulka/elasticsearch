@@ -160,10 +160,7 @@ public abstract class ESClientYamlSuiteTestCase extends ESRestTestCase {
         adminExecutionContext.clear();
 
         restTestExecutionContext.clear();
-        overrideDoSection();
     }
-
-    protected void overrideDoSection(){}
 
     protected ClientYamlTestClient initClientYamlTestClient(
             final ClientYamlSuiteRestSpec restSpec,
@@ -444,14 +441,5 @@ public abstract class ESClientYamlSuiteTestCase extends ESRestTestCase {
         return builder;
     }
 
-    protected final List<DoSection> getDoSectionsByParam(String paramKey) {
-        return getAllDoSections().stream()
-            .filter(doSection -> doSection.getApiCallSection().getParams().containsKey(paramKey))
-            .collect(Collectors.toList());
-    }
-
-    protected final List<DoSection> getAllDoSections(){
-        return getTestCandidate().getTestSection().getExecutableSections().stream().filter(s -> s instanceof DoSection).map(s2 -> (DoSection) s2).collect(Collectors.toList());
-    }
 
 }

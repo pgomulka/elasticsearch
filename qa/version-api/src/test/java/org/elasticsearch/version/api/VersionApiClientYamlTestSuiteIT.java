@@ -20,10 +20,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Stream;
+import java.util.stream.Collectors;
 
 // ./gradlew :qa:version-api:integTestRunner  -Dtests.timestamp=$(date +%S) --info
-// ./gradlew ':qa:version-api:integTestRunner' --tests "org.elasticsearch.version.api.VersionApiClientYamlTestSuiteIT.test {yaml=ingest/80_foreach/Test foreach Processor}"
+// ./gradlew ':qa:version-api:integTestRunner' --tests "org.elasticsearch.version.api.VersionApiClientYamlTestSuiteIT.test {yaml=ingest/80_foreach/Test foreach Processor}" -Dtests.timestamp=$(date +%S) --info
 // ./gradlew ':qa:version-api:integTestRunner' -Dtests.rest.suite='get/10_basic,index/10_with_id' -Dtests.timestamp=$(date +%S) --info
 // ./gradlew ':qa:version-api:integTestRunner' -Dtests.rest.suite='mapper_size' -Dtests.timestamp=$(date +%S) --info
 // ./gradlew ':qa:version-api:integTestRunner' --tests "org.elasticsearch.version.api.VersionApiClientYamlTestSuiteIT.test {yaml=/10_basic/Test percolator basics via rest}" -Dtests.timestamp=$(date +%S) --info
@@ -75,12 +75,21 @@ public class VersionApiClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
         }
         System.out.println("************* Finding tests from: " + root);
         Iterable<Object[]> foundTests = ESClientYamlSuiteTestCase.createParameters(ExecutableSection.XCONTENT_REGISTRY, root, false);
-        foundTests.forEach(objectArray -> {
+
+        foundTests.forEach( objectArray -> {
             for (Object o : objectArray) {
+                if(o instanceof ClientYamlTestCandidate){
+                    ClientYamlTestCandidate testCandidate = (ClientYamlTestCandidate) o;
+                    addVersionHeader(testCandidate);
+                    allowTypeWarnings(testCandidate);
+                }else{
+                    fail("Wha ?,  how can this be ! This needs to be a ClientYamlTestCandidate, not a " + o.getClass().getTypeName());
+                }
                 System.out.println("** -->" + o);
+
             }
+            tests.add(objectArray);
         });
-        foundTests.forEach(tests::add);
     }
 
     @Override
@@ -88,22 +97,28 @@ public class VersionApiClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
         return super.initClientYamlTestClient(restSpec, restClient, hosts, esVersion, masterVersion);
     }
 
-    @Override
-    public void overrideDoSection() {
-        addVersionHeader();
-        handleTypeWarnings();
-    }
-
-    private void addVersionHeader() {
+    private static void addVersionHeader(ClientYamlTestCandidate testCandidate) {
         //TODO: figure exactly what this header should be ...
-        getAllDoSections().forEach(d -> d.getApiCallSection().addHeaders(Collections.singletonMap("compatible-with", "v7")));
+        getAllDoSections(testCandidate).forEach(d -> d.getApiCallSection().addHeaders(Collections.singletonMap("compatible-with", "v7")));
     }
 
-    private void handleTypeWarnings() {
-        if (EXPECT_TYPE_WARNINGS.contains(getTestCandidate().getTestPath())) {
-            List<DoSection> doSections = getDoSectionsByParam("type");
+    private static void allowTypeWarnings(ClientYamlTestCandidate testCandidate) {
+        if (EXPECT_TYPE_WARNINGS.contains(testCandidate.getTestPath())) {
+            List<DoSection> doSections = getDoSectionsByParam(testCandidate, "type");
             doSections.forEach(d -> d.addExpectedWarningHeader("foobarbear"));
         }
     }
+
+    private static List<DoSection> getDoSectionsByParam(ClientYamlTestCandidate testCandidate, String paramKey) {
+        return getAllDoSections(testCandidate).stream()
+            .filter(doSection -> doSection.getApiCallSection().getParams().containsKey(paramKey))
+            .collect(Collectors.toList());
+    }
+
+    private static List<DoSection> getAllDoSections(ClientYamlTestCandidate testCandidate){
+        return testCandidate.getTestSection().getExecutableSections().stream().filter(s -> s instanceof DoSection).map(s2 -> (DoSection) s2).collect(Collectors.toList());
+    }
+
+
 }
 
