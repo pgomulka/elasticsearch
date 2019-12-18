@@ -121,10 +121,10 @@ public class RestIndexAction extends BaseRestHandler {
     @Override
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
 
-        //consume the type type param
-        if(request.param("type") != null) {
-            deprecationLogger.deprecatedAndMaybeLog("index_with_types", "foobarbear");
-        }
+//        //consume the type type param
+//        if(request.param("type") != null) {
+//            deprecationLogger.deprecatedAndMaybeLog("index_with_types", "foobarbear");
+//        }
         //deprecationLogger.deprecatedAndMaybeLog("index_with_types", TYPES_DEPRECATION_MESSAGE); //this correctly in 8.0 fails the REST tests .. but need to be able to allow for this when running 7.x tests
 
         IndexRequest indexRequest = new IndexRequest(request.param("index"));

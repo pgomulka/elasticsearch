@@ -49,14 +49,12 @@ public class RestGetAction extends BaseRestHandler {
         "or /{index}/_create/{id}).";
 
     public RestGetAction(final RestController controller) {
-        controller.registerHandler(GET, "/{index}/_doc/{id}", this);
-        controller.registerHandler(HEAD, "/{index}/_doc/{id}", this);
+        controller.registerCompatibleHandler(GET, "/{index}/_doc/{id}", this);
+        controller.registerCompatibleHandler(HEAD, "/{index}/_doc/{id}", this);
 
         // Deprecated typed endpoints.
-        controller.registerHandler(GET, "/{index}/{type}/{id}", this);
-        controller.registerHandler(HEAD, "/{index}/{type}/{id}", this);
-
-
+        controller.registerCompatibleHandler(GET, "/{index}/{type}/{id}", this);
+        controller.registerCompatibleHandler(HEAD, "/{index}/{type}/{id}", this);
     }
 
     @Override
@@ -69,9 +67,9 @@ public class RestGetAction extends BaseRestHandler {
         GetRequest getRequest = new GetRequest(request.param("index"), request.param("id"));
 
         //consume the type type param
-        if(request.param("type") != null) {
-            deprecationLogger.deprecatedAndMaybeLog("index_with_types", "foobarbear");
-        }
+//        if(request.param("type") != null) {
+//            deprecationLogger.deprecatedAndMaybeLog("index_with_types", "foobarbear");
+//        }
 
         getRequest.refresh(request.paramAsBoolean("refresh", getRequest.refresh()));
         getRequest.routing(request.param("routing"));

@@ -337,10 +337,10 @@ public class RestController implements HttpServerTransport.Dispatcher {
                       return;
                   }
                 } else {
-                    if(handler.isCompatible() == false || "7".equals(request.header("COMPATIBLE"))){
+                    if(handler.isCompatible() == false || Version.COMPATIBLE_VERSION.equals(request.header(Version.COMPATIBLE_HEADER))){
                         dispatchRequest(request, channel, handler);
                     } else {
-                        handleCompatibleNotAllowed(channel);
+                        handleCompatibleNotAllowed(rawPath,request.getHeaders(),channel);
                     }
                     return;
                 }
@@ -353,11 +353,20 @@ public class RestController implements HttpServerTransport.Dispatcher {
         handleBadRequest(uri, requestMethod, channel);
     }
 
-    private void handleCompatibleNotAllowed(RestChannel channel) throws IOException {
-        String msg = "compatible api not allowed";
-        BytesRestResponse bytesRestResponse = BytesRestResponse.createSimpleErrorResponse(channel, METHOD_NOT_ALLOWED, msg);
+    private void handleCompatibleNotAllowed(String rawPath, Map<String, List<String>> headers, RestChannel channel) throws IOException {
+        String msg = "compatible api can be only accessed with Compatible Header. path " + rawPath +" headers "+printMap(headers);
+        BytesRestResponse bytesRestResponse = BytesRestResponse.createSimpleErrorResponse(channel, RestStatus.NOT_FOUND, msg);
 
         channel.sendResponse(bytesRestResponse);
+    }
+
+    private String printMap(Map<String, List<String>> headers) {
+        StringBuilder s = new StringBuilder();
+        for (String key : headers.keySet()) {
+            s.append(key + " "+headers.get(key).stream().map(Object::toString).collect(Collectors.joining(", ")));
+             s.append(";");
+        }
+        return s.toString();
     }
 
     Iterator<MethodHandlers> getAllHandlers(@Nullable Map<String, String> requestParamsRef, String rawPath) {

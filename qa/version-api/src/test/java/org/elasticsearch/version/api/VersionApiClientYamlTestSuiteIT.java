@@ -132,7 +132,7 @@ public class VersionApiClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
 
     private void addVersionHeader() {
         //TODO: figure exactly what this header should be ...
-        getAllDoSections().forEach(d -> d.getApiCallSection().addHeaders(Collections.singletonMap("compatible-with", "v7")));
+        getAllDoSections().forEach(d -> d.getApiCallSection().addHeaders(Collections.singletonMap(Version.COMPATIBLE_HEADER, Version.COMPATIBLE_VERSION)));
     }
 
     private void handleTypeWarnings() {
