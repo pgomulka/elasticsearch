@@ -11,6 +11,7 @@ import org.elasticsearch.test.rest.yaml.ESClientYamlSuiteTestCase;
 import org.elasticsearch.test.rest.yaml.restspec.ClientYamlSuiteRestSpec;
 import org.elasticsearch.test.rest.yaml.section.DoSection;
 import org.elasticsearch.test.rest.yaml.section.ExecutableSection;
+import org.elasticsearch.version.api.v7compat.TypeCompat;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -33,11 +34,6 @@ public class VersionApiClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
     //TODO: remove this ... we shouldn't need this..just here while building this out.
     static final Set<String> BLACKLISTED = Set.of(
         "repository-s3" //TODO: figure out why this breaks running a single tests .. i assume some assert or exception is thrown from here.
-    );
-
-    //These are test names from the the last minor
-    static final Set<String> EXPECT_TYPE_WARNINGS = Set.of(
-        "ingest/80_foreach/Test foreach Processor"
     );
 
     public VersionApiClientYamlTestSuiteIT(@Name("yaml") ClientYamlTestCandidate testCandidate) {
@@ -81,12 +77,12 @@ public class VersionApiClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
                 if(o instanceof ClientYamlTestCandidate){
                     ClientYamlTestCandidate testCandidate = (ClientYamlTestCandidate) o;
                     addVersionHeader(testCandidate);
-                    allowTypeWarnings(testCandidate);
+                    TypeCompat.handleTypeCompatibility(testCandidate);
                 }else{
+                    //TODO: remove this ...
                     fail("Wha ?,  how can this be ! This needs to be a ClientYamlTestCandidate, not a " + o.getClass().getTypeName());
                 }
                 System.out.println("** -->" + o);
-
             }
             tests.add(objectArray);
         });
@@ -102,14 +98,7 @@ public class VersionApiClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
         getAllDoSections(testCandidate).forEach(d -> d.getApiCallSection().addHeaders(Collections.singletonMap("compatible-with", "v7")));
     }
 
-    private static void allowTypeWarnings(ClientYamlTestCandidate testCandidate) {
-        if (EXPECT_TYPE_WARNINGS.contains(testCandidate.getTestPath())) {
-            List<DoSection> doSections = getDoSectionsByParam(testCandidate, "type");
-            doSections.forEach(d -> d.addExpectedWarningHeader("foobarbear"));
-        }
-    }
-
-    private static List<DoSection> getDoSectionsByParam(ClientYamlTestCandidate testCandidate, String paramKey) {
+    public static List<DoSection> getDoSectionsByParam(ClientYamlTestCandidate testCandidate, String paramKey) {
         return getAllDoSections(testCandidate).stream()
             .filter(doSection -> doSection.getApiCallSection().getParams().containsKey(paramKey))
             .collect(Collectors.toList());
