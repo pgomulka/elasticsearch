@@ -11,6 +11,7 @@ import org.elasticsearch.test.rest.yaml.ESClientYamlSuiteTestCase;
 import org.elasticsearch.test.rest.yaml.restspec.ClientYamlSuiteRestSpec;
 import org.elasticsearch.test.rest.yaml.section.DoSection;
 import org.elasticsearch.test.rest.yaml.section.ExecutableSection;
+import org.elasticsearch.version.api.v7compat.TypeCompat;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -20,10 +21,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Stream;
+import java.util.stream.Collectors;
 
 // ./gradlew :qa:version-api:integTestRunner  -Dtests.timestamp=$(date +%S) --info
-// ./gradlew ':qa:version-api:integTestRunner' --tests "org.elasticsearch.version.api.VersionApiClientYamlTestSuiteIT.test {yaml=ingest/80_foreach/Test foreach Processor}"
+// ./gradlew ':qa:version-api:integTestRunner' --tests "org.elasticsearch.version.api.VersionApiClientYamlTestSuiteIT.test {yaml=ingest/80_foreach/Test foreach Processor}" -Dtests.timestamp=$(date +%S) --info
+// ./gradlew ':qa:version-api:integTestRunner' -Dtests.rest.suite='get/10_basic,index/10_with_id' -Dtests.timestamp=$(date +%S) --info
+// ./gradlew ':qa:version-api:integTestRunner' -Dtests.rest.suite='mapper_size' -Dtests.timestamp=$(date +%S) --info
+// ./gradlew ':qa:version-api:integTestRunner' --tests "org.elasticsearch.version.api.VersionApiClientYamlTestSuiteIT.test {yaml=/10_basic/Test percolator basics via rest}" -Dtests.timestamp=$(date +%S) --info
 public class VersionApiClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
 
 
@@ -32,114 +36,78 @@ public class VersionApiClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
         "repository-s3" //TODO: figure out why this breaks running a single tests .. i assume some assert or exception is thrown from here.
     );
 
-    static boolean USE_WHITE_LIST = true;
-    //TODO: remove this ... we shouldn't need this..just here while building this out.
-    static final Set<String> WHITELISTED = Set.of(
-        "rest-api-spec",
-        "ingest-common",
-        "ingest-geoip"
-    );
-
-    //These are test names from the the last minor
-    static final Set<String> EXPECT_TYPE_WARNINGS = Set.of(
-        "ingest/80_foreach/Test foreach Processor"
-    );
-
     public VersionApiClientYamlTestSuiteIT(@Name("yaml") ClientYamlTestCandidate testCandidate) {
         super(testCandidate);
     }
 
     @ParametersFactory
     public static Iterable<Object[]> parameters() throws Exception {
-        //TODO: support a warning if indivisual tests are requested.
-        //TODO: support a JVM arg to allow picking just a single group, e.g. which index/10_basic ?
 
         List<Object[]> tests = new ArrayList<>();
-        //TODO: DRY THIS .. the first one uses a slightly different path , the second two are the same
-        Path root1 = Paths.get(System.getProperty("versionApiTestRoot"), "rest-api-spec", "src", "main", "resources", "rest-api-spec", "test");
+        String testRoot = System.getProperty("versionApiTestRoot");
 
-        if (BLACKLISTED.stream().anyMatch(p -> root1.toString().contains(p))) {
-            System.out.println("%%%%%%%%%%%%%%%%%% Skipping due to blacklist " + root1.toString());
-
-        } else if (USE_WHITE_LIST && WHITELISTED.stream().anyMatch(p -> root1.toString().contains(p)) || USE_WHITE_LIST == false) {
-            System.out.println("************* Finding tests from: " + root1);
-            Iterable<Object[]> foundTests = ESClientYamlSuiteTestCase.createParameters(ExecutableSection.XCONTENT_REGISTRY, root1, false);
-
-            foundTests.forEach(objectArray -> {
-                for (Object o : objectArray) {
-                    System.out.println("** --> " + o);
-                }
-            });
-            foundTests.forEach(tests::add);
-        }
-
-        Path groupRoot = Paths.get(System.getProperty("versionApiTestRoot"), "modules");
-        for (File f : Objects.requireNonNull(groupRoot.toFile().listFiles())) {
-            Path pathToResources = Paths.get("src", "test", "resources", "rest-api-spec", "test");
-            Path root = groupRoot.resolve(Paths.get(f.getName()).resolve(pathToResources));
-            if (BLACKLISTED.stream().anyMatch(p -> root.toString().contains(p))) {
-                System.out.println("%%%%%%%%%%%%%%%%%% Skipping due to blacklist " + root.toString());
-                continue;
-            } else if (USE_WHITE_LIST && WHITELISTED.stream().anyMatch(p -> root.toString().contains(p)) || USE_WHITE_LIST == false) {
-                System.out.println("************* Finding tests from: " + root);
-
-                Iterable<Object[]> foundTests = ESClientYamlSuiteTestCase.createParameters(ExecutableSection.XCONTENT_REGISTRY, root, false);
-                foundTests.forEach(objectArray -> {
-                    for (Object o : objectArray) {
-                        System.out.println("** -->" + o);
-                    }
-                });
-                foundTests.forEach(tests::add);
-            }
-        }
-
-        groupRoot = Paths.get(System.getProperty("versionApiTestRoot"), "plugins");
-        for (File f : Objects.requireNonNull(groupRoot.toFile().listFiles())) {
-            Path pathToResources = Paths.get("src", "test", "resources", "rest-api-spec", "test");
-            Path root = groupRoot.resolve(Paths.get(f.getName()).resolve(pathToResources));
-            if (BLACKLISTED.stream().anyMatch(p -> root.toString().contains(p))) {
-                System.out.println("%%%%%%%%%%%%%%%%%% Skipping due to blacklist " + root.toString());
-                continue;
-            } else if (USE_WHITE_LIST && WHITELISTED.stream().anyMatch(p -> root.toString().contains(p)) || USE_WHITE_LIST == false) {
-
-                System.out.println("************* Finding tests from: " + root);
-                Iterable<Object[]> foundTests = ESClientYamlSuiteTestCase.createParameters(ExecutableSection.XCONTENT_REGISTRY, root, false);
-                foundTests.forEach(objectArray -> {
-                    for (Object o : objectArray) {
-                        System.out.println("** -->" + o);
-                    }
-                });
-                foundTests.forEach(tests::add);
-            }
-        }
+        add(Paths.get(testRoot, "rest-api-spec", "src", "main", "resources", "rest-api-spec", "test"), tests);
+        addWithChildren(Paths.get(testRoot, "modules"), tests);
+        addWithChildren(Paths.get(testRoot, "plugins"), tests);
 
         //TODO: support REST tests defined in THIS project too !
-
+        if (tests.isEmpty()) {
+            fail("No test found to run !");
+        }
         return tests;
     }
 
+    private static void addWithChildren(Path parent, List<Object[]> tests) throws Exception {
+        for (File f : Objects.requireNonNull(parent.toFile().listFiles())) {
+            Path root = parent.resolve(Paths.get(f.getName(), "src", "test", "resources", "rest-api-spec", "test"));
+            add(root, tests);
+        }
+    }
+
+    private static void add(Path root, List<Object[]> tests) throws Exception {
+        if (BLACKLISTED.stream().anyMatch(p -> root.toString().contains(p))) {
+            System.out.println("%%%%%%%%%%%%%%%%%% Skipping due to blacklist " + root.toString());
+            return;
+        }
+        System.out.println("************* Finding tests from: " + root);
+        Iterable<Object[]> foundTests = ESClientYamlSuiteTestCase.createParameters(ExecutableSection.XCONTENT_REGISTRY, root, false);
+
+        foundTests.forEach( objectArray -> {
+            for (Object o : objectArray) {
+                if(o instanceof ClientYamlTestCandidate){
+                    ClientYamlTestCandidate testCandidate = (ClientYamlTestCandidate) o;
+                    addVersionHeader(testCandidate);
+                    TypeCompat.handleTypeCompatibility(testCandidate);
+                }else{
+                    //TODO: remove this ...
+                    fail("Wha ?,  how can this be ! This needs to be a ClientYamlTestCandidate, not a " + o.getClass().getTypeName());
+                }
+                System.out.println("** -->" + o);
+            }
+            tests.add(objectArray);
+        });
+    }
 
     @Override
     protected ClientYamlTestClient initClientYamlTestClient(ClientYamlSuiteRestSpec restSpec, RestClient restClient, List<HttpHost> hosts, Version esVersion, Version masterVersion) {
         return super.initClientYamlTestClient(restSpec, restClient, hosts, esVersion, masterVersion);
     }
 
-    @Override
-    public void overrideDoSection() {
-        addVersionHeader();
-        handleTypeWarnings();
-    }
-
-    private void addVersionHeader() {
+    private static void addVersionHeader(ClientYamlTestCandidate testCandidate) {
         //TODO: figure exactly what this header should be ...
-        getAllDoSections().forEach(d -> d.getApiCallSection().addHeaders(Collections.singletonMap("compatible-with", "v7")));
+        getAllDoSections(testCandidate).forEach(d -> d.getApiCallSection().addHeaders(Collections.singletonMap("compatible-with", "v7")));
     }
 
-    private void handleTypeWarnings() {
-        if (EXPECT_TYPE_WARNINGS.contains(getTestCandidate().getTestPath())) {
-            List<DoSection> doSections = getDoSectionsByParam("type");
-            doSections.forEach(d -> d.addExpectedWarningHeader("foobarbear"));
-        }
+    public static List<DoSection> getDoSectionsByParam(ClientYamlTestCandidate testCandidate, String paramKey) {
+        return getAllDoSections(testCandidate).stream()
+            .filter(doSection -> doSection.getApiCallSection().getParams().containsKey(paramKey))
+            .collect(Collectors.toList());
     }
+
+    private static List<DoSection> getAllDoSections(ClientYamlTestCandidate testCandidate){
+        return testCandidate.getTestSection().getExecutableSections().stream().filter(s -> s instanceof DoSection).map(s2 -> (DoSection) s2).collect(Collectors.toList());
+    }
+
+
 }
 
