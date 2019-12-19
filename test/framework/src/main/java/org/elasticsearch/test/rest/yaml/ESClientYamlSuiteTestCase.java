@@ -160,10 +160,7 @@ public abstract class ESClientYamlSuiteTestCase extends ESRestTestCase {
         adminExecutionContext.clear();
 
         restTestExecutionContext.clear();
-        overrideDoSection();
     }
-
-    protected void overrideDoSection(){}
 
     protected ClientYamlTestClient initClientYamlTestClient(
             final ClientYamlSuiteRestSpec restSpec,
@@ -201,7 +198,7 @@ public abstract class ESClientYamlSuiteTestCase extends ESRestTestCase {
      * Create parameters for this parameterized test.
      */
     public static Iterable<Object[]> createParameters(NamedXContentRegistry executeableSectionRegistry, Path root, boolean requireRootToExist) throws Exception {
-        String[] requestedTests = resolvePathsProperty(REST_TESTS_SUITE, ""); // default to all tests under the test root
+        String[] requestedTests = resolvePathsProperty(REST_TESTS_SUITE, ""); // default to all tests
         Map<String, Set<Path>> yamlSuites = loadSuites(root, requireRootToExist, requestedTests);
         List<ClientYamlTestSuite> suites = new ArrayList<>();
         IllegalArgumentException validationException = null;
@@ -261,9 +258,7 @@ public abstract class ESClientYamlSuiteTestCase extends ESRestTestCase {
                 });
             } else {
                 path = root.resolve(strPath + ".yml");
-                if(requireFileToExist) {
-                    assert Files.exists(path); //kills the test
-                }
+                assert !requireFileToExist || Files.exists(path); //kills the test
                 if(Files.exists(path)) {
                     addSuite(root, path, files);
                 }
@@ -446,14 +441,5 @@ public abstract class ESClientYamlSuiteTestCase extends ESRestTestCase {
         return builder;
     }
 
-    protected final List<DoSection> getDoSectionsByParam(String paramKey) {
-        return getAllDoSections().stream()
-            .filter(doSection -> doSection.getApiCallSection().getParams().containsKey(paramKey))
-            .collect(Collectors.toList());
-    }
-
-    protected final List<DoSection> getAllDoSections(){
-        return getTestCandidate().getTestSection().getExecutableSections().stream().filter(s -> s instanceof DoSection).map(s2 -> (DoSection) s2).collect(Collectors.toList());
-    }
 
 }
