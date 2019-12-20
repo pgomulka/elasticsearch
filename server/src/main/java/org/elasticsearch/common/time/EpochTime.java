@@ -107,6 +107,35 @@ class EpochTime {
         }
     };
 
+    private static final EpochField NANOS = new EpochField(ChronoUnit.NANOS, ChronoUnit.FOREVER, LONG_POSITIVE_RANGE) {
+        @Override
+        public boolean isSupportedBy(TemporalAccessor temporal) {
+            return temporal.isSupported(ChronoField.NANO_OF_SECOND);
+        }
+        @Override
+        public long getFrom(TemporalAccessor temporal) {
+            return temporal.getLong(ChronoField.INSTANT_SECONDS) * 1000_000_000 + temporal.getLong(ChronoField.NANO_OF_SECOND);
+        }
+        @Override
+        public TemporalAccessor resolve(Map<TemporalField,Long> fieldValues,
+                                        TemporalAccessor partialTemporal, ResolverStyle resolverStyle) {
+            long nanos_epoch = fieldValues.remove(this);
+            long seconds = nanos_epoch / 1_000_000_000;
+            long nano_of_seconds = nanos_epoch % 1_000_000_000 ;
+            Long nanosOfMilli = fieldValues.remove(NANOS_OF_MILLI);
+            if (nanosOfMilli != null) {
+                nano_of_seconds += nanosOfMilli;
+            }
+            fieldValues.put(ChronoField.INSTANT_SECONDS, seconds);
+            fieldValues.put(ChronoField.NANO_OF_SECOND, nano_of_seconds);
+            // if there is already a milli of second, we need to overwrite it
+            if (fieldValues.containsKey(ChronoField.MILLI_OF_SECOND)) {
+                fieldValues.put(ChronoField.MILLI_OF_SECOND, nano_of_seconds / 1_000);
+            }
+            return null;
+        }
+    };
+
     private static final EpochField NANOS_OF_MILLI = new EpochField(ChronoUnit.NANOS, ChronoUnit.MILLIS, ValueRange.of(0, 999_999)) {
         @Override
         public boolean isSupportedBy(TemporalAccessor temporal) {
@@ -151,9 +180,18 @@ class EpochTime {
         builder -> builder.parseDefaulting(ChronoField.NANO_OF_SECOND, 999_999_999L),
         SECONDS_FORMATTER1, SECONDS_FORMATTER2);
 
-    static final DateFormatter MILLIS_FORMATTER = new JavaDateFormatter("epoch_millis", MILLISECONDS_FORMATTER1,
+    static final DateFormatter MILLIS_FORMATTER = new JavaDateFormatter("epoch_millis", DateFormatters.STRICT_DATE_OPTIONAL_TIME_PRINTER_NANOS,
         builder -> builder.parseDefaulting(EpochTime.NANOS_OF_MILLI, 999_999L),
         MILLISECONDS_FORMATTER1, MILLISECONDS_FORMATTER2);
+
+    private static final DateTimeFormatter NANOSECONDS_FORMATTER1 = new DateTimeFormatterBuilder()
+        .appendValue(NANOS, 1, 19, SignStyle.NORMAL)
+        .toFormatter(Locale.ROOT);
+
+
+    static final DateFormatter NANOS_FORMATTER = new JavaDateFormatter("epoch_nanos", DateFormatters.STRICT_DATE_OPTIONAL_TIME_PRINTER_NANOS,
+        builder -> builder.parseDefaulting(EpochTime.NANOS_OF_MILLI, 999_999L),
+        NANOSECONDS_FORMATTER1);
 
     private abstract static class EpochField implements TemporalField {
 
