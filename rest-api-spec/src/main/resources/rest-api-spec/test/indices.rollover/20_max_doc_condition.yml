@@ -1,5 +1,8 @@
 ---
 "Max docs rollover conditions matches only primary shards":
+  - skip:
+        version: "- 5.4.1"
+        reason:  "matching docs changed from all shards to primary shards"
 
   # create index with alias and replica
   - do:
@@ -14,6 +17,7 @@
   - do:
       index:
         index: logs-1
+        type:  test
         id:    "1"
         body:  { "foo": "hello world" }
         refresh: true
@@ -34,6 +38,7 @@
   - do:
       index:
         index: logs-1
+        type:  test
         id:    "2"
         body:  { "foo": "hello world" }
         refresh: true

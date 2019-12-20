@@ -1,5 +1,7 @@
 setup:
-
+  - skip:
+      version: " - 6.99.99"
+      reason: types are required in requests before 7.0.0
 
   - do:
       indices.create:
@@ -32,6 +34,7 @@ setup:
   - is_true: matched
   - match: { explanation.value: 1 }
   - match: { _index: test_1 }
+  - match: { _type: _doc }
   - match: { _id: id_1 }
 
 ---
@@ -48,6 +51,7 @@ setup:
   - is_true: matched
   - match: { explanation.value: 1 }
   - match: { _index: test_1 }
+  - match: { _type: _doc }
   - match: { _id: id_1 }
 
 ---

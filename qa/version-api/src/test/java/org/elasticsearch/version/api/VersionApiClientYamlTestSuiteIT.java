@@ -95,7 +95,7 @@ public class VersionApiClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
 
     private static void addVersionHeader(ClientYamlTestCandidate testCandidate) {
         //TODO: figure exactly what this header should be ...
-        getAllDoSections(testCandidate).forEach(d -> d.getApiCallSection().addHeaders(Collections.singletonMap("compatible-with", "v7")));
+        getAllDoSections(testCandidate).forEach(d -> d.getApiCallSection().addHeaders(Collections.singletonMap("compatible", "7")));
     }
 
     public static List<DoSection> getDoSectionsByParam(ClientYamlTestCandidate testCandidate, String paramKey) {

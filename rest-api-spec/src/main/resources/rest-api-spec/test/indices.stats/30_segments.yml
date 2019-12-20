@@ -43,7 +43,7 @@ setup:
   - do:
       indices.close:
         index: test
-        wait_for_active_shards: all
+        wait_for_active_shards: "all"
 
   - do:
       indices.stats:

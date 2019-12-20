@@ -1,7 +1,9 @@
 ---
 "Shrink index ignores target template mapping":
     - skip:
-        features: "arbitrary_key"
+        version: " - 6.9.99"
+        reason: expects warnings that pre-7.0.0 will not send
+        features: [warnings, arbitrary_key]
 
     - do:
         nodes.info:

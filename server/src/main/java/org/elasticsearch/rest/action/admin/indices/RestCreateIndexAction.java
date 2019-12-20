@@ -26,6 +26,7 @@ import org.elasticsearch.common.xcontent.LoggingDeprecationHandler;
 import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.rest.BaseRestHandler;
+import org.elasticsearch.rest.CompatibleHandlers;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.action.RestToXContentListener;
@@ -33,12 +34,13 @@ import org.elasticsearch.rest.action.RestToXContentListener;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class RestCreateIndexAction extends BaseRestHandler {
 
     public RestCreateIndexAction(RestController controller) {
-        controller.registerHandler(RestRequest.Method.PUT, "/{index}", this);
+        controller.registerHandler(RestRequest.Method.PUT, "/{index}", this, List.of(CompatibleHandlers.includeTypeConsumer()));
     }
 
     @Override

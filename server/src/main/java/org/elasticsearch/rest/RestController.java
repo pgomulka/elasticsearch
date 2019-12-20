@@ -44,12 +44,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
@@ -153,6 +155,7 @@ public class RestController implements HttpServerTransport.Dispatcher {
     }
 
     private void registerHandler(RestRequest.Method method, String path, RestHandler handler, UnaryOperator<RestHandler> handlerWrapper) {
+
         if (handler instanceof BaseRestHandler) {
             usageService.addRestHandler((BaseRestHandler) handler);
         }
@@ -161,33 +164,24 @@ public class RestController implements HttpServerTransport.Dispatcher {
             (mHandlers, newMHandler) -> mHandlers.addMethods(maybeWrappedHandler, method));
     }
 
-    UnaryOperator<RestHandler> COMPATIBLE_HANDLER_WRAPPER = handler ->
-        new RestHandler() {
-            @Override
-            public void handleRequest(RestRequest request, RestChannel channel, NodeClient client) throws Exception {
-                if (request.header(Version.COMPATIBLE_HEADER).equals(Version.COMPATIBLE_VERSION)) {
-                    request.params().put(Version.COMPATIBLE_HEADER, request.header(Version.COMPATIBLE_HEADER));
-                    request.param(Version.COMPATIBLE_HEADER);
 
-                    //consume type field even though not used
-                    request.param("type");
-                }
+    public void registerHandler(RestRequest.Method method, String path, RestHandler handler, List<Consumer<RestRequest>>  parameterConsumers) {
+        registerHandler(method, path, handler,
+            r-> CompatibleHandlers.compatibleParameterConsumingHandler(parameterConsumers).apply(handlerWrapper.apply(r)));
+    }
 
-                handler.handleRequest(request, channel, client);
-            }
-
-            @Override
-            public boolean isCompatible() {
-                return true;
-            }
-        };
+    public void registerCompatibleHandler(RestRequest.Method method, String path, RestHandler handler,
+                                          List<Consumer<RestRequest>>  parameterConsumers, Runnable ... warnings) {
+        Arrays.stream(warnings).forEach(Runnable::run);
+        registerHandler(method, path, handler,
+            r -> CompatibleHandlers.compatibleHandlerWrapper(parameterConsumers).apply(handlerWrapper.apply(r)));
+    }
 
     public void registerCompatibleHandler(RestRequest.Method method, String path, RestHandler handler, Runnable ... warnings) {
         Arrays.stream(warnings).forEach(Runnable::run);
-
-        registerHandler(method, path, handler, r -> COMPATIBLE_HANDLER_WRAPPER.apply(handlerWrapper.apply(r)));
+        registerHandler(method, path, handler,
+            r -> CompatibleHandlers.compatibleHandlerWrapper(Collections.emptyList()).apply(handlerWrapper.apply(r)));
     }
-
     @Override
     public void dispatchRequest(RestRequest request, RestChannel channel, ThreadContext threadContext) {
         if (request.rawPath().equals("/favicon.ico")) {

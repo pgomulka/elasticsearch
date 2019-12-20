@@ -68,8 +68,8 @@
 ---
 "Translog retention with soft_deletes":
   - skip:
-      version: " - 7.9.99"
-      reason:  "start ignoring translog retention policy with soft-deletes enabled in 8.0"
+      version: " - 7.3.99"
+      reason:  "start ignoring translog retention policy with soft-deletes enabled in 7.4"
   - do:
       indices.create:
         index: test
@@ -115,7 +115,9 @@
 
 ---
 "Translog last modified age stats":
-
+  - skip:
+      version: " - 6.2.99"
+      reason: translog last modified age stats was added in 6.3.0
   - do:
       index:
         index: test
@@ -184,8 +186,8 @@
 ---
 "Translog stats on closed indices with soft-deletes":
   - skip:
-      version: " - 7.9.99"
-      reason:  "start ignoring translog retention policy with soft-deletes enabled in 8.0"
+      version: " - 7.3.99"
+      reason:  "start ignoring translog retention policy with soft-deletes enabled in 7.4"
   - do:
       indices.create:
         index: test

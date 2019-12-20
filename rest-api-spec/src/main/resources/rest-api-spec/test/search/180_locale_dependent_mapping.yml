@@ -1,5 +1,8 @@
 ---
 "Test Index and Search locale dependent mappings / dates":
+  - skip:
+      version: " - 6.8.4"
+      reason: JDK9 only supports this with a special sysproperty added in 6.2.0 and the fix for avoiding multiple 8 prefix is in 6.8.5
   - do:
       indices.create:
           index: test_index
@@ -10,7 +13,7 @@
                   properties:
                       date_field:
                           type: date
-                          format: "E, d MMM yyyy HH:mm:ss Z"
+                          format: "8E, d MMM uuuu HH:mm:ss Z"
                           locale: "de"
   - do:
       bulk:
