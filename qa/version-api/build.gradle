@@ -22,7 +22,6 @@ apply plugin: 'elasticsearch.build'
 apply plugin: 'elasticsearch.rest-test'
 
 def versionApiTestRoot = new File(new File(project.buildDir, 'resources'), 'versionApiTestRoot')
-def versionApiSpecRoot = new File(new File(project.buildDir, 'resources'), 'versionApiSpecRoot')
 
 task copyFromBwc(type: Copy) {
   dependsOn ':distribution:bwc:minor:checkoutBwcBranch'
@@ -35,25 +34,10 @@ task copyFromBwc(type: Copy) {
   includeEmptyDirs = false
 }
 
-task copySpec(type: Copy) {
-  dependsOn ':distribution:bwc:minor:checkoutBwcBranch'
-  from (project(':distribution:bwc:minor').checkoutDir){
-    include 'rest-api-spec/**/rest-api-spec/api/*.json'
-  }
-  into versionApiSpecRoot
-  includeEmptyDirs = false
-}
-
 integTest.runner {
   dependsOn copyFromBwc
-  dependsOn copySpec
-  
   systemProperty 'versionApiTestRoot', versionApiTestRoot
-  systemProperty 'versionApiSpecRoot', versionApiSpecRoot
-  sourceSets.test.resources.srcDir(versionApiSpecRoot)
-
 }
-
 
 dependencies {
   testCompile project(':test:framework')

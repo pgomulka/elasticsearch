@@ -89,10 +89,8 @@ public class VersionApiClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
     }
 
     @Override
-    protected ClientYamlTestClient initClientYamlTestClient(ClientYamlSuiteRestSpec restSpec, RestClient restClient, List<HttpHost> hosts, Version esVersion, Version masterVersion) throws Exception {
-        ClientYamlSuiteRestSpec previousRestSpec = ClientYamlSuiteRestSpec.load(System.getProperty("versionApiSpecRoot"));
-        validateSpec(previousRestSpec);
-        return super.initClientYamlTestClient(previousRestSpec, restClient, hosts, esVersion, masterVersion);
+    protected ClientYamlTestClient initClientYamlTestClient(ClientYamlSuiteRestSpec restSpec, RestClient restClient, List<HttpHost> hosts, Version esVersion, Version masterVersion) {
+        return super.initClientYamlTestClient(restSpec, restClient, hosts, esVersion, masterVersion);
     }
 
     private static void addVersionHeader(ClientYamlTestCandidate testCandidate) {

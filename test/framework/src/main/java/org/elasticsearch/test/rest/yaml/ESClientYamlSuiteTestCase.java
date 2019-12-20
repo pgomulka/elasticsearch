@@ -167,7 +167,7 @@ public abstract class ESClientYamlSuiteTestCase extends ESRestTestCase {
             final RestClient restClient,
             final List<HttpHost> hosts,
             final Version esVersion,
-            final Version masterVersion) throws Exception {
+            final Version masterVersion) {
         return new ClientYamlTestClient(restSpec, restClient, hosts, esVersion, masterVersion, this::getClientBuilderWithSniffedHosts);
     }
 
@@ -291,7 +291,7 @@ public abstract class ESClientYamlSuiteTestCase extends ESRestTestCase {
         return adminExecutionContext;
     }
 
-    protected static void validateSpec(ClientYamlSuiteRestSpec restSpec) {
+    private static void validateSpec(ClientYamlSuiteRestSpec restSpec) {
         boolean validateSpec = RandomizedTest.systemPropertyAsBoolean(REST_TESTS_VALIDATE_SPEC, true);
         if (validateSpec) {
             StringBuilder errorMessage = new StringBuilder();
