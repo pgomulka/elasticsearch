@@ -3,7 +3,9 @@ package org.elasticsearch.rest.compat;
 import com.carrotsearch.randomizedtesting.annotations.Name;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.elasticsearch.Version;
 import org.elasticsearch.common.io.PathUtils;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.test.rest.yaml.ClientYamlTestCandidate;
 import org.elasticsearch.test.rest.yaml.ESClientYamlSuiteTestCase;
 import org.elasticsearch.test.rest.yaml.section.DoSection;
@@ -22,6 +24,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.StreamSupport;
 
+/**
+ * ./gradlew :qa:rest-compat-tests:integTestRunner --tests "org.elasticsearch.rest.compat.RestCompatSpecYamlTestSuiteIT.test {yaml=index/*}"
+ */
 class AbstractRestCompatYamlTestSuite extends ESClientYamlSuiteTestCase {
 
     private static final Logger logger = LogManager.getLogger(AbstractRestCompatYamlTestSuite.class);
@@ -119,7 +124,8 @@ class AbstractRestCompatYamlTestSuite extends ESClientYamlSuiteTestCase {
                             doSection.checkWarningHeaders(false);
                             //TODO: use real header
                             // add the compatibility header
-                            doSection.getApiCallSection().addHeaders(Collections.singletonMap("compatible-with", "v7"));
+                            String compatibleHeader = createCompatibleHeader(doSection);
+                            doSection.getApiCallSection().addHeaders(Map.of(Version.COMPATIBLE_HEADER,compatibleHeader));
                         });
                     } else {
                         //TODO: use a logger
@@ -133,6 +139,20 @@ class AbstractRestCompatYamlTestSuite extends ESClientYamlSuiteTestCase {
         }
         //TODO: what happens when a single test is requested via the modules, but the module is overriden ? (maybe keep all of the skipped tests locally and output them with a helpful hint here if empty
         return tests;
+    }
+
+    private static String createCompatibleHeader(DoSection doSection) {
+        String headerValue = doSection.getApiCallSection().getHeaders().get(Version.COMPATIBLE_HEADER);
+        //header value in a form of application/json
+        if(headerValue!=null) {
+            String[] split = headerValue.split("/");
+            String type = split[0];
+            String subType = split[1];
+            return type + "/" + "vnd.elasticsearch" + "+" + subType + ";" + "compatible-with" + Version.COMPATIBLE_VERSION;
+        }else{
+            return "application/vnd.elasticsearch+json;compatible-with=" + Version.COMPATIBLE_VERSION;
+
+        }
     }
 
     private static Set<ClientYamlTestCandidate> getTestsOverrides() throws Exception {

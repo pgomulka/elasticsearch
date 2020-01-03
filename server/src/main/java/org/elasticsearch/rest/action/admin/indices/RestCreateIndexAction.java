@@ -19,13 +19,16 @@
 
 package org.elasticsearch.rest.action.admin.indices;
 
+import org.apache.logging.log4j.LogManager;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.support.ActiveShardCount;
 import org.elasticsearch.client.node.NodeClient;
+import org.elasticsearch.common.logging.DeprecationLogger;
 import org.elasticsearch.common.xcontent.LoggingDeprecationHandler;
 import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.rest.BaseRestHandler;
+import org.elasticsearch.rest.CompatibleHandlers;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.action.RestToXContentListener;
@@ -33,12 +36,18 @@ import org.elasticsearch.rest.action.RestToXContentListener;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class RestCreateIndexAction extends BaseRestHandler {
+    private static final DeprecationLogger deprecationLogger = new DeprecationLogger(
+        LogManager.getLogger(RestCreateIndexAction.class));
+
 
     public RestCreateIndexAction(RestController controller) {
-        controller.registerHandler(RestRequest.Method.PUT, "/{index}", this);
+        controller.registerHandler(RestRequest.Method.PUT, "/{index}", this,
+            List.of(CompatibleHandlers.consumeParameterIncludeType(deprecationLogger),
+                CompatibleHandlers.consumeParameterType(deprecationLogger)));
     }
 
     @Override
@@ -54,7 +63,12 @@ public class RestCreateIndexAction extends BaseRestHandler {
         if (request.hasContent()) {
             Map<String, Object> sourceAsMap = XContentHelper.convertToMap(request.requiredContent(), false,
                 request.getXContentType()).v2();
-            sourceAsMap = prepareMappings(sourceAsMap);
+            if(CompatibleHandlers.isCompatible(request)){
+                sourceAsMap = prepareMappingsV7(sourceAsMap, request);
+            }else {
+                sourceAsMap = prepareMappings(sourceAsMap);
+            }
+
             createIndexRequest.source(sourceAsMap, LoggingDeprecationHandler.INSTANCE);
         }
 
@@ -64,8 +78,8 @@ public class RestCreateIndexAction extends BaseRestHandler {
         return channel -> client.admin().indices().create(createIndexRequest, new RestToXContentListener<>(channel));
     }
 
-
     static Map<String, Object> prepareMappings(Map<String, Object> source) {
+
         if (source.containsKey("mappings") == false
             || (source.get("mappings") instanceof Map) == false) {
             return source;
@@ -81,5 +95,27 @@ public class RestCreateIndexAction extends BaseRestHandler {
 
         newSource.put("mappings", Collections.singletonMap(MapperService.SINGLE_MAPPING_NAME, mappings));
         return newSource;
+    }
+
+    static Map<String, Object> prepareMappingsV7(Map<String, Object> source, RestRequest request) {
+        final boolean includeTypeName = request.paramAsBoolean(INCLUDE_TYPE_NAME_PARAMETER,
+            DEFAULT_INCLUDE_TYPE_NAME_POLICY);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> mappings = (Map<String, Object>) source.get("mappings");
+
+        if (includeTypeName && mappings.size() == 1) {
+            //no matter what the type was, replace it with _doc
+            Map<String, Object> newSource = new HashMap<>();
+
+            String typeName = mappings.keySet().iterator().next();
+            @SuppressWarnings("unchecked")
+            Map<String, Object> typedMappings = (Map<String, Object>) mappings.get(typeName);
+
+            newSource.put("mappings", Collections.singletonMap(MapperService.SINGLE_MAPPING_NAME, typedMappings));
+            return newSource;
+        }else{
+            return prepareMappings(source);
+        }
     }
 }

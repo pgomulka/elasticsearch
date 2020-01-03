@@ -28,23 +28,29 @@ import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.logging.DeprecationLogger;
 import org.elasticsearch.index.VersionType;
 import org.elasticsearch.rest.BaseRestHandler;
+import org.elasticsearch.rest.CompatibleHandlers;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.action.RestActions;
 import org.elasticsearch.rest.action.RestStatusToXContentListener;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Locale;
+import java.util.function.Consumer;
 
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.rest.RestRequest.Method.PUT;
 
 public class RestIndexAction extends BaseRestHandler {
 
-    private static final DeprecationLogger deprecationLogger = new DeprecationLogger(LogManager.getLogger(RestIndexAction.class));
-    public static final String TYPES_DEPRECATION_MESSAGE = "[types removal] Specifying types in document " +
+    private static final DeprecationLogger deprecationLogger = new DeprecationLogger(
+        LogManager.getLogger(RestIndexAction.class));
+    private static final String TYPES_DEPRECATION_MESSAGE = "[types removal] Specifying types in document " +
         "index requests is deprecated, use the typeless endpoints instead (/{index}/_doc/{id}, /{index}/_doc, " +
         "or /{index}/_create/{id}).";
+    private Consumer<RestRequest> DEPRECATION_WARNING = r -> deprecationLogger.deprecatedAndMaybeLog("index_with_types",TYPES_DEPRECATION_MESSAGE);
+
 
     private final ClusterService clusterService;
 
@@ -61,11 +67,16 @@ public class RestIndexAction extends BaseRestHandler {
         controller.registerHandler(POST, "/{index}/_create/{id}/", createHandler);
 
         // Deprecated typed endpoints.
-        controller.registerHandler(POST, "/{index}/{type}", autoIdHandler); // auto id creation
-        controller.registerHandler(PUT, "/{index}/{type}/{id}", this);
-        controller.registerHandler(POST, "/{index}/{type}/{id}", this);
-        controller.registerHandler(PUT, "/{index}/{type}/{id}/_create", createHandler);
-        controller.registerHandler(POST, "/{index}/{type}/{id}/_create", createHandler);
+        controller.registerCompatibleHandler(POST, "/{index}/{type}", autoIdHandler,
+            List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger))); // auto id creation
+        controller.registerCompatibleHandler(PUT, "/{index}/{type}/{id}", this,
+            List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger)));
+        controller.registerCompatibleHandler(POST, "/{index}/{type}/{id}", this,
+            List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger)));
+        controller.registerCompatibleHandler(PUT, "/{index}/{type}/{id}/_create", createHandler,
+            List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger)));
+        controller.registerCompatibleHandler(POST, "/{index}/{type}/{id}/_create", createHandler,
+            List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger)));
     }
 
     @Override
@@ -118,14 +129,6 @@ public class RestIndexAction extends BaseRestHandler {
 
     @Override
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
-
-        //consume the type type param
-        if(request.param("type") != null) {
-            deprecationLogger.deprecatedAndMaybeLog("index_with_types", "foobarbear");
-        }
-        //deprecationLogger.deprecatedAndMaybeLog("index_with_types", TYPES_DEPRECATION_MESSAGE); //this correctly in 8.0 fails the REST tests .. but need to be able to allow for this when running 7.x tests
-
-
         IndexRequest indexRequest = new IndexRequest(request.param("index"));
         indexRequest.id(request.param("id"));
         indexRequest.routing(request.param("routing"));

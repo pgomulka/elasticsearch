@@ -21,6 +21,7 @@ package org.elasticsearch.rest;
 
 import org.apache.lucene.util.SetOnce;
 import org.elasticsearch.ElasticsearchParseException;
+import org.elasticsearch.Version;
 import org.elasticsearch.common.Booleans;
 import org.elasticsearch.common.CheckedConsumer;
 import org.elasticsearch.common.Nullable;
@@ -120,8 +121,30 @@ public class RestRequest implements ToXContent.Params {
     public static RestRequest request(NamedXContentRegistry xContentRegistry, HttpRequest httpRequest, HttpChannel httpChannel) {
         Map<String, String> params = params(httpRequest.uri());
         String path = path(httpRequest.uri());
-        return new RestRequest(xContentRegistry, params, path, httpRequest.getHeaders(), httpRequest, httpChannel);
+
+
+        RestRequest restRequest = new RestRequest(xContentRegistry, params, path, httpRequest.getHeaders(), httpRequest, httpChannel);
+        addCompatibleParameter(restRequest);
+        return restRequest;
     }
+
+    private static void addCompatibleParameter(RestRequest request) {
+        if (isRequestCompatible(request)) {
+            String compatibleVersion = XContentType.parseVersion(request.header(Version.COMPATIBLE_HEADER));
+            request.params().put(Version.COMPATIBLE_PARAMS_KEY, compatibleVersion);
+            request.param(Version.COMPATIBLE_PARAMS_KEY);
+        }
+    }
+
+    public static boolean isRequestCompatible(RestRequest request) {
+        return isHeaderCompatible(request.header(Version.COMPATIBLE_HEADER));
+    }
+
+    public static boolean isHeaderCompatible(String headerValue) {
+        String version = XContentType.parseVersion(headerValue);
+        return Version.COMPATIBLE_VERSION.equals(version);
+    }
+
 
     private static Map<String, String> params(final String uri) {
         final Map<String, String> params = new HashMap<>();
@@ -133,6 +156,8 @@ public class RestRequest implements ToXContent.Params {
                 throw new BadParameterException(e);
             }
         }
+
+
         return params;
     }
 

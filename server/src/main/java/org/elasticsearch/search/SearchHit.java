@@ -48,6 +48,7 @@ import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.index.mapper.SourceFieldMapper;
 import org.elasticsearch.index.seqno.SequenceNumbers;
 import org.elasticsearch.index.shard.ShardId;
+import org.elasticsearch.rest.CompatibleHandlers;
 import org.elasticsearch.search.fetch.subphase.highlight.HighlightField;
 import org.elasticsearch.search.lookup.SourceLookup;
 import org.elasticsearch.transport.RemoteClusterAware;
@@ -529,6 +530,7 @@ public final class SearchHit implements Writeable, ToXContentObject, Iterable<Do
 
     public static class Fields {
         static final String _INDEX = "_index";
+        static final String _TYPE = "_type";
         static final String _ID = "_id";
         static final String _VERSION = "_version";
         static final String _SEQ_NO = "_seq_no";
@@ -580,6 +582,9 @@ public final class SearchHit implements Writeable, ToXContentObject, Iterable<Do
         }
         if (index != null) {
             builder.field(Fields._INDEX, RemoteClusterAware.buildRemoteIndexName(clusterAlias, index));
+        }
+        if (CompatibleHandlers.isCompatible(params)) {
+            builder.field(Fields._TYPE, SINGLE_MAPPING_TYPE);
         }
         if (id != null) {
             builder.field(Fields._ID, id);
