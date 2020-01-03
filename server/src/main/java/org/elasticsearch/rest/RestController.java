@@ -152,7 +152,8 @@ public class RestController implements HttpServerTransport.Dispatcher {
      * @param method GET, POST, etc.
      */
     public void registerHandler(RestRequest.Method method, String path, RestHandler handler) {
-        registerHandler(method, path, handler, this.handlerWrapper);
+        registerHandler(method, path, handler, r -> CompatibleHandlers.compatibleHandlerWrapper(Collections.emptyList(), false)
+                                                                      .apply(handlerWrapper.apply(r)));
     }
 
     private void registerHandler(RestRequest.Method method, String path, RestHandler handler, UnaryOperator<RestHandler> handlerWrapper) {
@@ -175,13 +176,13 @@ public class RestController implements HttpServerTransport.Dispatcher {
                                           List<Consumer<RestRequest>>  parameterConsumers, Runnable ... warnings) {
         Arrays.stream(warnings).forEach(Runnable::run);
         registerHandler(method, path, handler,
-            r -> CompatibleHandlers.compatibleHandlerWrapper(parameterConsumers).apply(handlerWrapper.apply(r)));
+            r -> CompatibleHandlers.compatibleHandlerWrapper(parameterConsumers, true).apply(handlerWrapper.apply(r)));
     }
 
     public void registerCompatibleHandler(RestRequest.Method method, String path, RestHandler handler, Runnable ... warnings) {
         Arrays.stream(warnings).forEach(Runnable::run);
         registerHandler(method, path, handler,
-            r -> CompatibleHandlers.compatibleHandlerWrapper(Collections.emptyList()).apply(handlerWrapper.apply(r)));
+            r -> CompatibleHandlers.compatibleHandlerWrapper(Collections.emptyList(), true).apply(handlerWrapper.apply(r)));
     }
     @Override
     public void dispatchRequest(RestRequest request, RestChannel channel, ThreadContext threadContext) {

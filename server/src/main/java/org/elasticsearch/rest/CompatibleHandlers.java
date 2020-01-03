@@ -1,24 +1,15 @@
 package org.elasticsearch.rest;
 
-import org.apache.logging.log4j.LogManager;
 import org.elasticsearch.Version;
 import org.elasticsearch.client.node.NodeClient;
-import org.elasticsearch.common.logging.DeprecationLogger;
-import org.elasticsearch.common.xcontent.LoggingDeprecationHandler;
-import org.elasticsearch.common.xcontent.XContentHelper;
-import org.elasticsearch.index.mapper.MapperService;
-import org.elasticsearch.rest.action.admin.indices.RestCreateIndexAction;
 
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 public class CompatibleHandlers {
-    public static UnaryOperator<RestHandler> compatibleHandlerWrapper(List<Consumer<RestRequest>> parameterConsumers){
+    public static UnaryOperator<RestHandler> compatibleHandlerWrapper(List<Consumer<RestRequest>> parameterConsumers, final boolean requiresCompatibleHeader){
         UnaryOperator<RestHandler> COMPATIBLE_HANDLER_WRAPPER = handler ->
             new RestHandler() {
                 @Override
@@ -37,7 +28,7 @@ public class CompatibleHandlers {
 
                 @Override
                 public boolean isCompatible() {
-                    return true;
+                    return requiresCompatibleHeader;
                 }
             };
 
