@@ -241,6 +241,10 @@ public abstract class ESClientYamlSuiteTestCase extends ESRestTestCase {
         tests.sort(Comparator.comparing(o -> ((ClientYamlTestCandidate) o[0]).getTestPath()));
         return tests;
     }
+    static Map<String, Set<Path>> loadSuites( String... paths) throws Exception {
+        Path root = PathUtils.get(ESClientYamlSuiteTestCase.class.getResource(TESTS_PATH).toURI());
+        return loadSuites(root,false,paths);
+    }
 
     /** Find all yaml suites that match the given list of paths from the root test path. */
     // pkg private for tests

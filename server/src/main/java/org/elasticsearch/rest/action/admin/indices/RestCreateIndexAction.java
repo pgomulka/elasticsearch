@@ -40,7 +40,7 @@ import java.util.Map;
 public class RestCreateIndexAction extends BaseRestHandler {
 
     public RestCreateIndexAction(RestController controller) {
-        controller.registerHandler(RestRequest.Method.PUT, "/{index}", this, List.of(CompatibleHandlers.includeTypeConsumer()));
+        controller.registerHandler(RestRequest.Method.PUT, "/{index}", this, List.of(CompatibleHandlers.consumeParameterIncludeType()));
     }
 
     @Override
@@ -56,7 +56,12 @@ public class RestCreateIndexAction extends BaseRestHandler {
         if (request.hasContent()) {
             Map<String, Object> sourceAsMap = XContentHelper.convertToMap(request.requiredContent(), false,
                 request.getXContentType()).v2();
-            sourceAsMap = prepareMappings(sourceAsMap);
+            if(CompatibleHandlers.isRequestCompatible(request)){
+                sourceAsMap = prepareMappingsV7(sourceAsMap, request);
+            }else {
+                sourceAsMap = prepareMappings(sourceAsMap);
+            }
+
             createIndexRequest.source(sourceAsMap, LoggingDeprecationHandler.INSTANCE);
         }
 
@@ -66,8 +71,13 @@ public class RestCreateIndexAction extends BaseRestHandler {
         return channel -> client.admin().indices().create(createIndexRequest, new RestToXContentListener<>(channel));
     }
 
+    private void updateType(Map<String, Object> sourceAsMap) {
+
+    }
+
 
     static Map<String, Object> prepareMappings(Map<String, Object> source) {
+
         if (source.containsKey("mappings") == false
             || (source.get("mappings") instanceof Map) == false) {
             return source;
@@ -79,6 +89,38 @@ public class RestCreateIndexAction extends BaseRestHandler {
         Map<String, Object> mappings = (Map<String, Object>) source.get("mappings");
         if (MapperService.isMappingSourceTyped(MapperService.SINGLE_MAPPING_NAME, mappings)) {
             throw new IllegalArgumentException("The mapping definition cannot be nested under a type");
+        }
+
+        newSource.put("mappings", Collections.singletonMap(MapperService.SINGLE_MAPPING_NAME, mappings));
+        return newSource;
+    }
+
+    static Map<String, Object> prepareMappingsV7(Map<String, Object> source, RestRequest request) {
+        final String INCLUDE_TYPE_NAME_PARAMETER = "include_type_name";
+        final boolean DEFAULT_INCLUDE_TYPE_NAME_POLICY = false;
+        final boolean includeTypeName = request.paramAsBoolean(INCLUDE_TYPE_NAME_PARAMETER,
+            DEFAULT_INCLUDE_TYPE_NAME_POLICY);
+
+        Map<String, Object> newSource = new HashMap<>(source);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> mappings = (Map<String, Object>) source.get("mappings");
+
+        if (includeTypeName && mappings.size() == 1){
+            //no matter what the type was, replace it with _doc
+            String key = mappings.keySet().iterator().next();
+            @SuppressWarnings("unchecked")
+            Map<String, Object>  typedMappings = (Map<String, Object>) mappings.get(key);
+
+            newSource.put("mappings", Collections.singletonMap(MapperService.SINGLE_MAPPING_NAME, typedMappings));
+            return newSource;
+        }else if (source.containsKey("mappings") == false
+            || (source.get("mappings") instanceof Map) == false) {
+            return source;
+        }
+
+        if (MapperService.isMappingSourceTyped(MapperService.SINGLE_MAPPING_NAME, mappings)) {
+            throw new IllegalArgumentException("The mapping definition cannot be nested under a type " +
+                "[" + MapperService.SINGLE_MAPPING_NAME + "] unless include_type_name is set to true.");
         }
 
         newSource.put("mappings", Collections.singletonMap(MapperService.SINGLE_MAPPING_NAME, mappings));

@@ -1,10 +1,20 @@
 package org.elasticsearch.rest;
 
+import org.apache.logging.log4j.LogManager;
 import org.elasticsearch.Version;
 import org.elasticsearch.client.node.NodeClient;
+import org.elasticsearch.common.logging.DeprecationLogger;
+import org.elasticsearch.common.xcontent.LoggingDeprecationHandler;
+import org.elasticsearch.common.xcontent.XContentHelper;
+import org.elasticsearch.index.mapper.MapperService;
+import org.elasticsearch.rest.action.admin.indices.RestCreateIndexAction;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 public class CompatibleHandlers {
@@ -34,7 +44,7 @@ public class CompatibleHandlers {
         return COMPATIBLE_HANDLER_WRAPPER;
     }
 
-    public static UnaryOperator<RestHandler> compatibleParameterConsumingHandler(List<Consumer<RestRequest>> parameterConsumers){
+    public static UnaryOperator<RestHandler> compatibleParameterConsumingHandler(List<Function<RestRequest,RestRequest>> parameterConsumers){
         UnaryOperator<RestHandler> COMPATIBLE_HANDLER_WRAPPER = handler ->
             new RestHandler() {
                 @Override
@@ -42,7 +52,7 @@ public class CompatibleHandlers {
                     if (isRequestCompatible(request)) {
 
                         //consume path a params
-                        parameterConsumers.forEach(c -> c.accept(request));
+                        parameterConsumers.forEach(c -> c.apply(request));
                     }
 
                     handler.handleRequest(request, channel, client);
@@ -50,18 +60,22 @@ public class CompatibleHandlers {
 
                 @Override
                 public boolean isCompatible() {
-                    return true;
+                    return false;
                 }
             };
 
         return COMPATIBLE_HANDLER_WRAPPER;
     }
 
-    private static boolean isRequestCompatible(RestRequest request) {
-        return request.header(Version.COMPATIBLE_HEADER).equals(Version.COMPATIBLE_VERSION);
+    public static boolean isRequestCompatible(RestRequest request) {
+        return Version.COMPATIBLE_VERSION.equals(request.header(Version.COMPATIBLE_HEADER));
     }
 
-    public static Consumer<RestRequest> includeTypeConsumer() {
-        return r -> r.param("include_type_name");
+    public static Function<RestRequest,RestRequest> consumeParameterIncludeType() {
+        return r -> {
+            r.param("include_type_name");
+            return r;
+        };
     }
+
 }

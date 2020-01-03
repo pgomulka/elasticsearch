@@ -99,7 +99,7 @@ public class DocumentMapperParser {
             Map.Entry<String, Object> entry = iterator.next();
             String fieldName = entry.getKey();
             Object fieldNode = entry.getValue();
-
+//what is there in 7?
             MetadataFieldMapper.TypeParser typeParser = rootTypeParsers.get(fieldName);
             if (typeParser != null) {
                 iterator.remove();

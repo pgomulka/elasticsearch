@@ -52,6 +52,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
@@ -165,7 +166,7 @@ public class RestController implements HttpServerTransport.Dispatcher {
     }
 
 
-    public void registerHandler(RestRequest.Method method, String path, RestHandler handler, List<Consumer<RestRequest>>  parameterConsumers) {
+    public void registerHandler(RestRequest.Method method, String path, RestHandler handler, List<Function<RestRequest,RestRequest>>  parameterConsumers) {
         registerHandler(method, path, handler,
             r-> CompatibleHandlers.compatibleParameterConsumingHandler(parameterConsumers).apply(handlerWrapper.apply(r)));
     }

@@ -227,6 +227,12 @@ public class DoSection implements ExecutableSection {
         this.expectedWarningHeaders = expectedWarningHeaders;
     }
 
+    void setExpectedWarningHeaders(List<String> expectedWarningHeaders) {
+        HashSet<String> set = new HashSet<>();
+        set.addAll(expectedWarningHeaders);
+        this.expectedWarningHeaders = set;
+    }
+
     public void addExpectedWarningHeader(String message){
         this.expectedWarningHeaders.add(message);
     }

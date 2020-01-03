@@ -56,6 +56,11 @@ public class MatchAssertion extends Assertion {
 
     @Override
     protected void doAssert(Object actualValue, Object expectedValue) {
+        if(getField().equals("_type") ){
+            assertThat(actualValue, equalTo("_doc"));
+            return;
+        }
+
         //if the value is wrapped into / it is a regexp (e.g. /s+d+/)
         if (expectedValue instanceof String) {
             String expValue = ((String) expectedValue).trim();
