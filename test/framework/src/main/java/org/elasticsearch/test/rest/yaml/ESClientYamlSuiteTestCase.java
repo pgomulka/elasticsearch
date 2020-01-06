@@ -51,6 +51,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -88,8 +89,8 @@ public abstract class ESClientYamlSuiteTestCase extends ESRestTestCase {
      */
     private static final String REST_TESTS_VALIDATE_SPEC = "tests.rest.validate_spec";
 
-    private static final String TESTS_PATH = "/rest-api-spec/test";
-    private static final String SPEC_PATH = "/rest-api-spec/api";
+    private static final String DEFAULT_TESTS_PATH = "/rest-api-spec/test";
+    private static final String DEFAULT_SPEC_PATH = "/rest-api-spec/api";
 
     /**
      * This separator pattern matches ',' except it is preceded by a '\'.
@@ -125,7 +126,7 @@ public abstract class ESClientYamlSuiteTestCase extends ESRestTestCase {
         if (restTestExecutionContext == null) {
             assert adminExecutionContext == null;
             assert blacklistPathMatchers == null;
-            final ClientYamlSuiteRestSpec restSpec = ClientYamlSuiteRestSpec.load(SPEC_PATH);
+            final ClientYamlSuiteRestSpec restSpec = ClientYamlSuiteRestSpec.load(getApiSpecRelativePath());
             validateSpec(restSpec);
             final List<HttpHost> hosts = getClusterHosts();
             Tuple<Version, Version> versionVersionTuple = readVersionsFromCatNodes(adminClient());
@@ -155,6 +156,10 @@ public abstract class ESClientYamlSuiteTestCase extends ESRestTestCase {
         restTestExecutionContext.clear();
     }
 
+    protected String getApiSpecRelativePath() {
+        return DEFAULT_SPEC_PATH;
+    }
+
     protected ClientYamlTestClient initClientYamlTestClient(
             final ClientYamlSuiteRestSpec restSpec,
             final RestClient restClient,
@@ -182,22 +187,22 @@ public abstract class ESClientYamlSuiteTestCase extends ESRestTestCase {
      * defined in {@link ExecutableSection}.
      */
     public static Iterable<Object[]> createParameters() throws Exception {
-        return createParameters(ExecutableSection.XCONTENT_REGISTRY);
+        return createParameters(ExecutableSection.XCONTENT_REGISTRY, Collections.singleton(DEFAULT_TESTS_PATH));
     }
 
     /**
      * Create parameters for this parameterized test.
      */
-    public static Iterable<Object[]> createParameters(NamedXContentRegistry executeableSectionRegistry) throws Exception {
+    public static Iterable<Object[]> createParameters(NamedXContentRegistry executableSectionRegistry, Set<String> testRoots) throws Exception {
         String[] paths = resolvePathsProperty(REST_TESTS_SUITE, ""); // default to all tests under the test root
-        Map<String, Set<Path>> yamlSuites = loadSuites(paths);
+        Map<String, Set<Path>> yamlSuites = loadSuites(testRoots, paths);
         List<ClientYamlTestSuite> suites = new ArrayList<>();
         IllegalArgumentException validationException = null;
         // yaml suites are grouped by directory (effectively by api)
         for (String api : yamlSuites.keySet()) {
             List<Path> yamlFiles = new ArrayList<>(yamlSuites.get(api));
             for (Path yamlFile : yamlFiles) {
-                ClientYamlTestSuite suite = ClientYamlTestSuite.parse(executeableSectionRegistry, api, yamlFile);
+                ClientYamlTestSuite suite = ClientYamlTestSuite.parse(executableSectionRegistry, api, yamlFile);
                 suites.add(suite);
                 try {
                     suite.validate();
@@ -235,23 +240,25 @@ public abstract class ESClientYamlSuiteTestCase extends ESRestTestCase {
 
     /** Find all yaml suites that match the given list of paths from the root test path. */
     // pkg private for tests
-    static Map<String, Set<Path>> loadSuites(String... paths) throws Exception {
+    static Map<String, Set<Path>> loadSuites(Set<String> testRoots, String... paths) throws Exception {
         Map<String, Set<Path>> files = new HashMap<>();
-        Path root = PathUtils.get(ESClientYamlSuiteTestCase.class.getResource(TESTS_PATH).toURI());
-        for (String strPath : paths) {
-            Path path = root.resolve(strPath);
-            if (Files.isDirectory(path)) {
-                Files.walk(path).forEach(file -> {
-                    if (file.toString().endsWith(".yml")) {
-                        addSuite(root, file, files);
-                    } else if (file.toString().endsWith(".yaml")) {
-                        throw new IllegalArgumentException("yaml files are no longer supported: " + file);
-                    }
-                });
-            } else {
-                path = root.resolve(strPath + ".yml");
-                assert Files.exists(path);
-                addSuite(root, path, files);
+        for (String testRoot : testRoots) {
+            Path root = PathUtils.get(ESClientYamlSuiteTestCase.class.getResource(testRoot).toURI());
+            for (String strPath : paths) {
+                Path path = root.resolve(strPath);
+                if (Files.isDirectory(path)) {
+                    Files.walk(path).forEach(file -> {
+                        if (file.toString().endsWith(".yml")) {
+                            addSuite(root, file, files);
+                        } else if (file.toString().endsWith(".yaml")) {
+                            throw new IllegalArgumentException("yaml files are no longer supported: " + file);
+                        }
+                    });
+                } else {
+                    path = root.resolve(strPath + ".yml");
+                    assert Files.exists(path);
+                    addSuite(root, path, files);
+                }
             }
         }
         return files;

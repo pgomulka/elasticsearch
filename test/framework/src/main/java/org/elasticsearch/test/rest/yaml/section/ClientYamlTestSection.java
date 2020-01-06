@@ -42,7 +42,8 @@ public class ClientYamlTestSection implements Comparable<ClientYamlTestSection> 
             SkipSection skipSection = SkipSection.parseIfNext(parser);
             while (parser.currentToken() != XContentParser.Token.END_ARRAY) {
                 ParserUtils.advanceToFieldName(parser);
-                executableSections.add(ExecutableSection.parse(parser));
+                executableSections.add(ExecutableSection.
+                    parse(parser));
             }
             if (parser.nextToken() != XContentParser.Token.END_OBJECT) {
                 throw new IllegalArgumentException("malformed section [" + sectionName + "] expected ["
