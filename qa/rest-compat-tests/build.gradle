@@ -21,8 +21,8 @@ apply plugin: 'elasticsearch.testclusters'
 apply plugin: 'elasticsearch.build'
 apply plugin: 'elasticsearch.rest-test'
 
-def restCompatAPIRoot = new File(new File(project.buildDir, 'resources'), 'restCompatAPIRoot')
-def restCompatTestRoot = new File(new File(project.buildDir, 'resources'), 'restCompatTestRoot')
+def restCompatAPIRoot =  new File(new File(new File(project.buildDir, 'resources'), 'test'), 'restCompatAPIRoot')
+def restCompatTestRoot = new File(new File(new File(project.buildDir, 'resources'), 'test'), 'restCompatTestRoot');
 
 task copyAPIFromBwc(type: Copy) {
   dependsOn ':distribution:bwc:minor:checkoutBwcBranch'
