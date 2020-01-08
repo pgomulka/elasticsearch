@@ -31,6 +31,7 @@ public abstract class Assertion implements ExecutableSection {
     private final XContentLocation location;
     private final String field;
     private final Object expectedValue;
+    private Object expectedOverrideValue;
 
     protected Assertion(XContentLocation location, String field, Object expectedValue) {
         this.location = location;
@@ -38,12 +39,19 @@ public abstract class Assertion implements ExecutableSection {
         this.expectedValue = expectedValue;
     }
 
+    public void setExpectedOverrideValue(Object expectedOverrideValue) {
+        this.expectedOverrideValue = expectedOverrideValue;
+    }
     public final String getField() {
         return field;
     }
 
     public final Object getExpectedValue() {
         return expectedValue;
+    }
+
+    public Object getExpectedOverrideValue() {
+        return expectedOverrideValue;
     }
 
     protected final Object resolveExpectedValue(ClientYamlTestExecutionContext executionContext) throws IOException {
@@ -73,7 +81,12 @@ public abstract class Assertion implements ExecutableSection {
 
     @Override
     public final void execute(ClientYamlTestExecutionContext executionContext) throws IOException {
-        doAssert(getActualValue(executionContext), resolveExpectedValue(executionContext));
+        //TODO: pass down the override value so that it can warn the expected value is overridden
+        if (getExpectedOverrideValue() != null) {
+            doAssert(getActualValue(executionContext), getExpectedOverrideValue());
+        } else {
+            doAssert(getActualValue(executionContext), resolveExpectedValue(executionContext));
+        }
     }
 
     /**

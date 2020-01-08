@@ -28,6 +28,8 @@ task copyAPIFromBwc(type: Copy) {
   dependsOn ':distribution:bwc:minor:checkoutBwcBranch'
   from (project(':distribution:bwc:minor').checkoutDir){
     include 'rest-api-spec/**/rest-api-spec/api/**/*.json'
+    include 'modules/**/rest-api-spec/api/**/*.json'
+    include 'plugins/**/rest-api-spec/api/**/*.json'
   }
   into restCompatAPIRoot
   includeEmptyDirs = false
@@ -58,3 +60,11 @@ integTest.runner {
 dependencies {
   testCompile project(':test:framework')
 }
+
+testClusters.integTest {
+  //reindex module
+  setting 'reindex.remote.whitelist', '127.0.0.1:*'
+
+}
+
+
