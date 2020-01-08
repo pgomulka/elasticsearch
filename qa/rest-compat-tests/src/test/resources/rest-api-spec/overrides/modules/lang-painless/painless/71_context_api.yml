@@ -1,4 +1,0 @@
-# Overriding since when the REST tests are run from the qa project, all of the module painless contexts are on the classpath
-"Action to list contexts":
-  - match: { contexts.22: terms_set }
-

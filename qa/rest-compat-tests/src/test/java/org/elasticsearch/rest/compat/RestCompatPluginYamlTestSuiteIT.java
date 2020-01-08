@@ -5,7 +5,7 @@ import com.carrotsearch.randomizedtesting.annotations.ParametersFactory;
 import org.elasticsearch.test.rest.yaml.ClientYamlTestCandidate;
 
 /**
- * Runs the REST compatibility tests for all of the plugins.
+ * Runs the prior version's elasticsearch/plugin REST tests against a cluster of the current (this) version.
  */
 public class RestCompatPluginYamlTestSuiteIT extends AbstractRestCompatYamlTestSuite {
 
@@ -17,6 +17,6 @@ public class RestCompatPluginYamlTestSuiteIT extends AbstractRestCompatYamlTestS
 
     @ParametersFactory
     public static Iterable<Object[]> parameters() throws Exception {
-        return AbstractRestCompatYamlTestSuite.getOldTests("plugins");
+        return AbstractRestCompatYamlTestSuite.getPriorVersionTests("plugins");
     }
 }
