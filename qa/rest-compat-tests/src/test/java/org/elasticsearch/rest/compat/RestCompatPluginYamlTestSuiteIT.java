@@ -7,11 +7,11 @@ import org.elasticsearch.test.rest.yaml.ClientYamlTestCandidate;
 /**
  * Runs the REST compatibility tests for all of the plugins.
  */
-public class RestCompatOldPluginYamlTestSuiteIT extends AbstractRestCompatYamlTestSuite {
+public class RestCompatPluginYamlTestSuiteIT extends AbstractRestCompatYamlTestSuite {
 
     //TODO: ensure plugins are installed.
 
-    public RestCompatOldPluginYamlTestSuiteIT(@Name("yaml") ClientYamlTestCandidate testCandidate) {
+    public RestCompatPluginYamlTestSuiteIT(@Name("yaml") ClientYamlTestCandidate testCandidate) {
         super(testCandidate);
     }
 

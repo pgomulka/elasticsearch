@@ -10,9 +10,9 @@ import java.io.File;
 /**
  * Runs any additional REST compatibility tests from this project's resources.
  */
-public class RestCompatThisYamlTestSuiteIT extends AbstractRestCompatYamlTestSuite {
+public class RestCompatYamlTestSuiteIT extends AbstractRestCompatYamlTestSuite {
 
-    public RestCompatThisYamlTestSuiteIT(@Name("yaml") ClientYamlTestCandidate testCandidate) {
+    public RestCompatYamlTestSuiteIT(@Name("yaml") ClientYamlTestCandidate testCandidate) {
         super(testCandidate);
     }
 

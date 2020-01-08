@@ -59,7 +59,7 @@ class AbstractRestCompatYamlTestSuite extends ESClientYamlSuiteTestCase {
 
     /**
      * <p>
-     * Finds the tests the prior version. Gradle checked out the prior version and copied the REST tests to "restCompatTestRoot" dir.
+     * Finds the tests from the prior version. Gradle checked out the prior version and copied the REST tests to "restCompatTestRoot" dir.
      * This method finds those old tests to feed into {@link ESClientYamlSuiteTestCase} so that the old REST tests are run against the
      * current server with compatibility mode flag sent. Some the old tests may not parse correctly into executable tests and are listed
      * locally in the SKIP variable.
