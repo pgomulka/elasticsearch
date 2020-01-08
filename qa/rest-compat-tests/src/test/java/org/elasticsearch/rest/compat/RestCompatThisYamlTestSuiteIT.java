@@ -10,9 +10,9 @@ import java.io.File;
 /**
  * Runs any additional REST compatibility tests from this project's resources.
  */
-public class RestCompatCustomYamlTestSuiteIT extends AbstractRestCompatYamlTestSuite {
+public class RestCompatThisYamlTestSuiteIT extends AbstractRestCompatYamlTestSuite {
 
-    public RestCompatCustomYamlTestSuiteIT(@Name("yaml") ClientYamlTestCandidate testCandidate) {
+    public RestCompatThisYamlTestSuiteIT(@Name("yaml") ClientYamlTestCandidate testCandidate) {
         super(testCandidate);
     }
 
@@ -20,4 +20,5 @@ public class RestCompatCustomYamlTestSuiteIT extends AbstractRestCompatYamlTestS
     public static Iterable<Object[]> parameters() throws Exception {
         return ESClientYamlSuiteTestCase.createParameters();
     }
+
 }
