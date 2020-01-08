@@ -1,0 +1,8 @@
+# Overriding since when the compat REST tests are run from the qa project, all of the module painless contexts are on the classpath and the
+# number and thus placement in the array are different then when running directly from the lang-painless REST tests
+"Action to list contexts":
+  - do:
+      scripts_painless_context: {}
+  - match: { contexts.0: aggregation_selector}
+  - match: { contexts.22: terms_set} # <-- changed
+
