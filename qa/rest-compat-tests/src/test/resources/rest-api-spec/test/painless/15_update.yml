@@ -1,0 +1,24 @@
+# Overriding this test since the underlying root caused changed between versions
+"Update Script with script error":
+  - do:
+      index:
+        index:  test_1
+        id:     2
+        body:
+          foo:    bar
+          count:  1
+
+  - do:
+      catch: bad_request
+      update:
+        index:  test_1
+        id:     2
+        body:
+          script:
+            lang:   painless
+            source: "ctx._source.ctx = ctx"
+            params: { bar: 'xxx' }
+
+  - match: { error.root_cause.0.type: "remote_transport_exception" } # <-- changed
+  - match: { error.type: "illegal_argument_exception" }
+  - match: { error.reason: "Iterable object is self-referencing itself" }
