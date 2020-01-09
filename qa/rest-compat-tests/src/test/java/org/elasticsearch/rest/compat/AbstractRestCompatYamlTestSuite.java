@@ -1,6 +1,8 @@
 package org.elasticsearch.rest.compat;
 
 import com.carrotsearch.randomizedtesting.annotations.Name;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.elasticsearch.common.io.PathUtils;
 import org.elasticsearch.test.rest.yaml.ClientYamlTestCandidate;
 import org.elasticsearch.test.rest.yaml.ESClientYamlSuiteTestCase;
@@ -22,7 +24,8 @@ import java.util.stream.StreamSupport;
 
 class AbstractRestCompatYamlTestSuite extends ESClientYamlSuiteTestCase {
 
-    static boolean foo = true;
+    private static final Logger logger = LogManager.getLogger(AbstractRestCompatYamlTestSuite.class);
+
     //TODO: maybe ? support new command line flag to enforce tests from a specific module, plugin, or core, add this to the reproduce line
     //-Dtests.rest.suite.compat.parent=[plugin-name | module-name]
 
@@ -40,7 +43,7 @@ class AbstractRestCompatYamlTestSuite extends ESClientYamlSuiteTestCase {
         }
     }
 
-    //TODO: figure out the additional steps and try to get this list down to zero.
+    //TODO: figure out the additional steps and try to get this list down to zero,
     static final Map<String, SkipReason> SKIP = Map.of(
         "/plugins/repository-gcs", SkipReason.REQUIRES_ADDITIONAL_SETUP,
         "/plugins/discovery-gce", SkipReason.REQUIRES_ADDITIONAL_SETUP,
@@ -88,56 +91,55 @@ class AbstractRestCompatYamlTestSuite extends ESClientYamlSuiteTestCase {
                     Optional<Map.Entry<String, SkipReason>> match =
                         SKIP.entrySet().stream().filter(e -> file.toString().contains(e.getKey())).findFirst();
                     if (match.isPresent()) {
-                        //TODO: use a logger
-                        System.out.println("* * * Skipping " + file + " [" + match.get().getValue().getDisplay() + "]");
+                        //TODO: make this better or just get rid of it ! - as it is wrong , it is missing the API 
+                        logger.info("Skipping test {}/{} [{}]", source, file.getFileName().toString().replace(".yml", ""), match.get().getValue().getDisplay());
                     } else {
                         testsClassPaths.add(testClassPath);
                     }
                 }
             });
         }
-        Set<ClientYamlTestCandidateToCompare> testOverrides = getTestsOverrides();
+        Set<ClientYamlTestCandidate> testOverrides = getTestsOverrides();
         List<Object[]> tests = new ArrayList<>(100);
+
         for (String testsClassPath : testsClassPaths) {
-            final String parent = ("modules".equals(source) || "plugins".equals(source)) ? testsClassPath.split("/")[3] : null;
+
             Iterable<Object[]> candidates = ESClientYamlSuiteTestCase.createParameters(ExecutableSection.XCONTENT_REGISTRY, testsClassPath);
-            //TODO: use StreamSupport
-            candidates.forEach(objectArray -> {
-                for (Object o : objectArray) {
-                    List<ClientYamlTestCandidate> testCandidates = new ArrayList<>(objectArray.length);
-                    if (o instanceof ClientYamlTestCandidate) {
-                        ClientYamlTestCandidate testCandidate = (ClientYamlTestCandidate) o;
-                        ClientYamlTestCandidateToCompare currentCandidate4Compare = new ClientYamlTestCandidateToCompare(testCandidate, source, parent);
-                        if (testOverrides.contains(currentCandidate4Compare) == false) {
-                            testCandidates.add(testCandidate);
-                            //disable checking for warning headers, we know that many of the tests will have deprecation and compatibility warnings.
-                            //the deprecation and compatibility warnings should be explicitly tested via the REST tests from this version.
-                            testCandidate.getTestSection().getExecutableSections().stream().filter(s -> s instanceof DoSection).forEach(ds -> {
-                                DoSection doSection = (DoSection) ds;
-                                doSection.checkWarningHeaders(false);
-                                //TODO: use real header
-                                doSection.getApiCallSection().addHeaders(Collections.singletonMap("compatible-with", "v7"));
-                            });
-                        } else {
-                            //TODO: use a logger
-                            System.out.println("* * * Skipping test [" + currentCandidate4Compare + "]");
-                        }
-                        if (testCandidates.isEmpty() == false) {
-                            tests.add(testCandidates.toArray());
-                        }
+            StreamSupport.stream(candidates.spliterator(), false)
+                .flatMap(Arrays::stream).map(o -> (ClientYamlTestCandidate) o)
+                .forEach(testCandidate -> {
+                    List<ClientYamlTestCandidate> testCandidates = new ArrayList<>(100);
+
+                    if (testOverrides.contains(testCandidate) == false) {
+                        testCandidates.add(testCandidate);
+                        //disable checking for warning headers, we know that many of the tests will have deprecation and compatibility warnings.
+                        //the deprecation and compatibility warnings should be explicitly tested via the REST tests from this version.
+                        testCandidate.getTestSection().getExecutableSections().stream().filter(s -> s instanceof DoSection).forEach(ds -> {
+                            DoSection doSection = (DoSection) ds;
+                            doSection.checkWarningHeaders(false);
+                            //TODO: use real header
+                            // add the compatibility header
+                            doSection.getApiCallSection().addHeaders(Collections.singletonMap("compatible-with", "v7"));
+                        });
+                    } else {
+                        //TODO: use a logger
+                        System.out.println("* * * Skipping test [" + testCandidates + "]");
                     }
-                }
-            });
+                    if (testCandidates.isEmpty() == false) {
+                        tests.add(testCandidates.toArray());
+                    }
+
+                });
         }
         //TODO: what happens when a single test is requested via the modules, but the module is overriden ? (maybe keep all of the skipped tests locally and output them with a helpful hint here if empty
         return tests;
     }
 
-    private static Set<ClientYamlTestCandidateToCompare> getTestsOverrides() throws Exception {
+    private static Set<ClientYamlTestCandidate> getTestsOverrides() throws Exception {
         Iterable<Object[]> candidates = ESClientYamlSuiteTestCase.createParameters();
-        Set<ClientYamlTestCandidateToCompare> testOverrides = new HashSet<>(100);
+        Set<ClientYamlTestCandidate> testOverrides = new HashSet<>(100);
         StreamSupport.stream(candidates.spliterator(), false)
-            .flatMap(Arrays::stream).forEach(o -> testOverrides.add(new ClientYamlTestCandidateToCompare((ClientYamlTestCandidate) o)));
+            .flatMap(Arrays::stream).forEach(o -> testOverrides.add((ClientYamlTestCandidate) o));
         return testOverrides;
     }
 }

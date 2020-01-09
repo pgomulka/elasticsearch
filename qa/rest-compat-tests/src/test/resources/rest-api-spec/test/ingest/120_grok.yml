@@ -1,0 +1,6 @@
+# Overriding since when the number of grok patterns are different between versions
+"Test Grok Patterns Retrieval":
+  - do:
+      ingest.processor_grok: {}
+  - length: { patterns: 303 } # <-- changed
+  - match: { patterns.PATH: "(?:%{UNIXPATH}|%{WINPATH})" }
