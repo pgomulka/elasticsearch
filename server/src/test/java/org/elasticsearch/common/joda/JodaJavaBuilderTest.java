@@ -8,10 +8,20 @@ import static org.hamcrest.core.IsEqual.equalTo;
 public class JodaJavaBuilderTest extends ESTestCase {
 
     public void testJoda() {
+        assertThat(convertPattern("YYYY-MM-dd"), equalTo("yyyy-MM-dd"));
+        assertThat(convertPattern("yyyy-MM-dd"), equalTo("uuuu-MM-dd"));
+        assertThat(convertPattern("YY-MM-dd"), equalTo("uu-MM-dd"));//joda calls year anyway
+        assertThat(convertPattern("yy-MM-dd"), equalTo("uu-MM-dd"));
+        assertThat(convertPattern("yyyy-MM-dd'T'"), equalTo("uuuu-MM-dd'T'"));
+        assertThat(convertPattern("yyyy-MM-dd'T'yy'something'yy-MM-dd"), equalTo("uuuu-MM-dd'T'uu'something'uu-MM-dd"));
+        assertThat(convertPattern("yyyy-MM-dd'T'hh:mm:ss.SSSZ"), equalTo("uuuu-MM-dd'T'hh:mm:ss.SSSXXX"));
+    }
+
+    private String convertPattern(String jodaPattern) {
         JodaJavaBuilder jodaJavaBuilder = new JodaJavaBuilder();
-        jodaJavaBuilder.appendPattern("YYYY-MM-dd");
-        String javaPattern = jodaJavaBuilder.getJavaPattern();
-        assertThat(javaPattern, equalTo("yyyy-MM-dd"));
+
+        jodaJavaBuilder.appendPattern(jodaPattern);
+        return jodaJavaBuilder.getJavaPattern();
     }
 
 }

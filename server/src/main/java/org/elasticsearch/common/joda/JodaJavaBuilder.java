@@ -3,14 +3,23 @@ package org.elasticsearch.common.joda;
 import org.joda.time.DateTimeFieldType;
 import org.joda.time.DateTimeUtils;
 import org.joda.time.DateTimeZone;
+import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatterBuilder;
 
 import java.util.Map;
+import java.util.regex.Pattern;
 
 public class JodaJavaBuilder extends DateTimeFormatterBuilder {
     StringBuilder pattern = new StringBuilder();
+//yyyy-MM-dd'#T' '#something' yy-MM-dd
+    public DateTimeFormatterBuilder appendPattern(String pattern) {
+        String pattern1 = pattern.replaceAll("'([^']+)'", "'#$1'");
+        return super.appendPattern(pattern1);
+    }
+
     public String getJavaPattern() {
-        return null;
+        String s = pattern.toString();
+        return s.replaceAll("#","");
     }
 
     //-----------------------------------------------------------------------
@@ -21,8 +30,7 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @return this DateTimeFormatterBuilder, for chaining
      */
     public DateTimeFormatterBuilder appendLiteral(char c) {
-        pattern.append("'"+c+"'");
-       return this;
+       return appendX(""+c);
     }
 
     /**
@@ -33,8 +41,7 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @throws IllegalArgumentException if text is null
      */
     public DateTimeFormatterBuilder appendLiteral(String text) {
-        pattern.append("'"+text+"'");
-        return this;
+        return appendX("'"+text+"'");
     }
 
 //    /**
@@ -458,7 +465,7 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @return this DateTimeFormatterBuilder, for chaining
      */
     public DateTimeFormatterBuilder appendYear(int minDigits, int maxDigits) {
-        return multiply("u",maxDigits);
+        return multiply("u",minDigits);
     }
 
     /**
@@ -550,7 +557,7 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @return this DateTimeFormatterBuilder, for chaining
      */
     public DateTimeFormatterBuilder appendYearOfEra(int minDigits, int maxDigits) {
-        return multiply("y",maxDigits);
+        return multiply("y",minDigits);
 
     }
 
