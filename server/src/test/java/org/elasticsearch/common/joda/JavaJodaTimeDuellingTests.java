@@ -39,6 +39,40 @@ import static org.hamcrest.Matchers.is;
 
 public class JavaJodaTimeDuellingTests extends ESTestCase {
 
+    public void testJodaToJavaYears() {
+
+        assertSameMillis("2020-01-01", "YYYY-MM-dd","8"+ "yyyy-MM-dd");
+        assertSameMillis("2020-01-01", "yyyy-MM-dd","8"+ "uuuu-MM-dd");
+        //joda calls year anyway
+
+        assertSameMillis("20-01-01", "YY-MM-dd","8"+ "uu-MM-dd");
+        assertSameMillis("2020-01-01T", "yyyy-MM-dd'T'","8"+ "uuuu-MM-dd'T'");
+
+        assertSameMillis("2020-01-01T20something20-01-01", "yyyy-MM-dd'T'yy'something'yy-MM-dd","8"+ "uuuu-MM-dd'T'uu'something'uu-MM-dd");
+
+
+    }
+
+    public void testJodaToJavaZones(){
+        assertSameMillis("2020-01-01T01:01:01.001+01", "yyyy-MM-dd'T'HH:mm:ss.SSSZ","8"+ "uuuu-MM-dd'T'HH:mm:ss.SSSZ");
+        assertSameMillis("2020-01-01T01:01:01.001+0000", "yyyy-MM-dd'T'HH:mm:ss.SSSZ","8"+ "uuuu-MM-dd'T'HH:mm:ss.SSSZ");
+        assertSameMillis("2020-01-01T01:01:01.001+0100", "yyyy-MM-dd'T'HH:mm:ss.SSSZ","8"+ "uuuu-MM-dd'T'HH:mm:ss.SSSZ");
+        assertSameMillis("2020-01-01T01:01:01.001+010000", "yyyy-MM-dd'T'HH:mm:ss.SSSZ","8"+ "uuuu-MM-dd'T'HH:mm:ss.SSSZ");
+
+        assertSameMillis("2020-01-01T01:01:01.001+01", "yyyy-MM-dd'T'HH:mm:ss.SSSZZ","8"+ "uuuu-MM-dd'T'HH:mm:ss.SSSZZZZZ");
+        assertSameMillis("2020-01-01T01:01:01.001+01:00", "yyyy-MM-dd'T'HH:mm:ss.SSSZZ","8"+ "uuuu-MM-dd'T'HH:mm:ss.SSSZZZZZ");
+        assertSameMillis("2020-01-01T01:01:01.001+01:00:00", "yyyy-MM-dd'T'HH:mm:ss.SSSZZ","8"+ "uuuu-MM-dd'T'HH:mm:ss.SSSZZZZZ");
+
+        assertSameMillis("2020-01-01T01:01:01.001Europe/Warsaw", "yyyy-MM-dd'T'HH:mm:ss.SSSZZZ","8"+ "uuuu-MM-dd'T'HH:mm:ss.SSSVV");
+    }
+
+    private String convertPattern(String jodaPattern) {
+        JodaJavaBuilder jodaJavaBuilder = new JodaJavaBuilder();
+
+        jodaJavaBuilder.appendPattern(jodaPattern);
+        return jodaJavaBuilder.getJavaPattern();
+    }
+
     public void testIncompatiblePatterns() {
         // in joda 'y' means year, this is changed to 'u' in java.time. difference is in before era yeaers
         assertSameMillis("-0001-01-01", "yyyy-MM-dd", "8uuuu-MM-dd");
@@ -67,6 +101,11 @@ public class JavaJodaTimeDuellingTests extends ESTestCase {
     }
 
     private void assertSameMillis(String input, String jodaFormat, String javaFormat) {
+
+        String actualJava = convertPattern(jodaFormat);
+//        assertThat("8"+actualJava,equalTo(javaFormat));
+        javaFormat="8"+actualJava;
+
         DateFormatter jodaFormatter = Joda.forPattern(jodaFormat);
         DateFormatter javaFormatter = DateFormatter.forPattern(javaFormat);
 

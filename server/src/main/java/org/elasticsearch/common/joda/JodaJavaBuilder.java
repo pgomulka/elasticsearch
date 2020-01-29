@@ -3,16 +3,18 @@ package org.elasticsearch.common.joda;
 import org.joda.time.DateTimeFieldType;
 import org.joda.time.DateTimeUtils;
 import org.joda.time.DateTimeZone;
-import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatterBuilder;
 
 import java.util.Map;
-import java.util.regex.Pattern;
 
 public class JodaJavaBuilder extends DateTimeFormatterBuilder {
     StringBuilder pattern = new StringBuilder();
-//yyyy-MM-dd'#T' '#something' yy-MM-dd
+
     public DateTimeFormatterBuilder appendPattern(String pattern) {
+        /*because of logic in DateTimeFormat.parseToken see comment '// This will identify token as text.'
+          opening apostrophe has to be prefixed with a special character
+         */
+
         String pattern1 = pattern.replaceAll("'([^']+)'", "'#$1'");
         return super.appendPattern(pattern1);
     }
@@ -20,6 +22,19 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
     public String getJavaPattern() {
         String s = pattern.toString();
         return s.replaceAll("#","");
+    }
+
+
+    private DateTimeFormatterBuilder appendToPattern(String y) {
+        pattern.append(y);
+        return this;
+    }
+
+    private DateTimeFormatterBuilder multiply(String text, int timees) {
+        for(int i=0;i<timees;i++){
+            appendToPattern(text);
+        }
+        return this;
     }
 
     //-----------------------------------------------------------------------
@@ -30,7 +45,7 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @return this DateTimeFormatterBuilder, for chaining
      */
     public DateTimeFormatterBuilder appendLiteral(char c) {
-       return appendX(""+c);
+       return appendToPattern(""+c);
     }
 
     /**
@@ -41,7 +56,7 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @throws IllegalArgumentException if text is null
      */
     public DateTimeFormatterBuilder appendLiteral(String text) {
-        return appendX("'"+text+"'");
+        return appendToPattern("'"+text+"'");
     }
 
 //    /**
@@ -403,12 +418,6 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
         return multiply("d",minDigits);
     }
 
-    private DateTimeFormatterBuilder multiply(String d, int minDigits) {
-        for(int i=0;i<minDigits;i++)
-            pattern.append(d);
-        return this;
-    }
-
     /**
      * Instructs the printer to emit a numeric dayOfYear field.
      *
@@ -441,11 +450,6 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
         return multiply("Y",maxDigits);
     }
 
-    private DateTimeFormatterBuilder appendX(String y) {
-        pattern.append(y);
-        return this;
-    }
-
     /**
      * Instructs the printer to emit a numeric monthOfYear field.
      *
@@ -453,7 +457,7 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @return this DateTimeFormatterBuilder, for chaining
      */
     public DateTimeFormatterBuilder appendMonthOfYear(int minDigits) {
-        return appendX("MM");
+        return appendToPattern("MM");
     }
 
     /**
@@ -487,7 +491,7 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @return this DateTimeFormatterBuilder, for chaining
      */
     public DateTimeFormatterBuilder appendTwoDigitYear(int pivot) {
-        return appendX("uu");
+        return appendToPattern("uu");
     }
 
     /**
@@ -505,7 +509,7 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @since 1.1
      */
     public DateTimeFormatterBuilder appendTwoDigitYear(int pivot, boolean lenientParse) {
-        return appendX("uu");
+        return appendToPattern("uu");
     }
 
     /**
@@ -527,7 +531,7 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @return this DateTimeFormatterBuilder, for chaining
      */
     public DateTimeFormatterBuilder appendTwoDigitWeekyear(int pivot) {
-       return appendX("YY");
+       return appendToPattern("YY");
     }
 
     /**
@@ -545,7 +549,7 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @since 1.1
      */
     public DateTimeFormatterBuilder appendTwoDigitWeekyear(int pivot, boolean lenientParse) {
-        return appendX("YY");
+        return appendToPattern("YY");
     }
 
     /**
@@ -592,7 +596,7 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @return this DateTimeFormatterBuilder, for chaining
      */
     public DateTimeFormatterBuilder appendHalfdayOfDayText() {
-        return appendX("a");
+        return appendToPattern("a");
     }
 
     /**
@@ -624,7 +628,7 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @return this DateTimeFormatterBuilder, for chaining
      */
     public DateTimeFormatterBuilder appendMonthOfYearText() {
-        return appendX("MMMM");
+        return appendToPattern("MMMM");
     }
 
     /**
@@ -634,7 +638,7 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @return this DateTimeFormatterBuilder, for chaining
      */
     public DateTimeFormatterBuilder appendMonthOfYearShortText() {
-        return appendX("MMM");
+        return appendToPattern("MMM");
     }
 
     /**
@@ -644,7 +648,7 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @return this DateTimeFormatterBuilder, for chaining
      */
     public DateTimeFormatterBuilder appendEraText() {
-        return appendX("G");
+        return appendToPattern("G");
     }
 
     /**
@@ -655,7 +659,7 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @return this DateTimeFormatterBuilder, for chaining
      */
     public DateTimeFormatterBuilder appendTimeZoneName() {
-        return appendX("zzzz");
+        return appendToPattern("zzzz");
     }
 
     /**
@@ -680,7 +684,7 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @return this DateTimeFormatterBuilder, for chaining
      */
     public DateTimeFormatterBuilder appendTimeZoneShortName() {
-        return appendX("zzz");
+        return appendToPattern("zzz");
     }
 
     /**
@@ -694,8 +698,7 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @return this DateTimeFormatterBuilder, for chaining
      */
     public DateTimeFormatterBuilder appendTimeZoneShortName(Map<String, DateTimeZone> parseLookup) {
-        return appendX("zzz");
-
+        return appendToPattern("zzz");
     }
 
     /**
@@ -705,7 +708,7 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @return this DateTimeFormatterBuilder, for chaining
      */
     public DateTimeFormatterBuilder appendTimeZoneId() {
-        return appendX("V");
+        return appendToPattern("VV");
     }
 
     /**
@@ -756,8 +759,8 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
         String zeroOffsetPrintText, String zeroOffsetParseText, boolean showSeparators,
         int minFields, int maxFields) {
         if(showSeparators){
-            return multiply("X",2);
+            return appendToPattern("[XXXXX][XXX][X]"); //+01:02:03(XXXXX) or +01:02 (XX) or +01(X)
         }
-        return multiply("X",3);
+        return appendToPattern("[XXXX][X]");//+010203(XXXX) or +0102(X allows this) or +01 (X)
     }
 }
