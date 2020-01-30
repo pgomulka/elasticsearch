@@ -14,9 +14,21 @@ public class JodaJavaBuilderTest extends ESTestCase {
 //        assertThat(convertPattern("yy-MM-dd"), equalTo("uu-MM-dd"));
 //        assertThat(convertPattern("yyyy-MM-dd'T'"), equalTo("uuuu-MM-dd'T'"));
 //        assertThat(convertPattern("yyyy-MM-dd'T'yy'something'yy-MM-dd"), equalTo("uuuu-MM-dd'T'uu'something'uu-MM-dd"));
-        assertThat(convertPattern("yyyy-MM-dd'T'hh:mm:ss.SSSZ"), equalTo("uuuu-MM-dd'T'hh:mm:ss.SSSXX"));
-        assertThat(convertPattern("yyyy-MM-dd'T'hh:mm:ss.SSSZZ"), equalTo("uuuu-MM-dd'T'hh:mm:ss.SSSXXX"));
-        assertThat(convertPattern("yyyy-MM-dd'T'hh:mm:ss.SSSZZZ"), equalTo("uuuu-MM-dd'T'hh:mm:ss.SSSV"));
+
+    }
+
+
+    public void testSplit(){
+        assertThat(convertPattern("yyyy-MM-dd'T'hh:mm:ss.SSSZ"), equalTo("uuuu-MM-dd'T'hh:mm:ss.SSSXXXX||uuuu-MM-dd'T'hh:mm:ss.SSSX"));
+        assertThat(convertPattern("yyyy-MM-dd'T'hh:mm:ss.SSSZZ"),
+            equalTo("uuuu-MM-dd'T'hh:mm:ss.SSSXXXXX||uuuu-MM-dd'T'hh:mm:ss.SSSXXX||uuuu-MM-dd'T'hh:mm:ss.SSSX"));
+        assertThat(convertPattern("yyyy-MM-dd'T'hh:mm:ss.SSSZZZ"), equalTo("uuuu-MM-dd'T'hh:mm:ss.SSSVV"));
+
+        assertThat(convertPattern("yyyy-MM-dd'T'Zyyyy-MM-dd'T'"), equalTo("uuuu-MM-dd'T'XXXXuuuu-MM-dd'T'||uuuu-MM-dd'T'Xuuuu-MM-dd'T'"));
+
+        assertThat(convertPattern("yyyyZMMZ"), equalTo("uuuuXXXXMMXXXX||uuuuXXXXMMX||uuuuXMMXXXX||uuuuXMMX"));
+
+
     }
 
     private String convertPattern(String jodaPattern) {

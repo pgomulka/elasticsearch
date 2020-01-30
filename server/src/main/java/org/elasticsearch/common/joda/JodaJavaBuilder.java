@@ -5,10 +5,18 @@ import org.joda.time.DateTimeUtils;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormatterBuilder;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.StringJoiner;
 
 public class JodaJavaBuilder extends DateTimeFormatterBuilder {
-    StringBuilder pattern = new StringBuilder();
+    List<StringBuilder> patterns = new ArrayList<>();
+    {
+        patterns.add(new StringBuilder());
+    }
+//    StringBuilder pattern = new StringBuilder();
 
     public DateTimeFormatterBuilder appendPattern(String pattern) {
         /*because of logic in DateTimeFormat.parseToken see comment '// This will identify token as text.'
@@ -20,20 +28,40 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
     }
 
     public String getJavaPattern() {
-        String s = pattern.toString();
-        return s.replaceAll("#","");
+        StringJoiner result = new StringJoiner("||");
+        for (StringBuilder pattern : patterns) {
+            String s = pattern.toString();
+            String replaced =  s.replaceAll("#","");
+            result.add(replaced);
+        }
+        return result.toString();
     }
 
 
-    private DateTimeFormatterBuilder appendToPattern(String y) {
-        pattern.append(y);
+    private DateTimeFormatterBuilder appendToPattern(String text) {
+        for (StringBuilder pattern : patterns) {
+            pattern.append(text);
+        }
         return this;
     }
 
-    private DateTimeFormatterBuilder multiply(String text, int timees) {
-        for(int i=0;i<timees;i++){
+    private DateTimeFormatterBuilder multiply(String text, int times) {
+        for(int i=0;i<times;i++){
             appendToPattern(text);
         }
+        return this;
+    }
+
+    private DateTimeFormatterBuilder split(String ... toAdd) {
+        List<StringBuilder> newPatterns = new ArrayList<>();
+        for (StringBuilder pattern : patterns) {
+            for (String suff : toAdd) {
+                StringBuilder newBuilder = new StringBuilder(pattern);
+                newBuilder.append(suff);
+                newPatterns.add(newBuilder);
+            }
+        }
+        patterns = newPatterns;
         return this;
     }
 
@@ -759,8 +787,10 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
         String zeroOffsetPrintText, String zeroOffsetParseText, boolean showSeparators,
         int minFields, int maxFields) {
         if(showSeparators){
-            return appendToPattern("[XXXXX][XXX][X]"); //+01:02:03(XXXXX) or +01:02 (XX) or +01(X)
+            return split("XXXXX","XXX","X"); //+01:02:03(XXXXX) or +01:02 (XX) or +01(X)
         }
-        return appendToPattern("[XXXX][X]");//+010203(XXXX) or +0102(X allows this) or +01 (X)
+        return split("XXXX","X");//+010203(XXXX) or +0102(X allows this) or +01 (X)
     }
+
+
 }
