@@ -39,7 +39,8 @@ import static org.hamcrest.Matchers.is;
 
 public class JavaJodaTimeDuellingTests extends ESTestCase {
     public void testWeekYear() {
-        assertSameMillis("2020-W01-1", "xxxx-'W'ww-e","8"+ "YYYY-'W'ww-e");
+//            won't work in 6.8
+        assertSameMillis("2020-W-01", "xxxx-'W'-ww","8"+ "YYYY-'W'-ww");
     }
     public void testJodaToJavaYears() {
 
@@ -56,16 +57,24 @@ public class JavaJodaTimeDuellingTests extends ESTestCase {
     }
 
     public void testJodaToJavaZones(){
-        assertSameMillis("2020-01-01T01:01:01.001+01", "yyyy-MM-dd'T'HH:mm:ss.SSSZ","8"+ "uuuu-MM-dd'T'HH:mm:ss.SSSZ");
-        assertSameMillis("2020-01-01T01:01:01.001+0000", "yyyy-MM-dd'T'HH:mm:ss.SSSZ","8"+ "uuuu-MM-dd'T'HH:mm:ss.SSSZ");
-        assertSameMillis("2020-01-01T01:01:01.001+0100", "yyyy-MM-dd'T'HH:mm:ss.SSSZ","8"+ "uuuu-MM-dd'T'HH:mm:ss.SSSZ");
-        assertSameMillis("2020-01-01T01:01:01.001+010000", "yyyy-MM-dd'T'HH:mm:ss.SSSZ","8"+ "uuuu-MM-dd'T'HH:mm:ss.SSSZ");
+        assertSameMillis("2020-01-01T01:01:01.001+01", "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
+            "8"+ "uuuu-MM-dd'T'HH:mm:ss.SSSXXXX||uuuu-MM-dd'T'HH:mm:ss.SSSX");
+        assertSameMillis("2020-01-01T01:01:01.001+0000", "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
+            "8"+ "uuuu-MM-dd'T'HH:mm:ss.SSSXXXX||uuuu-MM-dd'T'HH:mm:ss.SSSX");
+        assertSameMillis("2020-01-01T01:01:01.001+0100", "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
+            "8"+ "uuuu-MM-dd'T'HH:mm:ss.SSSXXXX||uuuu-MM-dd'T'HH:mm:ss.SSSX");
+        assertSameMillis("2020-01-01T01:01:01.001+010000", "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
+            "8"+ "uuuu-MM-dd'T'HH:mm:ss.SSSXXXX||uuuu-MM-dd'T'HH:mm:ss.SSSX");
 
-        assertSameMillis("2020-01-01T01:01:01.001+01", "yyyy-MM-dd'T'HH:mm:ss.SSSZZ","8"+ "uuuu-MM-dd'T'HH:mm:ss.SSSZZZZZ");
-        assertSameMillis("2020-01-01T01:01:01.001+01:00", "yyyy-MM-dd'T'HH:mm:ss.SSSZZ","8"+ "uuuu-MM-dd'T'HH:mm:ss.SSSZZZZZ");
-        assertSameMillis("2020-01-01T01:01:01.001+01:00:00", "yyyy-MM-dd'T'HH:mm:ss.SSSZZ","8"+ "uuuu-MM-dd'T'HH:mm:ss.SSSZZZZZ");
+        assertSameMillis("2020-01-01T01:01:01.001+01", "yyyy-MM-dd'T'HH:mm:ss.SSSZZ",
+            "8"+ "uuuu-MM-dd'T'HH:mm:ss.SSSXXXXX||uuuu-MM-dd'T'HH:mm:ss.SSSXXX||uuuu-MM-dd'T'HH:mm:ss.SSSX");
+        assertSameMillis("2020-01-01T01:01:01.001+01:00", "yyyy-MM-dd'T'HH:mm:ss.SSSZZ",
+            "8"+ "uuuu-MM-dd'T'HH:mm:ss.SSSXXXXX||uuuu-MM-dd'T'HH:mm:ss.SSSXXX||uuuu-MM-dd'T'HH:mm:ss.SSSX");
+        assertSameMillis("2020-01-01T01:01:01.001+01:00:00", "yyyy-MM-dd'T'HH:mm:ss.SSSZZ",
+            "8"+ "uuuu-MM-dd'T'HH:mm:ss.SSSXXXXX||uuuu-MM-dd'T'HH:mm:ss.SSSXXX||uuuu-MM-dd'T'HH:mm:ss.SSSX");
 
-        assertSameMillis("2020-01-01T01:01:01.001Europe/Warsaw", "yyyy-MM-dd'T'HH:mm:ss.SSSZZZ","8"+ "uuuu-MM-dd'T'HH:mm:ss.SSSVV");
+        assertSameMillis("2020-01-01T01:01:01.001Europe/Warsaw", "yyyy-MM-dd'T'HH:mm:ss.SSSZZZ",
+            "8"+ "uuuu-MM-dd'T'HH:mm:ss.SSSVV");
     }
 
     private String convertPattern(String jodaPattern) {
@@ -85,8 +94,10 @@ public class JavaJodaTimeDuellingTests extends ESTestCase {
 
 
         //in joda 'Z' was able to parse 'Z' zulu but in java it fails. You have to use 'X' to do that.
-        assertSameMillis("2019-01-01T01:01:01.001Z", "YYYY-MM-dd'T'HH:mm:ss.SSSZ", "8yyyy-MM-dd'T'HH:mm:ss.SSSX");
-        assertSameMillis("2019-01-01T01:01:01.001+0000", "YYYY-MM-dd'T'HH:mm:ss.SSSZ", "8yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+        assertSameMillis("2019-01-01T01:01:01.001Z", "YYYY-MM-dd'T'HH:mm:ss.SSSZ",
+            "8yyyy-MM-dd'T'HH:mm:ss.SSSXXXX||yyyy-MM-dd'T'HH:mm:ss.SSSX");
+        assertSameMillis("2019-01-01T01:01:01.001+0000", "YYYY-MM-dd'T'HH:mm:ss.SSSZ",
+            "8yyyy-MM-dd'T'HH:mm:ss.SSSXXXX||yyyy-MM-dd'T'HH:mm:ss.SSSX");
 
 
         // 'z' zoneId in joda prints UTC whereas joda prints 'Z' for zulu

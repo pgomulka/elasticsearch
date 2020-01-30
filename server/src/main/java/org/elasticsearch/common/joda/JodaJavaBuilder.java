@@ -1,29 +1,20 @@
 package org.elasticsearch.common.joda;
 
-import org.joda.time.DateTimeFieldType;
 import org.joda.time.DateTimeUtils;
 import org.joda.time.DateTimeZone;
-import org.joda.time.format.DateTimeFormatterBuilder;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
 
-public class JodaJavaBuilder extends DateTimeFormatterBuilder {
+public class JodaJavaBuilder/* extends DateTimeFormatterBuilder*/ {
     List<StringBuilder> patterns = new ArrayList<>();
     {
         patterns.add(new StringBuilder());
     }
-//    StringBuilder pattern = new StringBuilder();
 
-    public DateTimeFormatterBuilder appendPattern(String pattern) {
-        /*because of logic in DateTimeFormat.parseToken see comment '// This will identify token as text.'
-          opening apostrophe has to be prefixed with a special character
-         */
-
-        String pattern1 = pattern.replaceAll("'([^']+)'", "''$1'");
+    public JodaJavaBuilder appendPattern(String pattern) {
         CustomDateTimeFormat.parsePatternTo(this, pattern);
         return this;
     }
@@ -31,29 +22,27 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
     public String getJavaPattern() {
         StringJoiner result = new StringJoiner("||");
         for (StringBuilder pattern : patterns) {
-            String s = pattern.toString();
-//            String replaced =  s.replaceAll("#","");
-            result.add(s);
+            result.add(pattern.toString());
         }
         return result.toString();
     }
 
 
-    private DateTimeFormatterBuilder appendToPattern(String text) {
+    private JodaJavaBuilder appendToPattern(String text) {
         for (StringBuilder pattern : patterns) {
             pattern.append(text);
         }
         return this;
     }
 
-    private DateTimeFormatterBuilder multiply(String text, int times) {
+    private JodaJavaBuilder multiply(String text, int times) {
         for(int i=0;i<times;i++){
             appendToPattern(text);
         }
         return this;
     }
 
-    private DateTimeFormatterBuilder split(String ... toAdd) {
+    private JodaJavaBuilder split(String ... toAdd) {
         List<StringBuilder> newPatterns = new ArrayList<>();
         for (StringBuilder pattern : patterns) {
             for (String suff : toAdd) {
@@ -71,9 +60,9 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * Instructs the printer to emit a specific character, and the parser to
      * expect it. The parser is case-insensitive.
      *
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendLiteral(char c) {
+    public JodaJavaBuilder appendLiteral(char c) {
        return appendToPattern(""+c);
     }
 
@@ -81,175 +70,12 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * Instructs the printer to emit specific text, and the parser to expect
      * it. The parser is case-insensitive.
      *
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      * @throws IllegalArgumentException if text is null
      */
-    public DateTimeFormatterBuilder appendLiteral(String text) {
+    public JodaJavaBuilder appendLiteral(String text) {
         return appendToPattern(text);
     }
-
-//    /**
-//     * Instructs the printer to emit a field value as a decimal number, and the
-//     * parser to expect an unsigned decimal number.
-//     *
-//     * @param fieldType  type of field to append
-//     * @param minDigits  minimum number of digits to <i>print</i>
-//     * @param maxDigits  maximum number of digits to <i>parse</i>, or the estimated
-//     * maximum number of digits to print
-//     * @return this DateTimeFormatterBuilder, for chaining
-//     * @throws IllegalArgumentException if field type is null
-//     */
-//    public DateTimeFormatterBuilder appendDecimal(
-//        DateTimeFieldType fieldType, int minDigits, int maxDigits) {
-//        pattern.append("'"+text+"'");
-//        return this;
-//        if (fieldType == null) {
-//            throw new IllegalArgumentException("Field type must not be null");
-//        }
-//        if (maxDigits < minDigits) {
-//            maxDigits = minDigits;
-//        }
-//        if (minDigits < 0 || maxDigits <= 0) {
-//            throw new IllegalArgumentException();
-//        }
-//        if (minDigits <= 1) {
-//            return append0(new UnpaddedNumber(fieldType, maxDigits, false));
-//        } else {
-//            return append0(new PaddedNumber(fieldType, maxDigits, false, minDigits));
-//        }
-//    }
-
-    /**
-     * Instructs the printer to emit a field value as a fixed-width decimal
-     * number (smaller numbers will be left-padded with zeros), and the parser
-     * to expect an unsigned decimal number with the same fixed width.
-     *
-     * @param fieldType  type of field to append
-     * @param numDigits  the exact number of digits to parse or print, except if
-     * printed value requires more digits
-     * @return this DateTimeFormatterBuilder, for chaining
-     * @throws IllegalArgumentException if field type is null or if <code>numDigits <= 0</code>
-     * @since 1.5
-     */
-//    public DateTimeFormatterBuilder appendFixedDecimal(
-//        DateTimeFieldType fieldType, int numDigits) {
-//        if (fieldType == null) {
-//            throw new IllegalArgumentException("Field type must not be null");
-//        }
-//        if (numDigits <= 0) {
-//            throw new IllegalArgumentException("Illegal number of digits: " + numDigits);
-//        }
-//        return append0(new FixedNumber(fieldType, numDigits, false));
-//    }
-
-    /**
-     * Instructs the printer to emit a field value as a decimal number, and the
-     * parser to expect a signed decimal number.
-     *
-     * @param fieldType  type of field to append
-     * @param minDigits  minimum number of digits to <i>print</i>
-     * @param maxDigits  maximum number of digits to <i>parse</i>, or the estimated
-     * maximum number of digits to print
-     * @return this DateTimeFormatterBuilder, for chaining
-     * @throws IllegalArgumentException if field type is null
-     */
-//    public DateTimeFormatterBuilder appendSignedDecimal(
-//        DateTimeFieldType fieldType, int minDigits, int maxDigits) {
-//        if (fieldType == null) {
-//            throw new IllegalArgumentException("Field type must not be null");
-//        }
-//        if (maxDigits < minDigits) {
-//            maxDigits = minDigits;
-//        }
-//        if (minDigits < 0 || maxDigits <= 0) {
-//            throw new IllegalArgumentException();
-//        }
-//        if (minDigits <= 1) {
-//            return append0(new UnpaddedNumber(fieldType, maxDigits, true));
-//        } else {
-//            return append0(new PaddedNumber(fieldType, maxDigits, true, minDigits));
-//        }
-//    }
-
-    /**
-     * Instructs the printer to emit a field value as a fixed-width decimal
-     * number (smaller numbers will be left-padded with zeros), and the parser
-     * to expect an signed decimal number with the same fixed width.
-     *
-     * @param fieldType  type of field to append
-     * @param numDigits  the exact number of digits to parse or print, except if
-     * printed value requires more digits
-     * @return this DateTimeFormatterBuilder, for chaining
-     * @throws IllegalArgumentException if field type is null or if <code>numDigits <= 0</code>
-     * @since 1.5
-     */
-//    public DateTimeFormatterBuilder appendFixedSignedDecimal(
-//        DateTimeFieldType fieldType, int numDigits) {
-//        if (fieldType == null) {
-//            throw new IllegalArgumentException("Field type must not be null");
-//        }
-//        if (numDigits <= 0) {
-//            throw new IllegalArgumentException("Illegal number of digits: " + numDigits);
-//        }
-//        return append0(new FixedNumber(fieldType, numDigits, true));
-//    }
-
-    /**
-     * Instructs the printer to emit a field value as text, and the
-     * parser to expect text.
-     *
-     * @param fieldType  type of field to append
-     * @return this DateTimeFormatterBuilder, for chaining
-     * @throws IllegalArgumentException if field type is null
-     */
-//    public DateTimeFormatterBuilder appendText(DateTimeFieldType fieldType) {
-//        if (fieldType == null) {
-//            throw new IllegalArgumentException("Field type must not be null");
-//        }
-//        return append0(new TextField(fieldType, false));
-//    }
-
-    /**
-     * Instructs the printer to emit a field value as short text, and the
-     * parser to expect text.
-     *
-     * @param fieldType  type of field to append
-     * @return this DateTimeFormatterBuilder, for chaining
-     * @throws IllegalArgumentException if field type is null
-     */
-//    public DateTimeFormatterBuilder appendShortText(DateTimeFieldType fieldType) {
-//        if (fieldType == null) {
-//            throw new IllegalArgumentException("Field type must not be null");
-//        }
-//        return append0(new TextField(fieldType, true));
-//    }
-
-    /**
-     * Instructs the printer to emit a remainder of time as a decimal fraction,
-     * without decimal point. For example, if the field is specified as
-     * minuteOfHour and the time is 12:30:45, the value printed is 75. A
-     * decimal point is implied, so the fraction is 0.75, or three-quarters of
-     * a minute.
-     *
-     * @param fieldType  type of field to append
-     * @param minDigits  minimum number of digits to print.
-     * @param maxDigits  maximum number of digits to print or parse.
-     * @return this DateTimeFormatterBuilder, for chaining
-     * @throws IllegalArgumentException if field type is null
-     */
-//    public DateTimeFormatterBuilder appendFraction(
-//        DateTimeFieldType fieldType, int minDigits, int maxDigits) {
-//        if (fieldType == null) {
-//            throw new IllegalArgumentException("Field type must not be null");
-//        }
-//        if (maxDigits < minDigits) {
-//            maxDigits = minDigits;
-//        }
-//        if (minDigits < 0 || maxDigits <= 0) {
-//            throw new IllegalArgumentException();
-//        }
-//        return append0(new Fraction(fieldType, minDigits, maxDigits));
-//    }
 
     /**
      * Appends the print/parse of a fractional second.
@@ -258,142 +84,43 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * beyond a visible decimal point. The digits parsed will always be treated
      * as the most significant (numerically largest) digits.
      * Thus '23' will be parsed as 230 milliseconds.
-     * Contrast this behaviour to {@link #appendMillisOfSecond}.
      * This method does not print or parse the decimal point itself.
      *
      * @param minDigits  minimum number of digits to print
      * @param maxDigits  maximum number of digits to print or parse
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendFractionOfSecond(int minDigits, int maxDigits) {
+    public JodaJavaBuilder appendFractionOfSecond(int minDigits, int maxDigits) {
         return multiply("S",minDigits);
-    }
-
-    /**
-     * Appends the print/parse of a fractional minute.
-     * <p>
-     * This reliably handles the case where fractional digits are being handled
-     * beyond a visible decimal point. The digits parsed will always be treated
-     * as the most significant (numerically largest) digits.
-     * Thus '23' will be parsed as 0.23 minutes (converted to milliseconds).
-     * This method does not print or parse the decimal point itself.
-     *
-     * @param minDigits  minimum number of digits to print
-     * @param maxDigits  maximum number of digits to print or parse
-     * @return this DateTimeFormatterBuilder, for chaining
-     */
-    public DateTimeFormatterBuilder appendFractionOfMinute(int minDigits, int maxDigits) {
-        return appendFraction(DateTimeFieldType.minuteOfDay(), minDigits, maxDigits);
-    }
-
-    /**
-     * Appends the print/parse of a fractional hour.
-     * <p>
-     * This reliably handles the case where fractional digits are being handled
-     * beyond a visible decimal point. The digits parsed will always be treated
-     * as the most significant (numerically largest) digits.
-     * Thus '23' will be parsed as 0.23 hours (converted to milliseconds).
-     * This method does not print or parse the decimal point itself.
-     *
-     * @param minDigits  minimum number of digits to print
-     * @param maxDigits  maximum number of digits to print or parse
-     * @return this DateTimeFormatterBuilder, for chaining
-     */
-    public DateTimeFormatterBuilder appendFractionOfHour(int minDigits, int maxDigits) {
-        return appendFraction(DateTimeFieldType.hourOfDay(), minDigits, maxDigits);
-    }
-
-    /**
-     * Appends the print/parse of a fractional day.
-     * <p>
-     * This reliably handles the case where fractional digits are being handled
-     * beyond a visible decimal point. The digits parsed will always be treated
-     * as the most significant (numerically largest) digits.
-     * Thus '23' will be parsed as 0.23 days (converted to milliseconds).
-     * This method does not print or parse the decimal point itself.
-     *
-     * @param minDigits  minimum number of digits to print
-     * @param maxDigits  maximum number of digits to print or parse
-     * @return this DateTimeFormatterBuilder, for chaining
-     */
-    public DateTimeFormatterBuilder appendFractionOfDay(int minDigits, int maxDigits) {
-        return appendFraction(DateTimeFieldType.dayOfYear(), minDigits, maxDigits);
-    }
-
-    /**
-     * Instructs the printer to emit a numeric millisOfSecond field.
-     * <p>
-     * This method will append a field that prints a three digit value.
-     * During parsing the value that is parsed is assumed to be three digits.
-     * If less than three digits are present then they will be counted as the
-     * smallest parts of the millisecond. This is probably not what you want
-     * if you are using the field as a fraction. Instead, a fractional
-     * millisecond should be produced using {@link #appendFractionOfSecond}.
-     *
-     * @param minDigits  minimum number of digits to print
-     * @return this DateTimeFormatterBuilder, for chaining
-     */
-    public DateTimeFormatterBuilder appendMillisOfSecond(int minDigits) {
-        return appendDecimal(DateTimeFieldType.millisOfSecond(), minDigits, 3);
-    }
-
-    /**
-     * Instructs the printer to emit a numeric millisOfDay field.
-     *
-     * @param minDigits  minimum number of digits to print
-     * @return this DateTimeFormatterBuilder, for chaining
-     */
-    public DateTimeFormatterBuilder appendMillisOfDay(int minDigits) {
-        return appendDecimal(DateTimeFieldType.millisOfDay(), minDigits, 8);
     }
 
     /**
      * Instructs the printer to emit a numeric secondOfMinute field.
      *
      * @param minDigits  minimum number of digits to print
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendSecondOfMinute(int minDigits) {
+    public JodaJavaBuilder appendSecondOfMinute(int minDigits) {
         return multiply("s",minDigits);
-    }
-
-    /**
-     * Instructs the printer to emit a numeric secondOfDay field.
-     *
-     * @param minDigits  minimum number of digits to print
-     * @return this DateTimeFormatterBuilder, for chaining
-     */
-    public DateTimeFormatterBuilder appendSecondOfDay(int minDigits) {
-        return appendDecimal(DateTimeFieldType.secondOfDay(), minDigits, 5);
     }
 
     /**
      * Instructs the printer to emit a numeric minuteOfHour field.
      *
      * @param minDigits  minimum number of digits to print
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendMinuteOfHour(int minDigits) {
+    public JodaJavaBuilder appendMinuteOfHour(int minDigits) {
         return multiply("m",minDigits);
-    }
-
-    /**
-     * Instructs the printer to emit a numeric minuteOfDay field.
-     *
-     * @param minDigits  minimum number of digits to print
-     * @return this DateTimeFormatterBuilder, for chaining
-     */
-    public DateTimeFormatterBuilder appendMinuteOfDay(int minDigits) {
-        return appendDecimal(DateTimeFieldType.minuteOfDay(), minDigits, 4);
     }
 
     /**
      * Instructs the printer to emit a numeric hourOfDay field.
      *
      * @param minDigits  minimum number of digits to print
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendHourOfDay(int minDigits) {
+    public JodaJavaBuilder appendHourOfDay(int minDigits) {
         return multiply("H",minDigits);
     }
 
@@ -401,9 +128,9 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * Instructs the printer to emit a numeric clockhourOfDay field.
      *
      * @param minDigits minimum number of digits to print
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendClockhourOfDay(int minDigits) {
+    public JodaJavaBuilder appendClockhourOfDay(int minDigits) {
         return multiply("k",minDigits);
     }
 
@@ -411,9 +138,9 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * Instructs the printer to emit a numeric hourOfHalfday field.
      *
      * @param minDigits  minimum number of digits to print
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendHourOfHalfday(int minDigits) {
+    public JodaJavaBuilder appendHourOfHalfday(int minDigits) {
         return multiply("K",minDigits);
     }
 
@@ -421,9 +148,9 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * Instructs the printer to emit a numeric clockhourOfHalfday field.
      *
      * @param minDigits  minimum number of digits to print
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendClockhourOfHalfday(int minDigits) {
+    public JodaJavaBuilder appendClockhourOfHalfday(int minDigits) {
         return multiply("h",minDigits);
     }
 
@@ -431,9 +158,9 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * Instructs the printer to emit a numeric dayOfWeek field.
      *
      * @param minDigits  minimum number of digits to print
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendDayOfWeek(int minDigits) {
+    public JodaJavaBuilder appendDayOfWeek(int minDigits) {
         return multiply("e",minDigits);
     }
 
@@ -441,9 +168,9 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * Instructs the printer to emit a numeric dayOfMonth field.
      *
      * @param minDigits  minimum number of digits to print
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendDayOfMonth(int minDigits) {
+    public JodaJavaBuilder appendDayOfMonth(int minDigits) {
         return multiply("d",minDigits);
     }
 
@@ -451,9 +178,9 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * Instructs the printer to emit a numeric dayOfYear field.
      *
      * @param minDigits  minimum number of digits to print
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendDayOfYear(int minDigits) {
+    public JodaJavaBuilder appendDayOfYear(int minDigits) {
         return multiply("D",minDigits);
     }
 
@@ -461,9 +188,9 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * Instructs the printer to emit a numeric weekOfWeekyear field.
      *
      * @param minDigits  minimum number of digits to print
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendWeekOfWeekyear(int minDigits) {
+    public JodaJavaBuilder appendWeekOfWeekyear(int minDigits) {
         return multiply("w",minDigits);
     }
 
@@ -473,9 +200,9 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @param minDigits  minimum number of digits to <i>print</i>
      * @param maxDigits  maximum number of digits to <i>parse</i>, or the estimated
      * maximum number of digits to print
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendWeekyear(int minDigits, int maxDigits) {
+    public JodaJavaBuilder appendWeekyear(int minDigits, int maxDigits) {
         return multiply("Y",minDigits);
     }
 
@@ -483,9 +210,9 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * Instructs the printer to emit a numeric monthOfYear field.
      *
      * @param minDigits  minimum number of digits to print
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendMonthOfYear(int minDigits) {
+    public JodaJavaBuilder appendMonthOfYear(int minDigits) {
         return appendToPattern("MM");
     }
 
@@ -495,9 +222,9 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @param minDigits  minimum number of digits to <i>print</i>
      * @param maxDigits  maximum number of digits to <i>parse</i>, or the estimated
      * maximum number of digits to print
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendYear(int minDigits, int maxDigits) {
+    public JodaJavaBuilder appendYear(int minDigits, int maxDigits) {
         return multiply("u",minDigits);
     }
 
@@ -517,9 +244,9 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * </pre>
      *
      * @param pivot  pivot year to use when parsing
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendTwoDigitYear(int pivot) {
+    public JodaJavaBuilder appendTwoDigitYear(int pivot) {
         return appendToPattern("uu");
     }
 
@@ -534,10 +261,10 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @param pivot  pivot year to use when parsing
      * @param lenientParse  when true, if digit count is not two, it is treated
      * as an absolute year
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      * @since 1.1
      */
-    public DateTimeFormatterBuilder appendTwoDigitYear(int pivot, boolean lenientParse) {
+    public JodaJavaBuilder appendTwoDigitYear(int pivot, boolean lenientParse) {
         return appendToPattern("uu");
     }
 
@@ -557,9 +284,9 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * </pre>
      *
      * @param pivot  pivot weekyear to use when parsing
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendTwoDigitWeekyear(int pivot) {
+    public JodaJavaBuilder appendTwoDigitWeekyear(int pivot) {
        return appendToPattern("YY");
     }
 
@@ -574,10 +301,10 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @param pivot  pivot weekyear to use when parsing
      * @param lenientParse  when true, if digit count is not two, it is treated
      * as an absolute weekyear
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      * @since 1.1
      */
-    public DateTimeFormatterBuilder appendTwoDigitWeekyear(int pivot, boolean lenientParse) {
+    public JodaJavaBuilder appendTwoDigitWeekyear(int pivot, boolean lenientParse) {
         return appendToPattern("YY");
     }
 
@@ -587,23 +314,11 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @param minDigits  minimum number of digits to <i>print</i>
      * @param maxDigits  maximum number of digits to <i>parse</i>, or the estimated
      * maximum number of digits to print
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendYearOfEra(int minDigits, int maxDigits) {
+    public JodaJavaBuilder appendYearOfEra(int minDigits, int maxDigits) {
         return multiply("y",minDigits);
 
-    }
-
-    /**
-     * Instructs the printer to emit a numeric year of century field.
-     *
-     * @param minDigits  minimum number of digits to print
-     * @param maxDigits  maximum number of digits to <i>parse</i>, or the estimated
-     * maximum number of digits to print
-     * @return this DateTimeFormatterBuilder, for chaining
-     */
-    public DateTimeFormatterBuilder appendYearOfCentury(int minDigits, int maxDigits) {
-        return appendDecimal(DateTimeFieldType.yearOfCentury(), minDigits, maxDigits);
     }
 
     /**
@@ -612,9 +327,9 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @param minDigits  minimum number of digits to print
      * @param maxDigits  maximum number of digits to <i>parse</i>, or the estimated
      * maximum number of digits to print
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendCenturyOfEra(int minDigits, int maxDigits) {
+    public JodaJavaBuilder appendCenturyOfEra(int minDigits, int maxDigits) {
         throw new UnsupportedOperationException("Century of era not supported");
     }
 
@@ -622,9 +337,9 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * Instructs the printer to emit a locale-specific AM/PM text, and the
      * parser to expect it. The parser is case-insensitive.
      *
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendHalfdayOfDayText() {
+    public JodaJavaBuilder appendHalfdayOfDayText() {
         return appendToPattern("a");
     }
 
@@ -632,9 +347,9 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * Instructs the printer to emit a locale-specific dayOfWeek text. The
      * parser will accept a long or short dayOfWeek text, case-insensitive.
      *
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendDayOfWeekText() {
+    public JodaJavaBuilder appendDayOfWeekText() {
         return multiply("e",4);
     }
 
@@ -643,9 +358,9 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * text. The parser will accept a long or short dayOfWeek text,
      * case-insensitive.
      *
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendDayOfWeekShortText() {
+    public JodaJavaBuilder appendDayOfWeekShortText() {
         return multiply("e",3);
     }
 
@@ -654,9 +369,9 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * text. The parser will accept a long or short monthOfYear text,
      * case-insensitive.
      *
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendMonthOfYearText() {
+    public JodaJavaBuilder appendMonthOfYearText() {
         return appendToPattern("MMMM");
     }
 
@@ -664,9 +379,9 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * Instructs the printer to emit a locale-specific monthOfYear text. The
      * parser will accept a long or short monthOfYear text, case-insensitive.
      *
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendMonthOfYearShortText() {
+    public JodaJavaBuilder appendMonthOfYearShortText() {
         return appendToPattern("MMM");
     }
 
@@ -674,45 +389,30 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * Instructs the printer to emit a locale-specific era text (BC/AD), and
      * the parser to expect it. The parser is case-insensitive.
      *
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendEraText() {
+    public JodaJavaBuilder appendEraText() {
         return appendToPattern("G");
     }
 
     /**
      * Instructs the printer to emit a locale-specific time zone name.
      * Using this method prevents parsing, because time zone names are not unique.
-     * See {@link #appendTimeZoneName(Map)}.
      *
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendTimeZoneName() {
+    public JodaJavaBuilder appendTimeZoneName() {
         return appendToPattern("zzzz");
     }
-
-    /**
-     * Instructs the printer to emit a locale-specific time zone name, providing a lookup for parsing.
-     * Time zone names are not unique, thus the API forces you to supply the lookup.
-     * The names are searched in the order of the map, thus it is strongly recommended
-     * to use a {@code LinkedHashMap} or similar.
-     *
-     * @param parseLookup  the table of names, not null
-     * @return this DateTimeFormatterBuilder, for chaining
-     */
-//    public DateTimeFormatterBuilder appendTimeZoneName(Map<String, DateTimeZone> parseLookup) {
-//        TimeZoneName pp = new TimeZoneName(TimeZoneName.LONG_NAME, parseLookup);
-//        return append0(pp, pp);
-//    }
 
     /**
      * Instructs the printer to emit a short locale-specific time zone name.
      * Using this method prevents parsing, because time zone names are not unique.
      * See {@link #appendTimeZoneShortName(Map)}.
      *
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendTimeZoneShortName() {
+    public JodaJavaBuilder appendTimeZoneShortName() {
         return appendToPattern("zzz");
     }
 
@@ -724,9 +424,9 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * to use a {@code LinkedHashMap} or similar.
      *
      * @param parseLookup  the table of names, null to use the {@link DateTimeUtils#getDefaultTimeZoneNames() default names}
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendTimeZoneShortName(Map<String, DateTimeZone> parseLookup) {
+    public JodaJavaBuilder appendTimeZoneShortName(Map<String, DateTimeZone> parseLookup) {
         return appendToPattern("zzz");
     }
 
@@ -734,35 +434,12 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * Instructs the printer to emit the identifier of the time zone.
      * From version 2.0, this field can be parsed.
      *
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      */
-    public DateTimeFormatterBuilder appendTimeZoneId() {
+    public JodaJavaBuilder appendTimeZoneId() {
         return appendToPattern("VV");
     }
 
-    /**
-     * Instructs the printer to emit text and numbers to display time zone
-     * offset from UTC. A parser will use the parsed time zone offset to adjust
-     * the datetime.
-     * <p>
-     * If zero offset text is supplied, then it will be printed when the zone is zero.
-     * During parsing, either the zero offset text, or the offset will be parsed.
-     *
-     * @param zeroOffsetText  the text to use if time zone offset is zero. If
-     * null, offset is always shown.
-     * @param showSeparators  if true, prints ':' separator before minute and
-     * second field and prints '.' separator before fraction field.
-     * @param minFields  minimum number of fields to print, stopping when no
-     * more precision is required. 1=hours, 2=minutes, 3=seconds, 4=fraction
-     * @param maxFields  maximum number of fields to print
-     * @return this DateTimeFormatterBuilder, for chaining
-     */
-//    public DateTimeFormatterBuilder appendTimeZoneOffset(
-//        String zeroOffsetText, boolean showSeparators,
-//        int minFields, int maxFields) {
-//        if()
-//        return appendPattern()
-//    }
 
     /**
      * Instructs the printer to emit text and numbers to display time zone
@@ -781,10 +458,10 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @param minFields  minimum number of fields to print, stopping when no
      * more precision is required. 1=hours, 2=minutes, 3=seconds, 4=fraction
      * @param maxFields  maximum number of fields to print
-     * @return this DateTimeFormatterBuilder, for chaining
+     * @return this JodaJavaBuilder, for chaining
      * @since 2.0
      */
-    public DateTimeFormatterBuilder appendTimeZoneOffset(
+    public JodaJavaBuilder appendTimeZoneOffset(
         String zeroOffsetPrintText, String zeroOffsetParseText, boolean showSeparators,
         int minFields, int maxFields) {
         if(showSeparators){
@@ -792,6 +469,4 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
         }
         return split("XXXX","X");//+010203(XXXX) or +0102(X allows this) or +01 (X)
     }
-
-
 }

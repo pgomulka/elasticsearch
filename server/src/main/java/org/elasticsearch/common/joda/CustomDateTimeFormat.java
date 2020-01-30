@@ -32,7 +32,7 @@ import org.joda.time.format.ISODateTimeFormat;
 
 public class CustomDateTimeFormat {
 
-    public static void parsePatternTo(DateTimeFormatterBuilder builder, String pattern) {
+    public static void parsePatternTo(JodaJavaBuilder builder, String pattern) {
         int length = pattern.length();
         int[] indexRef = new int[1];
 
@@ -235,15 +235,12 @@ public class CustomDateTimeFormat {
 
             for (; i < length; i++) {
                 c = pattern.charAt(i);
-//                if (c == '\'' && inLiteral == false && buf.length() != 1){
-////                    i--;
-//                    break;
-//                }
+
                 if (c == '\'') {
                     if (i + 1 < length && pattern.charAt(i + 1) == '\'') {
                         // '' is treated as escaped '
                         i++;
-                        buf.append(c);
+                        buf.append(c);//THIS IS THE CHANGE COMPARED TO JODA
                     } else {
                         inLiteral = !inLiteral;
                         buf.append(c);

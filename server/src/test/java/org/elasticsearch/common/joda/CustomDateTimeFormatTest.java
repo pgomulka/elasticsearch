@@ -7,19 +7,21 @@ import static org.hamcrest.Matchers.equalTo;
 public class CustomDateTimeFormatTest extends ESTestCase {
 
     public void testTextTokens() {
-//        assertThat(parseToken("-"), equalTo("'-"));
+        assertThat(parseToken("-"), equalTo("'-"));
         assertThat(parseToken("-'W'"), equalTo("'-'W'"));
+        assertThat(parseToken("-'''"), equalTo("'-''"));
     }
 
     public void testMultipleTokens() {
         int[] indexRef = new int[1];
         indexRef[0] = 0;
-        String pattern = "-'W'";
+        String pattern = "-'W'-e";
         String token = CustomDateTimeFormat.parseToken(pattern, indexRef);
-        assertThat(token, equalTo("'-"));
+        assertThat(token, equalTo("'-'W'-"));
+        indexRef[0]++;
 
          token = CustomDateTimeFormat.parseToken(pattern, indexRef);
-        assertThat(token, equalTo("''W'"));
+        assertThat(token, equalTo("e"));
     }
 
     private String parseToken(String pattern) {

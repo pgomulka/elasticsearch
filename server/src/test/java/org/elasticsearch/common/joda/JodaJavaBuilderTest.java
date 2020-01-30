@@ -17,7 +17,8 @@ public class JodaJavaBuilderTest extends ESTestCase {
 
     }
     public void testWeekYearJoda() {
-        assertThat(convertPattern("-'W'"), equalTo("-'W'"));
+//        assertThat(convertPattern("-'W'"), equalTo("-'W'"));
+        assertThat(convertPattern("-'W'-e"), equalTo("-'W'-e"));
     }
 
         public void testSplit(){
