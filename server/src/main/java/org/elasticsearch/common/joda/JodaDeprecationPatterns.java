@@ -19,34 +19,21 @@
 
 package org.elasticsearch.common.joda;
 
-import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
-import org.elasticsearch.cluster.metadata.MappingMetaData;
-import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.time.DateFormatter;
 import org.elasticsearch.common.time.FormatNames;
 
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class JodaDeprecationPatterns {
     public static final String USE_PREFIX_8_WARNING = "Prefix your date format with '8' to use the new specifier.";
     private static Map<String, String> JODA_PATTERNS_DEPRECATIONS = new LinkedHashMap<>();
-    private static Map<String, String> AUTO_UPGRADE_JODA_PATTERNS_DEPRECATIONS = new LinkedHashMap<>();
 
     static {
-        AUTO_UPGRADE_JODA_PATTERNS_DEPRECATIONS.put("y", "u");
-        AUTO_UPGRADE_JODA_PATTERNS_DEPRECATIONS.put("Y", "y");
-        AUTO_UPGRADE_JODA_PATTERNS_DEPRECATIONS.put("x", "Y");
-
-
         JODA_PATTERNS_DEPRECATIONS.put("Y", "'Y' year-of-era should be replaced with 'y'. Use 'Y' for week-based-year.");
         JODA_PATTERNS_DEPRECATIONS.put("y", "'y' year should be replaced with 'u'. Use 'y' for year-of-era.");
         JODA_PATTERNS_DEPRECATIONS.put("C", "'C' century of era is no longer supported.");
@@ -55,7 +42,6 @@ public class JodaDeprecationPatterns {
             "'Z' time zone offset/id fails when parsing 'Z' for Zulu timezone. Consider using 'X'.");
         JODA_PATTERNS_DEPRECATIONS.put("z",
             "'z' time zone text. Will print 'Z' for Zulu given UTC timezone.");
-
     }
 
     /**
@@ -104,89 +90,5 @@ public class JodaDeprecationPatterns {
         String combinedWarning = warnings.stream()
                                  .collect(Collectors.joining("; "));
         return combinedWarning;
-    }
-
-
-    public static String migratePattern(String pattern) {
-        List<String> patterns = DateFormatter.splitCombinedPatterns(pattern);
-
-        Set<String> migrated = new LinkedHashSet<>();
-        for (String subPattern : patterns) {
-            if (isDeprecatedPattern(subPattern)) {
-                String replaced = subPattern;
-                for (Map.Entry<String, String> replaceEntry : AUTO_UPGRADE_JODA_PATTERNS_DEPRECATIONS.entrySet()) {
-                    if (subPattern.contains(replaceEntry.getKey())) {
-                        replaced = replaceInPattern(replaceEntry.getKey(), replaceEntry.getValue(), subPattern);//rereplaced.replace(replaceEntry.getKey(), replaceEntry.getValue());
-                    }
-                }
-                migrated.add(replaced);
-
-            } else {
-                migrated.add(subPattern);
-            }
-        }
-        String combinedWarning = migrated.stream()
-                                         .collect(Collectors.joining("; "));
-        return combinedWarning;
-    }
-
-    private static String replaceInPattern(String from, String to, String text) {
-        LinkedHashMap<Integer, Integer> regions = regions(text);
-        return replaceInRegions(text, from, to, regions);
-    }
-
-    private static String replaceInRegions(String text, String from, String to, LinkedHashMap<Integer, Integer> regions) {
-        Pattern pattern = Pattern.compile(from);
-        for (Map.Entry<Integer, Integer> range : regions.entrySet()) {
-            int start = range.getKey();
-            int end = range.getValue();
-            text = replaceInRegion(text, to, pattern, start, end);
-
-        }
-        return text;
-    }
-
-    private static String replaceInRegion(String text, String to, Pattern pattern, int start, int end) {
-        StringBuffer result = new StringBuffer();
-        Matcher matcher = pattern.matcher(text);
-
-        Matcher region = matcher.region(start, end);
-        while (region.find()) {
-            region.appendReplacement(result, to);
-        }
-        region.appendTail(result);
-        return result.toString();
-    }
-
-    private static LinkedHashMap<Integer, Integer> regions(String text) {
-        List<Integer> l = new ArrayList<>();
-        for (int i = 0; i < text.length(); i++) {
-            if (text.charAt(i) == '\'') {
-                l.add(i);
-            }
-        }
-        if (l.size() % 2 != 0)
-            l.add(text.length());
-
-        LinkedHashMap<Integer, Integer> map = new LinkedHashMap<>();
-        int start = 0;
-        int i=0;
-        while(i<l.size()){
-            map.put(start,l.get(i));
-            start = l.get(i+1);
-            i+=2;
-        }
-        map.put(start,text.length());
-        return map;
-    }
-
-    public static Object convert(ImmutableOpenMap<String,? extends ImmutableOpenMap<String, MappingMetaData>> mappings) {
-        Iterator<? extends ObjectObjectCursor<String, ? extends ImmutableOpenMap<String, MappingMetaData>>> iterator = mappings.iterator();
-        while(iterator.hasNext()){
-            ObjectObjectCursor<String, ? extends ImmutableOpenMap<String, MappingMetaData>> next = iterator.next();
-
-        }
-
-        return null;
     }
 }

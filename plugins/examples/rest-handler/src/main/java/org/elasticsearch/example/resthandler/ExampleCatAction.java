@@ -18,7 +18,6 @@
  */
 package org.elasticsearch.example.resthandler;
 
-import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsRequestBuilder;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.Table;
 import org.elasticsearch.common.settings.Settings;
@@ -50,7 +49,6 @@ public class ExampleCatAction extends AbstractCatAction {
     @Override
     protected RestChannelConsumer doCatRequest(final RestRequest request, final NodeClient client) {
         final String message = request.param("message", "Hello from Cat Example action");
-
 
         Table table = getTableWithHeader(request);
         table.startRow();
