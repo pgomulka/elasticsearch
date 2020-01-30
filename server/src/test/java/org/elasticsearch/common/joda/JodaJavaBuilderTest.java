@@ -8,17 +8,19 @@ import static org.hamcrest.core.IsEqual.equalTo;
 public class JodaJavaBuilderTest extends ESTestCase {
 
     public void testJoda() {
-//        assertThat(convertPattern("YYYY-MM-dd"), equalTo("yyyy-MM-dd"));
-//        assertThat(convertPattern("yyyy-MM-dd"), equalTo("uuuu-MM-dd"));
-//        assertThat(convertPattern("YY-MM-dd"), equalTo("uu-MM-dd"));//joda calls year anyway
-//        assertThat(convertPattern("yy-MM-dd"), equalTo("uu-MM-dd"));
-//        assertThat(convertPattern("yyyy-MM-dd'T'"), equalTo("uuuu-MM-dd'T'"));
-//        assertThat(convertPattern("yyyy-MM-dd'T'yy'something'yy-MM-dd"), equalTo("uuuu-MM-dd'T'uu'something'uu-MM-dd"));
+        assertThat(convertPattern("YYYY-MM-dd"), equalTo("yyyy-MM-dd"));
+        assertThat(convertPattern("yyyy-MM-dd"), equalTo("uuuu-MM-dd"));
+        assertThat(convertPattern("YY-MM-dd"), equalTo("uu-MM-dd"));//joda calls year anyway
+        assertThat(convertPattern("yy-MM-dd"), equalTo("uu-MM-dd"));
+        assertThat(convertPattern("yyyy-MM-dd'T'"), equalTo("uuuu-MM-dd'T'"));
+        assertThat(convertPattern("yyyy-MM-dd'T'yy'something'yy-MM-dd"), equalTo("uuuu-MM-dd'T'uu'something'uu-MM-dd"));
 
     }
+    public void testWeekYearJoda() {
+        assertThat(convertPattern("-'W'"), equalTo("-'W'"));
+    }
 
-
-    public void testSplit(){
+        public void testSplit(){
         assertThat(convertPattern("yyyy-MM-dd'T'hh:mm:ss.SSSZ"), equalTo("uuuu-MM-dd'T'hh:mm:ss.SSSXXXX||uuuu-MM-dd'T'hh:mm:ss.SSSX"));
         assertThat(convertPattern("yyyy-MM-dd'T'hh:mm:ss.SSSZZ"),
             equalTo("uuuu-MM-dd'T'hh:mm:ss.SSSXXXXX||uuuu-MM-dd'T'hh:mm:ss.SSSXXX||uuuu-MM-dd'T'hh:mm:ss.SSSX"));

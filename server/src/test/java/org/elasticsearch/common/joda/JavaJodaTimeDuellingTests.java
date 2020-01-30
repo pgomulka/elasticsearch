@@ -38,7 +38,9 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 
 public class JavaJodaTimeDuellingTests extends ESTestCase {
-
+    public void testWeekYear() {
+        assertSameMillis("2020-W01-1", "xxxx-'W'ww-e","8"+ "YYYY-'W'ww-e");
+    }
     public void testJodaToJavaYears() {
 
         assertSameMillis("2020-01-01", "YYYY-MM-dd","8"+ "yyyy-MM-dd");
@@ -103,7 +105,7 @@ public class JavaJodaTimeDuellingTests extends ESTestCase {
     private void assertSameMillis(String input, String jodaFormat, String javaFormat) {
 
         String actualJava = convertPattern(jodaFormat);
-//        assertThat("8"+actualJava,equalTo(javaFormat));
+        assertThat("8"+actualJava,equalTo(javaFormat));
         javaFormat="8"+actualJava;
 
         DateFormatter jodaFormatter = Joda.forPattern(jodaFormat);

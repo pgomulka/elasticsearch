@@ -23,16 +23,17 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
           opening apostrophe has to be prefixed with a special character
          */
 
-        String pattern1 = pattern.replaceAll("'([^']+)'", "'#$1'");
-        return super.appendPattern(pattern1);
+        String pattern1 = pattern.replaceAll("'([^']+)'", "''$1'");
+        CustomDateTimeFormat.parsePatternTo(this, pattern);
+        return this;
     }
 
     public String getJavaPattern() {
         StringJoiner result = new StringJoiner("||");
         for (StringBuilder pattern : patterns) {
             String s = pattern.toString();
-            String replaced =  s.replaceAll("#","");
-            result.add(replaced);
+//            String replaced =  s.replaceAll("#","");
+            result.add(s);
         }
         return result.toString();
     }
@@ -84,7 +85,7 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @throws IllegalArgumentException if text is null
      */
     public DateTimeFormatterBuilder appendLiteral(String text) {
-        return appendToPattern("'"+text+"'");
+        return appendToPattern(text);
     }
 
 //    /**
@@ -475,7 +476,7 @@ public class JodaJavaBuilder extends DateTimeFormatterBuilder {
      * @return this DateTimeFormatterBuilder, for chaining
      */
     public DateTimeFormatterBuilder appendWeekyear(int minDigits, int maxDigits) {
-        return multiply("Y",maxDigits);
+        return multiply("Y",minDigits);
     }
 
     /**
