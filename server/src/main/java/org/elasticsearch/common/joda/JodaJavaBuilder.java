@@ -35,11 +35,12 @@ public class JodaJavaBuilder/* extends DateTimeFormatterBuilder*/ {
         return this;
     }
 
-    private JodaJavaBuilder multiply(String text, int times) {
+    private StringBuilder multiply(String text, int times) {
+        StringBuilder sb = new StringBuilder();
         for(int i=0;i<times;i++){
-            appendToPattern(text);
+            sb.append(text);
         }
-        return this;
+        return sb;
     }
 
     private JodaJavaBuilder split(String ... toAdd) {
@@ -91,7 +92,8 @@ public class JodaJavaBuilder/* extends DateTimeFormatterBuilder*/ {
      * @return this JodaJavaBuilder, for chaining
      */
     public JodaJavaBuilder appendFractionOfSecond(int minDigits, int maxDigits) {
-        return multiply("S",minDigits);
+        StringBuilder sb = multiply("S", minDigits);
+        return appendToPattern(sb.toString());
     }
 
     /**
@@ -101,7 +103,8 @@ public class JodaJavaBuilder/* extends DateTimeFormatterBuilder*/ {
      * @return this JodaJavaBuilder, for chaining
      */
     public JodaJavaBuilder appendSecondOfMinute(int minDigits) {
-        return multiply("s",minDigits);
+        StringBuilder sb = multiply("s", minDigits);
+        return appendToPattern(sb.toString());
     }
 
     /**
@@ -111,7 +114,8 @@ public class JodaJavaBuilder/* extends DateTimeFormatterBuilder*/ {
      * @return this JodaJavaBuilder, for chaining
      */
     public JodaJavaBuilder appendMinuteOfHour(int minDigits) {
-        return multiply("m",minDigits);
+        StringBuilder sb = multiply("m", minDigits);
+        return appendToPattern(sb.toString());
     }
 
     /**
@@ -121,7 +125,8 @@ public class JodaJavaBuilder/* extends DateTimeFormatterBuilder*/ {
      * @return this JodaJavaBuilder, for chaining
      */
     public JodaJavaBuilder appendHourOfDay(int minDigits) {
-        return multiply("H",minDigits);
+        StringBuilder sb = multiply("H", minDigits);
+        return appendToPattern(sb.toString());
     }
 
     /**
@@ -131,7 +136,8 @@ public class JodaJavaBuilder/* extends DateTimeFormatterBuilder*/ {
      * @return this JodaJavaBuilder, for chaining
      */
     public JodaJavaBuilder appendClockhourOfDay(int minDigits) {
-        return multiply("k",minDigits);
+        StringBuilder sb = multiply("k", minDigits);
+        return appendToPattern(sb.toString());
     }
 
     /**
@@ -141,7 +147,8 @@ public class JodaJavaBuilder/* extends DateTimeFormatterBuilder*/ {
      * @return this JodaJavaBuilder, for chaining
      */
     public JodaJavaBuilder appendHourOfHalfday(int minDigits) {
-        return multiply("K",minDigits);
+        StringBuilder sb = multiply("K", minDigits);
+        return appendToPattern(sb.toString());
     }
 
     /**
@@ -151,7 +158,8 @@ public class JodaJavaBuilder/* extends DateTimeFormatterBuilder*/ {
      * @return this JodaJavaBuilder, for chaining
      */
     public JodaJavaBuilder appendClockhourOfHalfday(int minDigits) {
-        return multiply("h",minDigits);
+        StringBuilder sb = multiply("h", minDigits);
+        return appendToPattern(sb.toString());
     }
 
     /**
@@ -161,7 +169,8 @@ public class JodaJavaBuilder/* extends DateTimeFormatterBuilder*/ {
      * @return this JodaJavaBuilder, for chaining
      */
     public JodaJavaBuilder appendDayOfWeek(int minDigits) {
-        return multiply("e",minDigits);
+        StringBuilder sb = multiply("e", minDigits);
+        return appendToPattern(sb.toString());
     }
 
     /**
@@ -171,7 +180,23 @@ public class JodaJavaBuilder/* extends DateTimeFormatterBuilder*/ {
      * @return this JodaJavaBuilder, for chaining
      */
     public JodaJavaBuilder appendDayOfMonth(int minDigits) {
-        return multiply("d",minDigits);
+        ArrayList<String> list = new ArrayList<>();
+        if(minDigits == 1){
+            list.add("d");
+        }else if (minDigits == 2){
+            list.add("d");
+            list.add("dd");
+        }else{
+            list.add("d");
+            list.add("dd");
+            StringBuilder sb = new StringBuilder();
+            for(int i=3;i<=minDigits;i++){
+                sb.append("0");
+                list.add("'"+sb+"'dd");
+            }
+        }
+        split(list.toArray(new String[]{}));
+        return this;
     }
 
     /**
@@ -181,7 +206,8 @@ public class JodaJavaBuilder/* extends DateTimeFormatterBuilder*/ {
      * @return this JodaJavaBuilder, for chaining
      */
     public JodaJavaBuilder appendDayOfYear(int minDigits) {
-        return multiply("D",minDigits);
+        StringBuilder sb = multiply("D", minDigits);
+        return appendToPattern(sb.toString());
     }
 
     /**
@@ -191,7 +217,8 @@ public class JodaJavaBuilder/* extends DateTimeFormatterBuilder*/ {
      * @return this JodaJavaBuilder, for chaining
      */
     public JodaJavaBuilder appendWeekOfWeekyear(int minDigits) {
-        return multiply("w",minDigits);
+        StringBuilder sb = multiply("w", minDigits);
+        return appendToPattern(sb.toString());
     }
 
     /**
@@ -203,7 +230,8 @@ public class JodaJavaBuilder/* extends DateTimeFormatterBuilder*/ {
      * @return this JodaJavaBuilder, for chaining
      */
     public JodaJavaBuilder appendWeekyear(int minDigits, int maxDigits) {
-        return multiply("Y",minDigits);
+        StringBuilder sb = multiply("Y", minDigits);
+        return appendToPattern(sb.toString());
     }
 
     /**
@@ -225,7 +253,8 @@ public class JodaJavaBuilder/* extends DateTimeFormatterBuilder*/ {
      * @return this JodaJavaBuilder, for chaining
      */
     public JodaJavaBuilder appendYear(int minDigits, int maxDigits) {
-        return multiply("u",minDigits);
+        StringBuilder sb = multiply("u", minDigits);
+        return appendToPattern(sb.toString());
     }
 
     /**
@@ -317,7 +346,8 @@ public class JodaJavaBuilder/* extends DateTimeFormatterBuilder*/ {
      * @return this JodaJavaBuilder, for chaining
      */
     public JodaJavaBuilder appendYearOfEra(int minDigits, int maxDigits) {
-        return multiply("y",minDigits);
+        StringBuilder sb = multiply("y", minDigits);
+        return appendToPattern(sb.toString());
 
     }
 
@@ -350,7 +380,7 @@ public class JodaJavaBuilder/* extends DateTimeFormatterBuilder*/ {
      * @return this JodaJavaBuilder, for chaining
      */
     public JodaJavaBuilder appendDayOfWeekText() {
-        return multiply("e",4);
+        return split("cccc","ccc");
     }
 
     /**
@@ -361,7 +391,7 @@ public class JodaJavaBuilder/* extends DateTimeFormatterBuilder*/ {
      * @return this JodaJavaBuilder, for chaining
      */
     public JodaJavaBuilder appendDayOfWeekShortText() {
-        return multiply("e",3);
+        return split("cccc","ccc");
     }
 
     /**

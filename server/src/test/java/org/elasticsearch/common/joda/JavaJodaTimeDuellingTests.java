@@ -38,11 +38,38 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 
 public class JavaJodaTimeDuellingTests extends ESTestCase {
+    static{
+        Locale.setDefault(Locale.US);
+    }
     public void testWeekYear() {
 //            won't work in 6.8
-        assertSameMillis("2020-W-01", "xxxx-'W'-ww","8"+ "YYYY-'W'-ww");
+//        assertSameMillis("2020-W-01", "xxxx-'W'-ww","8"+ "YYYY-'W'-ww");
+    }
+
+
+    public void testMonthNames(){
+//        assertSameMillis("01 2020-01-01", "ee YYYY-MM-dd","8"+ "EEE yyyy-MM-dd", Locale.US);
+//        assertSameMillis("01 2020-01-01", "ee YYYY-MM-dd","8"+ "yyyy-MM-dd", Locale.US);
+
+        assertSameMillis("Feb  05 2020", "MMM dd YYYY","8"+ "MMM dd yyyy",Locale.US);
+        assertSameMillis("Feb 05 2020", "MMM dd YYYY","8"+ "MMM dd yyyy",Locale.US);
+        assertSameMillis("Feb 5 2020", "MMM dd YYYY","8"+ "MMM dd yyyy||MMM d yyyy",Locale.US);
+        assertSameMillis("Feb 5 2020", "MMM ddd YYYY","8"+ "MMM ddd yyyy||MMM d yyyy",Locale.US);
+    }
+
+    public void testWeekDayNames(){
+//        assertSameMillis("01 2020-01-01", "ee YYYY-MM-dd","8"+ "EEE yyyy-MM-dd", Locale.US);
+//        assertSameMillis("01 2020-01-01", "ee YYYY-MM-dd","8"+ "yyyy-MM-dd", Locale.US);
+
+        assertSameMillis("Wed 2020-01-01", "EEE YYYY-MM-dd","8"+ "eeee yyyy-MM-dd||eeee yyyy-MM-dd", Locale.US);
+        assertSameMillis("Wednesday 2020-01-01", "EEEE YYYY-MM-dd","8"+ "eeee yyyy-MM-dd||eeee yyyy-MM-dd", Locale.US);
+
+        assertSameMillis("Wed 2020-01-01", "EEEE YYYY-MM-dd","8"+ "eeee yyyy-MM-dd||eeee yyyy-MM-dd", Locale.US);
+        assertSameMillis("Wednesday 2020-01-01", "EEE YYYY-MM-dd","8"+ "eeee yyyy-MM-dd||eeee yyyy-MM-dd", Locale.US);
     }
     public void testJodaToJavaYears() {
+
+
 
         assertSameMillis("2020-01-01", "YYYY-MM-dd","8"+ "yyyy-MM-dd");
         assertSameMillis("2020-01-01", "yyyy-MM-dd","8"+ "uuuu-MM-dd");
@@ -112,15 +139,14 @@ public class JavaJodaTimeDuellingTests extends ESTestCase {
         assertThat(javaZoneId, equalTo("2019-01-01T01:01:01.001Z"));
         assertThat(jodaZoneId, equalTo("2019-01-01T01:01:01.001UTC"));
     }
-
-    private void assertSameMillis(String input, String jodaFormat, String javaFormat) {
+    private void assertSameMillis(String input, String jodaFormat, String javaFormat, Locale locale) {
 
         String actualJava = convertPattern(jodaFormat);
-        assertThat("8"+actualJava,equalTo(javaFormat));
+//        assertThat("8"+actualJava,equalTo(javaFormat));
         javaFormat="8"+actualJava;
 
-        DateFormatter jodaFormatter = Joda.forPattern(jodaFormat);
-        DateFormatter javaFormatter = DateFormatter.forPattern(javaFormat);
+        DateFormatter jodaFormatter = Joda.forPattern(jodaFormat).withLocale(locale);
+        DateFormatter javaFormatter = DateFormatter.forPattern(javaFormat).withLocale(locale);
 
         DateTime jodaDateTime = jodaFormatter.parseJoda(input);
 
@@ -131,6 +157,10 @@ public class JavaJodaTimeDuellingTests extends ESTestCase {
             input, jodaFormat, javaFormat, jodaDateTime, DateTimeFormatter.ISO_INSTANT.format(zonedDateTime.toInstant()));
 
         assertThat(msg, jodaDateTime.getMillis(), is(zonedDateTime.toInstant().toEpochMilli()));
+    }
+
+    private void assertSameMillis(String input, String jodaFormat, String javaFormat) {
+        assertSameMillis(input, jodaFormat, javaFormat, Locale.getDefault(Locale.Category.FORMAT));
     }
 
     public void testTimeZoneFormatting() {
