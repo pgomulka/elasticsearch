@@ -19,18 +19,24 @@
 
 package org.elasticsearch.rest.action.admin.indices;
 
+import org.apache.logging.log4j.LogManager;
 import org.elasticsearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.Strings;
+import org.elasticsearch.common.logging.DeprecationLogger;
 import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.rest.BaseRestHandler;
+import org.elasticsearch.rest.CompatibleHandlers;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.action.RestToXContentListener;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.elasticsearch.client.Requests.putMappingRequest;
@@ -38,14 +44,33 @@ import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.rest.RestRequest.Method.PUT;
 
 public class RestPutMappingAction extends BaseRestHandler {
+    private static final DeprecationLogger deprecationLogger = new DeprecationLogger(
+        LogManager.getLogger(RestPutMappingAction.class));
+    public static final String TYPES_DEPRECATION_MESSAGE = "[types removal] Using include_type_name in put "
+        + "mapping requests is deprecated. The parameter will be removed in the next major version.";
 
     public RestPutMappingAction(RestController controller) {
         controller.registerHandler(PUT, "/{index}/_mapping/", this);
+        controller.registerCompatibleHandler(PUT, "/{index}/{type}/_mapping", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
+        controller.registerCompatibleHandler(PUT, "/{index}/_mapping/{type}", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
+        controller.registerCompatibleHandler(PUT, "/_mapping/{type}", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
+
         controller.registerHandler(POST, "/{index}/_mapping/", this);
+        controller.registerCompatibleHandler(POST, "/{index}/{type}/_mapping", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
+        controller.registerCompatibleHandler(POST, "/{index}/_mapping/{type}", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
+        controller.registerCompatibleHandler(POST, "/_mapping/{type}", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
 
         //register the same paths, but with plural form _mappings
         controller.registerHandler(PUT, "/{index}/_mappings/", this);
+        controller.registerCompatibleHandler(PUT, "/{index}/{type}/_mappings", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
+        controller.registerCompatibleHandler(PUT, "/{index}/_mappings/{type}", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
+        controller.registerCompatibleHandler(PUT, "/_mappings/{type}", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
+
+
         controller.registerHandler(POST, "/{index}/_mappings/", this);
+        controller.registerCompatibleHandler(POST, "/{index}/{type}/_mappings", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
+        controller.registerCompatibleHandler(POST, "/{index}/_mappings/{type}", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
+        controller.registerCompatibleHandler(POST, "/_mappings/{type}", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
     }
 
     @Override
@@ -53,14 +78,33 @@ public class RestPutMappingAction extends BaseRestHandler {
         return "put_mapping_action";
     }
 
+
     @Override
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
         PutMappingRequest putMappingRequest = putMappingRequest(Strings.splitStringByCommaToArray(request.param("index")));
 
         Map<String, Object> sourceAsMap = XContentHelper.convertToMap(request.requiredContent(), false,
             request.getXContentType()).v2();
-        if (MapperService.isMappingSourceTyped(MapperService.SINGLE_MAPPING_NAME, sourceAsMap)) {
-            throw new IllegalArgumentException("Types cannot be provided in put mapping requests");
+        if(CompatibleHandlers.isCompatible(request)) {
+            final boolean includeTypeName = request.paramAsBoolean(INCLUDE_TYPE_NAME_PARAMETER,
+                DEFAULT_INCLUDE_TYPE_NAME_POLICY);
+            if (request.hasParam(INCLUDE_TYPE_NAME_PARAMETER)) {
+                deprecationLogger.deprecatedAndMaybeLog("put_mapping_with_types", TYPES_DEPRECATION_MESSAGE);
+            }
+            final String type = request.param("type");
+//            putMappingRequest.type(includeTypeName ? type : MapperService.SINGLE_MAPPING_NAME);
+            if(includeTypeName && isMappingSourceTyped())
+            if (includeTypeName == false &&
+                (type != null || isMappingSourceTyped(MapperService.SINGLE_MAPPING_NAME, sourceAsMap))) {
+                throw new IllegalArgumentException("Types cannot be provided in put mapping requests, unless " +
+                    "the include_type_name parameter is set to true.");
+            }
+//            sourceAsMap = CompatibleHandlers.replaceTypeWithDoc(sourceAsMap);
+
+        }else{
+            if (MapperService.isMappingSourceTyped(MapperService.SINGLE_MAPPING_NAME, sourceAsMap)) {
+                throw new IllegalArgumentException("Types cannot be provided in put mapping requests");
+            }
         }
 
         putMappingRequest.source(sourceAsMap);
@@ -68,5 +112,9 @@ public class RestPutMappingAction extends BaseRestHandler {
         putMappingRequest.masterNodeTimeout(request.paramAsTime("master_timeout", putMappingRequest.masterNodeTimeout()));
         putMappingRequest.indicesOptions(IndicesOptions.fromRequest(request, putMappingRequest.indicesOptions()));
         return channel -> client.admin().indices().putMapping(putMappingRequest, new RestToXContentListener<>(channel));
+    }
+
+    public static boolean isMappingSourceTyped(String type, Map<String, Object> mapping) {
+        return mapping.size() == 1 && mapping.keySet().iterator().next().equals(type);
     }
 }

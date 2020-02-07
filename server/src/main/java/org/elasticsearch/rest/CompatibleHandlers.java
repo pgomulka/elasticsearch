@@ -7,8 +7,12 @@ import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.logging.DeprecationLogger;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.index.mapper.MapperService;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
@@ -59,6 +63,17 @@ public class CompatibleHandlers {
     public static boolean isCompatible(ToXContent.Params params) {
         String param = params.param(Version.COMPATIBLE_PARAMS_KEY);
         return Version.COMPATIBLE_VERSION.equals(param);
+    }
+
+    public static Map<String,Object> replaceTypeWithDoc(Map<String,Object> mappings){
+        Map<String, Object> newSource = new HashMap<>();
+
+        String typeName = mappings.keySet().iterator().next();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> typedMappings = (Map<String, Object>) mappings.get(typeName);
+
+        newSource.put("mappings", Collections.singletonMap(MapperService.SINGLE_MAPPING_NAME, typedMappings));
+        return typedMappings;
     }
 
 }
