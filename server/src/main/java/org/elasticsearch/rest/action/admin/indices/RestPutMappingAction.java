@@ -93,13 +93,15 @@ public class RestPutMappingAction extends BaseRestHandler {
             }
             final String type = request.param("type");
 //            putMappingRequest.type(includeTypeName ? type : MapperService.SINGLE_MAPPING_NAME);
-            if(includeTypeName && isMappingSourceTyped())
+            if(includeTypeName && isMappingSourceTyped(type,sourceAsMap)){
+                sourceAsMap = CompatibleHandlers.replaceTypeWithDoc(sourceAsMap);
+            }
             if (includeTypeName == false &&
                 (type != null || isMappingSourceTyped(MapperService.SINGLE_MAPPING_NAME, sourceAsMap))) {
                 throw new IllegalArgumentException("Types cannot be provided in put mapping requests, unless " +
                     "the include_type_name parameter is set to true.");
             }
-//            sourceAsMap = CompatibleHandlers.replaceTypeWithDoc(sourceAsMap);
+
 
         }else{
             if (MapperService.isMappingSourceTyped(MapperService.SINGLE_MAPPING_NAME, sourceAsMap)) {
