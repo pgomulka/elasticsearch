@@ -104,16 +104,6 @@ public class RestSearchAction extends BaseRestHandler {
     }
 
     @Override
-    public List<Route> compatibleRoutes() {
-        return unmodifiableList(asList(
-            new Route(GET, "/{index}/{type}/_search",
-                List.of(CompatibleHandlers.consumeParameterType(deprecationLogger))),
-            new Route(POST, "/{index}/{type}/_search",
-                List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)))
-            ));
-    }
-
-    @Override
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
         SearchRequest searchRequest = new SearchRequest();
         /*
@@ -347,5 +337,26 @@ public class RestSearchAction extends BaseRestHandler {
     @Override
     public boolean allowsUnsafeBuffers() {
         return true;
+    }
+
+    public static class CompatibleRestSearchAction extends RestSearchAction {
+        @Override
+        public List<Route> routes() {
+            return unmodifiableList(asList(
+                new Route(GET, "/{index}/{type}/_search"),
+                new Route(POST, "/{index}/{type}/_search")
+            ));
+        }
+
+        @Override
+        public RestChannelConsumer prepareRequest(RestRequest request, final NodeClient client) throws IOException {
+            CompatibleHandlers.consumeParameterType(deprecationLogger).accept(request);
+            return super.prepareRequest(request, client);
+        }
+
+        @Override
+        public boolean compatibilityRequired() {
+            return true;
+        }
     }
 }

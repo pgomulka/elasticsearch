@@ -192,8 +192,8 @@ public class RestController implements HttpServerTransport.Dispatcher {
                 route.getLogger()));
         restHandler.replacedRoutes().forEach(route -> registerWithDeprecatedHandler(route.getMethod(), route.getPath(),
             restHandler, route.getDeprecatedMethod(), route.getDeprecatedPath(), route.getLogger()));
-        restHandler.compatibleRoutes().forEach(route -> registerCompatibleHandler(route.getMethod(), route.getPath(), restHandler,
-            route.getParameterConsumers()));
+//        restHandler.compatibleRoutes().forEach(route -> registerCompatibleHandler(route.getMethod(), route.getPath(), restHandler,
+//            route.getParameterConsumers()));
     }
 
     @Override

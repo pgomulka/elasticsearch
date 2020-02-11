@@ -49,9 +49,7 @@ public class RestCreateIndexAction extends BaseRestHandler {
 
     @Override
     public List<Route> routes() {
-        return singletonList(new Route(PUT, "/{index}",
-            List.of(CompatibleHandlers.consumeParameterIncludeType(deprecationLogger),
-            CompatibleHandlers.consumeParameterType(deprecationLogger))));
+        return singletonList(new Route(PUT, "/{index}"));
     }
 
     @Override
@@ -61,6 +59,8 @@ public class RestCreateIndexAction extends BaseRestHandler {
 
     @Override
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
+        CompatibleHandlers.consumeParameterIncludeType(deprecationLogger).accept(request);
+        CompatibleHandlers.consumeParameterType(deprecationLogger).accept(request);
 
         CreateIndexRequest createIndexRequest = new CreateIndexRequest(request.param("index"));
 

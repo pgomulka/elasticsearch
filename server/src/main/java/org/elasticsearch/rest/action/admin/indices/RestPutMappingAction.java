@@ -62,27 +62,6 @@ public class RestPutMappingAction extends BaseRestHandler {
     }
 
     @Override
-    public List<Route> compatibleRoutes() {
-        return unmodifiableList(asList(
-            new Route(PUT, "/{index}/{type}/_mapping/"),
-            new Route(PUT, "/{index}/_mapping/{type}"),
-            new Route(PUT, "/_mapping/{type}"),
-
-            new Route(POST, "/{index}/{type}/_mapping/"),
-            new Route(POST, "/{index}/_mapping/{type}"),
-            new Route(POST, "/_mapping/{type}"),
-
-            new Route(PUT, "/{index}/{type}/_mappings/"),
-            new Route(PUT, "/{index}/_mappings/{type}"),
-            new Route(PUT, "/_mappings/{type}"),
-
-            new Route(POST, "/{index}/{type}/_mappings/"),
-            new Route(POST, "/{index}/_mappings/{type}"),
-            new Route(POST, "/_mappings/{type}")
-            ));
-    }
-
-    @Override
     public String getName() {
         return "put_mapping_action";
     }
@@ -126,5 +105,34 @@ public class RestPutMappingAction extends BaseRestHandler {
 
     public static boolean isMappingSourceTyped(String type, Map<String, Object> mapping) {
         return mapping.size() == 1 && mapping.keySet().iterator().next().equals(type);
+    }
+
+
+    public static class CompatibleRestPutMappingAction extends RestPutMappingAction {
+        @Override
+        public List<Route> routes() {
+            return unmodifiableList(asList(
+                new Route(PUT, "/{index}/{type}/_mapping/"),
+                new Route(PUT, "/{index}/_mapping/{type}"),
+                new Route(PUT, "/_mapping/{type}"),
+
+                new Route(POST, "/{index}/{type}/_mapping/"),
+                new Route(POST, "/{index}/_mapping/{type}"),
+                new Route(POST, "/_mapping/{type}"),
+
+                new Route(PUT, "/{index}/{type}/_mappings/"),
+                new Route(PUT, "/{index}/_mappings/{type}"),
+                new Route(PUT, "/_mappings/{type}"),
+
+                new Route(POST, "/{index}/{type}/_mappings/"),
+                new Route(POST, "/{index}/_mappings/{type}"),
+                new Route(POST, "/_mappings/{type}")
+            ));
+        }
+
+        @Override
+        public boolean compatibilityRequired() {
+            return true;
+        }
     }
 }

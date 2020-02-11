@@ -61,27 +61,37 @@ public class RestIndexAction extends BaseRestHandler {
             new Route(PUT, "/{index}/_doc/{id}")));
     }
 
-    @Override
-    public List<Route> compatibleRoutes() {
-        return unmodifiableList(asList(
-            new Route(POST, "/{index}/{type}/{id}",
-                List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger))),
-            new Route(PUT, "/{index}/{type}/{id}",
-                List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger)))));
-        /*
-         controller.registerCompatibleHandler(PUT, "/{index}/{type}/{id}", this,
-                List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger)));
-            controller.registerCompatibleHandler(POST, "/{index}/{type}/{id}", this,
-                List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger)));
-         */
-    }
+
 
     @Override
     public String getName() {
         return "document_index_action";
     }
 
-    public static final class CreateHandler extends RestIndexAction {
+    public static class CompatibleRestIndexAction extends  RestIndexAction{
+        @Override
+        public List<Route> routes() {
+            return unmodifiableList(asList(
+                new Route(POST, "/{index}/{type}/{id}",
+                    List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger))),
+                new Route(PUT, "/{index}/{type}/{id}",
+                    List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger)))));
+        }
+
+        @Override
+        public RestChannelConsumer prepareRequest(RestRequest request, final NodeClient client) throws IOException {
+            DEPRECATION_WARNING.accept(request);
+            CompatibleHandlers.consumeParameterType(deprecationLogger).accept(request);
+            return super.prepareRequest(request, client);
+        }
+
+        @Override
+        public boolean compatibilityRequired() {
+            return true;
+        }
+    }
+
+    public static class CreateHandler extends RestIndexAction {
 
         @Override
         public String getName() {
@@ -93,15 +103,6 @@ public class RestIndexAction extends BaseRestHandler {
             return unmodifiableList(asList(
                 new Route(POST, "/{index}/_create/{id}"),
                 new Route(PUT, "/{index}/_create/{id}")));
-        }
-
-        @Override
-        public List<Route> compatibleRoutes() {
-            return unmodifiableList(asList(
-                new Route(POST, "/{index}/{type}/{id}/_create",
-                    List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger))),
-                new Route(PUT, "/{index}/{type}/{id}/_create",
-                    List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger)))));
         }
 
         @Override
@@ -118,7 +119,30 @@ public class RestIndexAction extends BaseRestHandler {
         }
     }
 
-    public static final class AutoIdHandler extends RestIndexAction {
+    public static class CompatibleCreateHandler extends CreateHandler {
+        @Override
+        public List<Route> routes() {
+            return unmodifiableList(asList(
+                new Route(POST, "/{index}/{type}/{id}/_create",
+                    List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger))),
+                new Route(PUT, "/{index}/{type}/{id}/_create",
+                    List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger)))));
+        }
+
+        @Override
+        public RestChannelConsumer prepareRequest(RestRequest request, final NodeClient client) throws IOException {
+            DEPRECATION_WARNING.accept(request);
+            CompatibleHandlers.consumeParameterType(deprecationLogger).accept(request);
+            return super.prepareRequest(request, client);
+        }
+
+        @Override
+        public boolean compatibilityRequired() {
+            return true;
+        }
+    }
+
+    public static class AutoIdHandler extends RestIndexAction {
 
         private final ClusterService clusterService;
 
@@ -137,12 +161,6 @@ public class RestIndexAction extends BaseRestHandler {
         }
 
         @Override
-        public List<Route> compatibleRoutes() {
-            return singletonList(new Route(POST, "/{index}/{type}",
-                List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger))));
-        }
-
-        @Override
         public RestChannelConsumer prepareRequest(RestRequest request, final NodeClient client) throws IOException {
             assert request.params().get("id") == null : "non-null id: " + request.params().get("id");
             if (request.params().get("op_type") == null && clusterService.state().nodes().getMinNodeVersion().onOrAfter(Version.V_7_5_0)) {
@@ -153,7 +171,25 @@ public class RestIndexAction extends BaseRestHandler {
         }
     }
 
-    @Override
+    public static final class CompatibleAutoIdHandler extends AutoIdHandler {
+
+        public CompatibleAutoIdHandler(ClusterService clusterService) {
+            super(clusterService);
+        }
+
+        @Override
+        public List<Route> routes() {
+            return singletonList(new Route(POST, "/{index}/{type}"));
+        }
+
+        @Override
+        public RestChannelConsumer prepareRequest(RestRequest request, final NodeClient client) throws IOException {
+            DEPRECATION_WARNING.accept(request);
+            CompatibleHandlers.consumeParameterType(deprecationLogger).accept(request);
+            return super.prepareRequest(request, client);
+        }
+    }
+        @Override
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
         IndexRequest indexRequest = new IndexRequest(request.param("index"));
         indexRequest.id(request.param("id"));

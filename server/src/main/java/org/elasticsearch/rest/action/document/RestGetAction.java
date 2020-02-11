@@ -68,15 +68,6 @@ public class RestGetAction extends BaseRestHandler {
     }
 
     @Override
-    public List<Route> compatibleRoutes() {
-        return unmodifiableList(asList(
-            new Route(GET, "/{index}/{type}/{id}",
-                List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger))),
-            new Route(HEAD, "/{index}/{type}/{id}",
-                List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger)))));
-    }
-
-    @Override
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
         GetRequest getRequest = new GetRequest(request.param("index"), request.param("id"));
 
@@ -109,4 +100,24 @@ public class RestGetAction extends BaseRestHandler {
         });
     }
 
+    public static class CompatibleRestGetAction extends RestGetAction {
+        @Override
+        public List<Route> routes() {
+            return unmodifiableList(asList(
+                new Route(GET, "/{index}/{type}/{id}"),
+                new Route(HEAD, "/{index}/{type}/{id}")));
+        }
+
+        @Override
+        public RestChannelConsumer prepareRequest(RestRequest request, final NodeClient client) throws IOException {
+            DEPRECATION_WARNING.accept(request);
+            CompatibleHandlers.consumeParameterType(deprecationLogger).accept(request);
+            return super.prepareRequest(request, client);
+        }
+
+        @Override
+        public boolean compatibilityRequired() {
+            return true;
+        }
+    }
 }
