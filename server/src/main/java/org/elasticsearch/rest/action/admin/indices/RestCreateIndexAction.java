@@ -34,21 +34,28 @@ import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.action.RestToXContentListener;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static java.util.Collections.singletonList;
+import static java.util.Collections.singletonMap;
+import static org.elasticsearch.rest.RestRequest.Method.PUT;
 
 public class RestCreateIndexAction extends BaseRestHandler {
     private static final DeprecationLogger deprecationLogger = new DeprecationLogger(
         LogManager.getLogger(RestCreateIndexAction.class));
 
-
-    public RestCreateIndexAction(RestController controller) {
-        controller.registerHandler(RestRequest.Method.PUT, "/{index}", this,
-            List.of(CompatibleHandlers.consumeParameterIncludeType(deprecationLogger),
-                CompatibleHandlers.consumeParameterType(deprecationLogger)));
+    @Override
+    public List<Route> routes() {
+        return singletonList(new Route(PUT, "/{index}"));
     }
+
+//    public RestCreateIndexAction(RestController controller) {
+//        controller.registerHandler(RestRequest.Method.PUT, "/{index}", this,
+//            List.of(CompatibleHandlers.consumeParameterIncludeType(deprecationLogger),
+//                CompatibleHandlers.consumeParameterType(deprecationLogger)));
+//    }
 
     @Override
     public String getName() {
@@ -79,7 +86,6 @@ public class RestCreateIndexAction extends BaseRestHandler {
     }
 
     static Map<String, Object> prepareMappings(Map<String, Object> source) {
-
         if (source.containsKey("mappings") == false
             || (source.get("mappings") instanceof Map) == false) {
             return source;
@@ -93,7 +99,7 @@ public class RestCreateIndexAction extends BaseRestHandler {
             throw new IllegalArgumentException("The mapping definition cannot be nested under a type");
         }
 
-        newSource.put("mappings", Collections.singletonMap(MapperService.SINGLE_MAPPING_NAME, mappings));
+        newSource.put("mappings", singletonMap(MapperService.SINGLE_MAPPING_NAME, mappings));
         return newSource;
     }
 

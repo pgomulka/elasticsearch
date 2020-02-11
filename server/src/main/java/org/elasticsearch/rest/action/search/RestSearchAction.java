@@ -53,6 +53,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.IntConsumer;
 
+import static java.util.Arrays.asList;
+import static java.util.Collections.unmodifiableList;
 import static org.elasticsearch.common.unit.TimeValue.parseTimeValue;
 import static org.elasticsearch.rest.RestRequest.Method.GET;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
@@ -74,7 +76,7 @@ public class RestSearchAction extends BaseRestHandler {
 
     private static final DeprecationLogger deprecationLogger = new DeprecationLogger(LogManager.getLogger(RestSearchAction.class));
 
-    public RestSearchAction(RestController controller) {
+ /*   public RestSearchAction(RestController controller) {
         controller.registerHandler(GET, "/_search", this);
         controller.registerHandler(POST, "/_search", this);
         controller.registerHandler(GET, "/{index}/_search", this);
@@ -86,10 +88,19 @@ public class RestSearchAction extends BaseRestHandler {
         controller.registerCompatibleHandler(POST, "/{index}/{type}/_search", this,
             List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
     }
-
+*/
     @Override
     public String getName() {
         return "search_action";
+    }
+
+    @Override
+    public List<Route> routes() {
+        return unmodifiableList(asList(
+            new Route(GET, "/_search"),
+            new Route(POST, "/_search"),
+            new Route(GET, "/{index}/_search"),
+            new Route(POST, "/{index}/_search")));
     }
 
     @Override

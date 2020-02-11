@@ -39,21 +39,21 @@ import java.util.List;
 import java.util.Locale;
 import java.util.function.Consumer;
 
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
+import static java.util.Collections.unmodifiableList;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.rest.RestRequest.Method.PUT;
 
 public class RestIndexAction extends BaseRestHandler {
 
-    private static final DeprecationLogger deprecationLogger = new DeprecationLogger(
-        LogManager.getLogger(RestIndexAction.class));
-    private static final String TYPES_DEPRECATION_MESSAGE = "[types removal] Specifying types in document " +
-        "index requests is deprecated, use the typeless endpoints instead (/{index}/_doc/{id}, /{index}/_doc, " +
-        "or /{index}/_create/{id}).";
-    private Consumer<RestRequest> DEPRECATION_WARNING = r -> deprecationLogger.deprecatedAndMaybeLog("index_with_types",TYPES_DEPRECATION_MESSAGE);
-
-
-    private final ClusterService clusterService;
-
+    @Override
+    public List<Route> routes() {
+        return unmodifiableList(asList(
+            new Route(POST, "/{index}/_doc/{id}"),
+            new Route(PUT, "/{index}/_doc/{id}")));
+    }
+/*
     public RestIndexAction(RestController controller, ClusterService clusterService) {
         this.clusterService = clusterService;
 
@@ -78,15 +78,13 @@ public class RestIndexAction extends BaseRestHandler {
         controller.registerCompatibleHandler(POST, "/{index}/{type}/{id}/_create", createHandler,
             List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger)));
     }
-
+ */
     @Override
     public String getName() {
         return "document_index_action";
     }
 
-    final class CreateHandler extends BaseRestHandler {
-        protected CreateHandler() {
-        }
+    public static final class CreateHandler extends RestIndexAction {
 
         @Override
         public String getName() {
@@ -94,10 +92,17 @@ public class RestIndexAction extends BaseRestHandler {
         }
 
         @Override
+        public List<Route> routes() {
+            return unmodifiableList(asList(
+                new Route(POST, "/{index}/_create/{id}"),
+                new Route(PUT, "/{index}/_create/{id}")));
+        }
+
+        @Override
         public RestChannelConsumer prepareRequest(RestRequest request, final NodeClient client) throws IOException {
             validateOpType(request.params().get("op_type"));
             request.params().put("op_type", "create");
-            return RestIndexAction.this.prepareRequest(request, client);
+            return super.prepareRequest(request, client);
         }
 
         void validateOpType(String opType) {
@@ -107,13 +112,22 @@ public class RestIndexAction extends BaseRestHandler {
         }
     }
 
-    final class AutoIdHandler extends BaseRestHandler {
-        protected AutoIdHandler() {
+    public static final class AutoIdHandler extends RestIndexAction {
+
+        private final ClusterService clusterService;
+
+        public AutoIdHandler(ClusterService clusterService) {
+            this.clusterService = clusterService;
         }
 
         @Override
         public String getName() {
             return "document_create_action";
+        }
+
+        @Override
+        public List<Route> routes() {
+            return singletonList(new Route(POST, "/{index}/_doc"));
         }
 
         @Override
@@ -123,7 +137,7 @@ public class RestIndexAction extends BaseRestHandler {
                 // default to op_type create
                 request.params().put("op_type", "create");
             }
-            return RestIndexAction.this.prepareRequest(request, client);
+            return super.prepareRequest(request, client);
         }
     }
 

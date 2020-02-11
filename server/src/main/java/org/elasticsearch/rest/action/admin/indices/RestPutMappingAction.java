@@ -34,11 +34,14 @@ import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.action.RestToXContentListener;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static java.util.Arrays.asList;
+import static java.util.Collections.unmodifiableList;
 import static org.elasticsearch.client.Requests.putMappingRequest;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.rest.RestRequest.Method.PUT;
@@ -49,7 +52,17 @@ public class RestPutMappingAction extends BaseRestHandler {
     public static final String TYPES_DEPRECATION_MESSAGE = "[types removal] Using include_type_name in put "
         + "mapping requests is deprecated. The parameter will be removed in the next major version.";
 
-    public RestPutMappingAction(RestController controller) {
+    @Override
+    public List<Route> routes() {
+        return unmodifiableList(asList(
+            new Route(POST, "/{index}/_mapping/"),
+            new Route(PUT, "/{index}/_mapping/"),
+            new Route(POST, "/{index}/_mappings/"),
+            new Route(PUT, "/{index}/_mappings/")));
+    }
+/*
+public RestPutMappingAction(RestController controller) {
+//todo pgcomp
         controller.registerHandler(PUT, "/{index}/_mapping/", this);
         controller.registerCompatibleHandler(PUT, "/{index}/{type}/_mapping", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
         controller.registerCompatibleHandler(PUT, "/{index}/_mapping/{type}", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
@@ -72,7 +85,7 @@ public class RestPutMappingAction extends BaseRestHandler {
         controller.registerCompatibleHandler(POST, "/{index}/_mappings/{type}", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
         controller.registerCompatibleHandler(POST, "/_mappings/{type}", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
     }
-
+ */
     @Override
     public String getName() {
         return "put_mapping_action";

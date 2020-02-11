@@ -37,8 +37,11 @@ import org.elasticsearch.search.fetch.subphase.FetchSourceContext;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.List;
 import java.util.function.Consumer;
 
+import static java.util.Arrays.asList;
+import static java.util.Collections.unmodifiableList;
 import static org.elasticsearch.rest.RestRequest.Method.GET;
 import static org.elasticsearch.rest.RestRequest.Method.HEAD;
 import static org.elasticsearch.rest.RestStatus.NOT_FOUND;
@@ -51,21 +54,29 @@ public class RestGetAction extends BaseRestHandler {
         "document get requests is deprecated, use the /{index}/_doc/{id} endpoint instead.";
     private static final Consumer<RestRequest> DEPRECATION_WARNING = r -> deprecationLogger.deprecatedAndMaybeLog("get_with_types",TYPES_DEPRECATION_MESSAGE);
 
-    public RestGetAction(final RestController controller) {
-        controller.registerHandler(GET, "/{index}/_doc/{id}", this);
-        controller.registerHandler(HEAD, "/{index}/_doc/{id}", this);
-
-//        // Deprecated typed endpoints.
-        controller.registerCompatibleHandler(GET, "/{index}/{type}/{id}", this,
-            List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger))); // auto id creation
-        controller.registerCompatibleHandler(HEAD, "/{index}/{type}/{id}", this,
-            List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger))); // auto id creation
-    }
 
     @Override
     public String getName() {
         return "document_get_action";
     }
+
+    @Override
+    public List<Route> routes() {
+        return unmodifiableList(asList(
+            new Route(GET, "/{index}/_doc/{id}"),
+            new Route(HEAD, "/{index}/_doc/{id}")));
+    }
+
+//    public RestGetAction(final RestController controller) {
+//        controller.registerHandler(GET, "/{index}/_doc/{id}", this);
+//        controller.registerHandler(HEAD, "/{index}/_doc/{id}", this);
+//
+////        // Deprecated typed endpoints.
+//        controller.registerCompatibleHandler(GET, "/{index}/{type}/{id}", this,
+//            List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger))); // auto id creation
+//        controller.registerCompatibleHandler(HEAD, "/{index}/{type}/{id}", this,
+//            List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger))); // auto id creation
+//    }
 
     @Override
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
