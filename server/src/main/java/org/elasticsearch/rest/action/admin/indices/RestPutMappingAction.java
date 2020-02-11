@@ -60,37 +60,32 @@ public class RestPutMappingAction extends BaseRestHandler {
             new Route(POST, "/{index}/_mappings/"),
             new Route(PUT, "/{index}/_mappings/")));
     }
-/*
-public RestPutMappingAction(RestController controller) {
-//todo pgcomp
-        controller.registerHandler(PUT, "/{index}/_mapping/", this);
-        controller.registerCompatibleHandler(PUT, "/{index}/{type}/_mapping", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
-        controller.registerCompatibleHandler(PUT, "/{index}/_mapping/{type}", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
-        controller.registerCompatibleHandler(PUT, "/_mapping/{type}", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
 
-        controller.registerHandler(POST, "/{index}/_mapping/", this);
-        controller.registerCompatibleHandler(POST, "/{index}/{type}/_mapping", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
-        controller.registerCompatibleHandler(POST, "/{index}/_mapping/{type}", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
-        controller.registerCompatibleHandler(POST, "/_mapping/{type}", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
+    @Override
+    public List<Route> compatibleRoutes() {
+        return unmodifiableList(asList(
+            new Route(PUT, "/{index}/{type}/_mapping/"),
+            new Route(PUT, "/{index}/_mapping/{type}"),
+            new Route(PUT, "/_mapping/{type}"),
 
-        //register the same paths, but with plural form _mappings
-        controller.registerHandler(PUT, "/{index}/_mappings/", this);
-        controller.registerCompatibleHandler(PUT, "/{index}/{type}/_mappings", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
-        controller.registerCompatibleHandler(PUT, "/{index}/_mappings/{type}", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
-        controller.registerCompatibleHandler(PUT, "/_mappings/{type}", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
+            new Route(POST, "/{index}/{type}/_mapping/"),
+            new Route(POST, "/{index}/_mapping/{type}"),
+            new Route(POST, "/_mapping/{type}"),
 
+            new Route(PUT, "/{index}/{type}/_mappings/"),
+            new Route(PUT, "/{index}/_mappings/{type}"),
+            new Route(PUT, "/_mappings/{type}"),
 
-        controller.registerHandler(POST, "/{index}/_mappings/", this);
-        controller.registerCompatibleHandler(POST, "/{index}/{type}/_mappings", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
-        controller.registerCompatibleHandler(POST, "/{index}/_mappings/{type}", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
-        controller.registerCompatibleHandler(POST, "/_mappings/{type}", this, List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
+            new Route(POST, "/{index}/{type}/_mappings/"),
+            new Route(POST, "/{index}/_mappings/{type}"),
+            new Route(POST, "/_mappings/{type}")
+            ));
     }
- */
+
     @Override
     public String getName() {
         return "put_mapping_action";
     }
-
 
     @Override
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {

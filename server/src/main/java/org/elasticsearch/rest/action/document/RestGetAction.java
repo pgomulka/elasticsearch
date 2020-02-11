@@ -67,16 +67,14 @@ public class RestGetAction extends BaseRestHandler {
             new Route(HEAD, "/{index}/_doc/{id}")));
     }
 
-//    public RestGetAction(final RestController controller) {
-//        controller.registerHandler(GET, "/{index}/_doc/{id}", this);
-//        controller.registerHandler(HEAD, "/{index}/_doc/{id}", this);
-//
-////        // Deprecated typed endpoints.
-//        controller.registerCompatibleHandler(GET, "/{index}/{type}/{id}", this,
-//            List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger))); // auto id creation
-//        controller.registerCompatibleHandler(HEAD, "/{index}/{type}/{id}", this,
-//            List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger))); // auto id creation
-//    }
+    @Override
+    public List<Route> compatibleRoutes() {
+        return unmodifiableList(asList(
+            new Route(GET, "/{index}/{type}/{id}",
+                List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger))),
+            new Route(HEAD, "/{index}/{type}/{id}",
+                List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger)))));
+    }
 
     @Override
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {

@@ -26,6 +26,9 @@ import org.elasticsearch.rest.RestRequest.Method;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Consumer;
+
+import static java.util.Collections.emptyList;
 
 /**
  * Handler for REST requests
@@ -69,16 +72,19 @@ public interface RestHandler {
      * The list of {@link Route}s that this RestHandler is responsible for handling.
      */
     default List<Route> routes() {
-        return Collections.emptyList();
+        return emptyList();
     }
 
+    default List<Route> compatibleRoutes() {
+        return emptyList();
+    }
     /**
      * A list of routes handled by this RestHandler that are deprecated and do not have a direct
      * replacement. If changing the {@code path} or {@code method} of a route,
      * use {@link #replacedRoutes()}.
      */
     default List<DeprecatedRoute> deprecatedRoutes() {
-        return Collections.emptyList();
+        return emptyList();
     }
 
     /**
@@ -87,7 +93,7 @@ public interface RestHandler {
      * as deprecated alongside the updated {@code route}.
      */
     default List<ReplacedRoute> replacedRoutes() {
-        return Collections.emptyList();
+        return emptyList();
     }
 
     default boolean compatibilityRequired(){
@@ -98,10 +104,16 @@ public interface RestHandler {
 
         private final String path;
         private final Method method;
+        private final List<Consumer<RestRequest>> parameterConsumers;
 
         public Route(Method method, String path) {
+            this(method,path,emptyList());
+        }
+
+        public Route(Method method, String path, List<Consumer<RestRequest>> parameterConsumers) {
             this.path = path;
             this.method = method;
+            this.parameterConsumers = parameterConsumers;
         }
 
         public String getPath() {
@@ -110,6 +122,10 @@ public interface RestHandler {
 
         public Method getMethod() {
             return method;
+        }
+
+        public List<Consumer<RestRequest>> getParameterConsumers() {
+            return parameterConsumers;
         }
     }
 

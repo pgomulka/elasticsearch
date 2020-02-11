@@ -46,6 +46,13 @@ import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.rest.RestRequest.Method.PUT;
 
 public class RestIndexAction extends BaseRestHandler {
+    private static final String TYPES_DEPRECATION_MESSAGE = "[types removal] Specifying types in document " +
+        "index requests is deprecated, use the typeless endpoints instead (/{index}/_doc/{id}, /{index}/_doc, " +
+        "or /{index}/_create/{id}).";
+    private static final DeprecationLogger deprecationLogger = new DeprecationLogger(
+        LogManager.getLogger(RestIndexAction.class));
+    private static final Consumer<RestRequest> DEPRECATION_WARNING =
+        r -> deprecationLogger.deprecatedAndMaybeLog("index_with_types",TYPES_DEPRECATION_MESSAGE);
 
     @Override
     public List<Route> routes() {
@@ -53,32 +60,22 @@ public class RestIndexAction extends BaseRestHandler {
             new Route(POST, "/{index}/_doc/{id}"),
             new Route(PUT, "/{index}/_doc/{id}")));
     }
-/*
-    public RestIndexAction(RestController controller, ClusterService clusterService) {
-        this.clusterService = clusterService;
 
-        AutoIdHandler autoIdHandler = new AutoIdHandler();
-        controller.registerHandler(POST, "/{index}/_doc", autoIdHandler); // auto id creation
-        controller.registerHandler(PUT, "/{index}/_doc/{id}", this);
-        controller.registerHandler(POST, "/{index}/_doc/{id}", this);
-
-        CreateHandler createHandler = new CreateHandler();
-        controller.registerHandler(PUT, "/{index}/_create/{id}", createHandler);
-        controller.registerHandler(POST, "/{index}/_create/{id}/", createHandler);
-
-        // Deprecated typed endpoints.
-        controller.registerCompatibleHandler(POST, "/{index}/{type}", autoIdHandler,
-            List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger))); // auto id creation
-        controller.registerCompatibleHandler(PUT, "/{index}/{type}/{id}", this,
-            List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger)));
-        controller.registerCompatibleHandler(POST, "/{index}/{type}/{id}", this,
-            List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger)));
-        controller.registerCompatibleHandler(PUT, "/{index}/{type}/{id}/_create", createHandler,
-            List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger)));
-        controller.registerCompatibleHandler(POST, "/{index}/{type}/{id}/_create", createHandler,
-            List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger)));
+    @Override
+    public List<Route> compatibleRoutes() {
+        return unmodifiableList(asList(
+            new Route(POST, "/{index}/{type}/{id}",
+                List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger))),
+            new Route(PUT, "/{index}/{type}/{id}",
+                List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger)))));
+        /*
+         controller.registerCompatibleHandler(PUT, "/{index}/{type}/{id}", this,
+                List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger)));
+            controller.registerCompatibleHandler(POST, "/{index}/{type}/{id}", this,
+                List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger)));
+         */
     }
- */
+
     @Override
     public String getName() {
         return "document_index_action";
@@ -96,6 +93,15 @@ public class RestIndexAction extends BaseRestHandler {
             return unmodifiableList(asList(
                 new Route(POST, "/{index}/_create/{id}"),
                 new Route(PUT, "/{index}/_create/{id}")));
+        }
+
+        @Override
+        public List<Route> compatibleRoutes() {
+            return unmodifiableList(asList(
+                new Route(POST, "/{index}/{type}/{id}/_create",
+                    List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger))),
+                new Route(PUT, "/{index}/{type}/{id}/_create",
+                    List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger)))));
         }
 
         @Override
@@ -128,6 +134,12 @@ public class RestIndexAction extends BaseRestHandler {
         @Override
         public List<Route> routes() {
             return singletonList(new Route(POST, "/{index}/_doc"));
+        }
+
+        @Override
+        public List<Route> compatibleRoutes() {
+            return singletonList(new Route(POST, "/{index}/{type}",
+                List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger))));
         }
 
         @Override

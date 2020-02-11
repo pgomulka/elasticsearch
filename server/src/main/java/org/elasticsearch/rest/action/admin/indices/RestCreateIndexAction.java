@@ -34,12 +34,13 @@ import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.action.RestToXContentListener;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static java.util.Collections.singletonList;
-import static java.util.Collections.singletonMap;
+import static java.util.Arrays.asList;
+import static java.util.Collections.*;
 import static org.elasticsearch.rest.RestRequest.Method.PUT;
 
 public class RestCreateIndexAction extends BaseRestHandler {
@@ -48,14 +49,10 @@ public class RestCreateIndexAction extends BaseRestHandler {
 
     @Override
     public List<Route> routes() {
-        return singletonList(new Route(PUT, "/{index}"));
+        return singletonList(new Route(PUT, "/{index}",
+            List.of(CompatibleHandlers.consumeParameterIncludeType(deprecationLogger),
+            CompatibleHandlers.consumeParameterType(deprecationLogger))));
     }
-
-//    public RestCreateIndexAction(RestController controller) {
-//        controller.registerHandler(RestRequest.Method.PUT, "/{index}", this,
-//            List.of(CompatibleHandlers.consumeParameterIncludeType(deprecationLogger),
-//                CompatibleHandlers.consumeParameterType(deprecationLogger)));
-//    }
 
     @Override
     public String getName() {

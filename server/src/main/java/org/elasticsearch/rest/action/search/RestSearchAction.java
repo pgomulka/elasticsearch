@@ -104,6 +104,16 @@ public class RestSearchAction extends BaseRestHandler {
     }
 
     @Override
+    public List<Route> compatibleRoutes() {
+        return unmodifiableList(asList(
+            new Route(GET, "/{index}/{type}/_search",
+                List.of(CompatibleHandlers.consumeParameterType(deprecationLogger))),
+            new Route(POST, "/{index}/{type}/_search",
+                List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)))
+            ));
+    }
+
+    @Override
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
         SearchRequest searchRequest = new SearchRequest();
         /*
