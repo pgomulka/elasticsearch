@@ -72,10 +72,8 @@ public class RestIndexAction extends BaseRestHandler {
         @Override
         public List<Route> routes() {
             return unmodifiableList(asList(
-                new Route(POST, "/{index}/{type}/{id}",
-                    List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger))),
-                new Route(PUT, "/{index}/{type}/{id}",
-                    List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger)))));
+                new Route(POST, "/{index}/{type}/{id}"),
+                new Route(PUT, "/{index}/{type}/{id}")));
         }
 
         @Override
@@ -123,10 +121,8 @@ public class RestIndexAction extends BaseRestHandler {
         @Override
         public List<Route> routes() {
             return unmodifiableList(asList(
-                new Route(POST, "/{index}/{type}/{id}/_create",
-                    List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger))),
-                new Route(PUT, "/{index}/{type}/{id}/_create",
-                    List.of(DEPRECATION_WARNING, CompatibleHandlers.consumeParameterType(deprecationLogger)))));
+                new Route(POST, "/{index}/{type}/{id}/_create"),
+                new Route(PUT, "/{index}/{type}/{id}/_create")));
         }
 
         @Override
@@ -187,6 +183,11 @@ public class RestIndexAction extends BaseRestHandler {
             DEPRECATION_WARNING.accept(request);
             CompatibleHandlers.consumeParameterType(deprecationLogger).accept(request);
             return super.prepareRequest(request, client);
+        }
+
+        @Override
+        public boolean compatibilityRequired() {
+            return true;
         }
     }
         @Override

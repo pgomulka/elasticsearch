@@ -59,9 +59,10 @@ public class RestCreateIndexAction extends BaseRestHandler {
 
     @Override
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
-        CompatibleHandlers.consumeParameterIncludeType(deprecationLogger).accept(request);
-        CompatibleHandlers.consumeParameterType(deprecationLogger).accept(request);
-
+        if(CompatibleHandlers.isCompatible(request)) {
+            CompatibleHandlers.consumeParameterIncludeType(deprecationLogger).accept(request);
+            CompatibleHandlers.consumeParameterType(deprecationLogger).accept(request);
+        }
         CreateIndexRequest createIndexRequest = new CreateIndexRequest(request.param("index"));
 
         if (request.hasContent()) {
