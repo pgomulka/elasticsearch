@@ -309,7 +309,7 @@ public class RestController implements HttpServerTransport.Dispatcher {
                 if (restHeader.isMultiValueAllowed() == false && distinctHeaderValues.size() > 1) {
                     channel.sendResponse(
                         BytesRestResponse.
-                            createSimpleErrorResponse(channel, BAD_REQUEST, "multiple values for single-valued header [" + name + "]."));
+                            createSimpleErrorResponse(channel, BAD_REQUEST, "multiple values headersToCopy.toArray()for single-valued header [" + name + "]."));
                     return;
                 } else {
                     threadContext.putHeader(name, String.join(",", distinctHeaderValues));

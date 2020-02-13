@@ -55,12 +55,14 @@ public class NamedXContentRegistry {
 
         /** A parser capability of parser the entry's class. */
         private final ContextParser<Object, ?> parser;
+        private final boolean requiresCompatible;
 
         /** Creates a new entry which can be stored by the registry. */
         public <T> Entry(Class<T> categoryClass, ParseField name, CheckedFunction<XContentParser, ? extends T, IOException> parser) {
             this.categoryClass = Objects.requireNonNull(categoryClass);
             this.name = Objects.requireNonNull(name);
             this.parser = Objects.requireNonNull((p, c) -> parser.apply(p));
+            this.requiresCompatible = false;
         }
         /**
          * Creates a new entry which can be stored by the registry.
@@ -70,6 +72,14 @@ public class NamedXContentRegistry {
             this.categoryClass = Objects.requireNonNull(categoryClass);
             this.name = Objects.requireNonNull(name);
             this.parser = Objects.requireNonNull(parser);
+            this.requiresCompatible = false;
+        }
+
+        public <T> Entry(Class<T> categoryClass, ParseField name, ContextParser<Object, ? extends T> parser, boolean requiresCompatible) {
+            this.categoryClass = Objects.requireNonNull(categoryClass);
+            this.name = Objects.requireNonNull(name);
+            this.parser = Objects.requireNonNull(parser);
+            this.requiresCompatible = requiresCompatible;
         }
     }
 
@@ -128,7 +138,7 @@ public class NamedXContentRegistry {
             throw new XContentParseException("unknown named object category [" + categoryClass.getName() + "]");
         }
         Entry entry = parsers.get(name);
-        if (entry == null) {
+        if (entry == null || isCompatibleAndRequestIsNot(entry,parser)) {
             throw new NamedObjectNotFoundException(parser.getTokenLocation(), "unknown field [" + name + "]", parsers.keySet());
         }
         if (false == entry.name.match(name, parser.getDeprecationHandler())) {
@@ -138,6 +148,12 @@ public class NamedXContentRegistry {
                     "unable to parse " + categoryClass.getSimpleName() + " with name [" + name + "]: parser didn't match");
         }
         return categoryClass.cast(entry.parser.parse(parser, context));
+    }
+
+    private boolean isCompatibleAndRequestIsNot(Entry entry, XContentParser parser) {
+        boolean requiresCompatible = entry.requiresCompatible;
+        boolean parserCompatible = parser.isCompatible();
+        return requiresCompatible && parserCompatible == false;
     }
 
 }

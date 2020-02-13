@@ -57,10 +57,21 @@ public abstract class AbstractXContentParser implements XContentParser {
 
     private final NamedXContentRegistry xContentRegistry;
     private final DeprecationHandler deprecationHandler;
+    private boolean isCompatible = false;
 
     public AbstractXContentParser(NamedXContentRegistry xContentRegistry, DeprecationHandler deprecationHandler) {
         this.xContentRegistry = xContentRegistry;
         this.deprecationHandler = deprecationHandler;
+    }
+
+    public XContentParser setIsCompatible(boolean isCompatible) {
+        this.isCompatible = isCompatible;
+        return this;
+    }
+
+    @Override
+    public boolean isCompatible() {
+        return isCompatible;
     }
 
     // The 3rd party parsers we rely on are known to silently truncate fractions: see
