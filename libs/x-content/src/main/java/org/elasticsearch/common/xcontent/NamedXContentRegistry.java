@@ -81,6 +81,10 @@ public class NamedXContentRegistry {
             this.parser = Objects.requireNonNull(parser);
             this.requiresCompatible = requiresCompatible;
         }
+
+        public boolean isCompatibleWith(XContentParser parser) {
+            return requiresCompatible == false || parser.isCompatible();
+        }
     }
 
     private final Map<Class<?>, Map<String, Entry>> registry;
@@ -138,7 +142,7 @@ public class NamedXContentRegistry {
             throw new XContentParseException("unknown named object category [" + categoryClass.getName() + "]");
         }
         Entry entry = parsers.get(name);
-        if (entry == null || isCompatibleAndRequestIsNot(entry,parser)) {
+        if (entry == null || entry.isCompatibleWith(parser) == false) {
             throw new NamedObjectNotFoundException(parser.getTokenLocation(), "unknown field [" + name + "]", parsers.keySet());
         }
         if (false == entry.name.match(name, parser.getDeprecationHandler())) {
@@ -149,11 +153,4 @@ public class NamedXContentRegistry {
         }
         return categoryClass.cast(entry.parser.parse(parser, context));
     }
-
-    private boolean isCompatibleAndRequestIsNot(Entry entry, XContentParser parser) {
-        boolean requiresCompatible = entry.requiresCompatible;
-        boolean parserCompatible = parser.isCompatible();
-        return requiresCompatible && parserCompatible == false;
-    }
-
 }

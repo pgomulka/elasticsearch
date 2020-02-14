@@ -64,7 +64,8 @@ public abstract class AbstractXContentParser implements XContentParser {
         this.deprecationHandler = deprecationHandler;
     }
 
-    public XContentParser setIsCompatible(boolean isCompatible) {
+    @Override
+    public XContentParser withIsCompatible(boolean isCompatible) {
         this.isCompatible = isCompatible;
         return this;
     }

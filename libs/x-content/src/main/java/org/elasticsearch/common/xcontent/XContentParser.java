@@ -268,7 +268,7 @@ public interface XContentParser extends Closeable {
     DeprecationHandler getDeprecationHandler();
 
 
-    default XContentParser setIsCompatible(boolean isCompatible) {
+    default XContentParser withIsCompatible(boolean isCompatible) {
          return this;
     }
 

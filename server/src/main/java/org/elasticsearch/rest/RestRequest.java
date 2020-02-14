@@ -489,7 +489,7 @@ public class RestRequest implements ToXContent.Params {
             try (InputStream stream = content.streamInput();
                  XContentParser parser = xContentType.xContent()
                      .createParser(xContentRegistry, LoggingDeprecationHandler.INSTANCE, stream)
-                     .setIsCompatible(isRequestCompatible(this))) {
+                     .withIsCompatible(isRequestCompatible(this))) {
                 withParser.accept(parser);
             }
         } else {
