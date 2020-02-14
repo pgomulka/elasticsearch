@@ -266,4 +266,13 @@ public interface XContentParser extends Closeable {
      * The callback to notify when parsing encounters a deprecated field.
      */
     DeprecationHandler getDeprecationHandler();
+
+
+    default XContentParser withIsCompatible(boolean isCompatible) {
+         return this;
+    }
+
+    default boolean isCompatible() {
+        return false;
+    }
 }

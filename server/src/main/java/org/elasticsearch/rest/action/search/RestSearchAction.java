@@ -19,15 +19,19 @@
 
 package org.elasticsearch.rest.action.search;
 
+import org.apache.logging.log4j.LogManager;
 import org.elasticsearch.action.search.SearchAction;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.Booleans;
 import org.elasticsearch.common.Strings;
+import org.elasticsearch.common.logging.DeprecationLogger;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.rest.BaseRestHandler;
+import org.elasticsearch.rest.CompatibleHandlers;
+import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.action.RestActions;
 import org.elasticsearch.rest.action.RestCancellableNodeClient;
@@ -70,6 +74,21 @@ public class RestSearchAction extends BaseRestHandler {
         RESPONSE_PARAMS = Collections.unmodifiableSet(responseParams);
     }
 
+    private static final DeprecationLogger deprecationLogger = new DeprecationLogger(LogManager.getLogger(RestSearchAction.class));
+
+ /*   public RestSearchAction(RestController controller) {
+        controller.registerHandler(GET, "/_search", this);
+        controller.registerHandler(POST, "/_search", this);
+        controller.registerHandler(GET, "/{index}/_search", this);
+        controller.registerHandler(POST, "/{index}/_search", this);
+
+        // Deprecated typed endpoints.
+        controller.registerCompatibleHandler(GET, "/{index}/{type}/_search", this,
+            List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
+        controller.registerCompatibleHandler(POST, "/{index}/{type}/_search", this,
+            List.of(CompatibleHandlers.consumeParameterType(deprecationLogger)));
+    }
+*/
     @Override
     public String getName() {
         return "search_action";
@@ -318,5 +337,26 @@ public class RestSearchAction extends BaseRestHandler {
     @Override
     public boolean allowsUnsafeBuffers() {
         return true;
+    }
+
+    public static class CompatibleRestSearchAction extends RestSearchAction {
+        @Override
+        public List<Route> routes() {
+            return unmodifiableList(asList(
+                new Route(GET, "/{index}/{type}/_search"),
+                new Route(POST, "/{index}/{type}/_search")
+            ));
+        }
+
+        @Override
+        public RestChannelConsumer prepareRequest(RestRequest request, final NodeClient client) throws IOException {
+            CompatibleHandlers.consumeParameterType(deprecationLogger).accept(request);
+            return super.prepareRequest(request, client);
+        }
+
+        @Override
+        public boolean compatibilityRequired() {
+            return true;
+        }
     }
 }

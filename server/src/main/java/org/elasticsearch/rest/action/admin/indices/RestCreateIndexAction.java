@@ -19,26 +19,33 @@
 
 package org.elasticsearch.rest.action.admin.indices;
 
+import org.apache.logging.log4j.LogManager;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.support.ActiveShardCount;
 import org.elasticsearch.client.node.NodeClient;
+import org.elasticsearch.common.logging.DeprecationLogger;
 import org.elasticsearch.common.xcontent.LoggingDeprecationHandler;
 import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.rest.BaseRestHandler;
+import org.elasticsearch.rest.CompatibleHandlers;
+import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.action.RestToXContentListener;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static java.util.Collections.singletonList;
-import static java.util.Collections.singletonMap;
+import static java.util.Arrays.asList;
+import static java.util.Collections.*;
 import static org.elasticsearch.rest.RestRequest.Method.PUT;
 
 public class RestCreateIndexAction extends BaseRestHandler {
+    private static final DeprecationLogger deprecationLogger = new DeprecationLogger(
+        LogManager.getLogger(RestCreateIndexAction.class));
 
     @Override
     public List<Route> routes() {
@@ -52,13 +59,21 @@ public class RestCreateIndexAction extends BaseRestHandler {
 
     @Override
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
-
+        if(CompatibleHandlers.isCompatible(request)) {
+            CompatibleHandlers.consumeParameterIncludeType(deprecationLogger).accept(request);
+            CompatibleHandlers.consumeParameterType(deprecationLogger).accept(request);
+        }
         CreateIndexRequest createIndexRequest = new CreateIndexRequest(request.param("index"));
 
         if (request.hasContent()) {
             Map<String, Object> sourceAsMap = XContentHelper.convertToMap(request.requiredContent(), false,
                 request.getXContentType()).v2();
-            sourceAsMap = prepareMappings(sourceAsMap);
+            if(CompatibleHandlers.isCompatible(request)){
+                sourceAsMap = prepareMappingsV7(sourceAsMap, request);
+            }else {
+                sourceAsMap = prepareMappings(sourceAsMap);
+            }
+
             createIndexRequest.source(sourceAsMap, LoggingDeprecationHandler.INSTANCE);
         }
 
@@ -67,7 +82,6 @@ public class RestCreateIndexAction extends BaseRestHandler {
         createIndexRequest.waitForActiveShards(ActiveShardCount.parseString(request.param("wait_for_active_shards")));
         return channel -> client.admin().indices().create(createIndexRequest, new RestToXContentListener<>(channel));
     }
-
 
     static Map<String, Object> prepareMappings(Map<String, Object> source) {
         if (source.containsKey("mappings") == false
@@ -85,5 +99,27 @@ public class RestCreateIndexAction extends BaseRestHandler {
 
         newSource.put("mappings", singletonMap(MapperService.SINGLE_MAPPING_NAME, mappings));
         return newSource;
+    }
+
+    static Map<String, Object> prepareMappingsV7(Map<String, Object> source, RestRequest request) {
+        final boolean includeTypeName = request.paramAsBoolean(INCLUDE_TYPE_NAME_PARAMETER,
+            DEFAULT_INCLUDE_TYPE_NAME_POLICY);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> mappings = (Map<String, Object>) source.get("mappings");
+
+        if (includeTypeName && mappings.size() == 1) {
+            //no matter what the type was, replace it with _doc
+            Map<String, Object> newSource = new HashMap<>();
+
+            String typeName = mappings.keySet().iterator().next();
+            @SuppressWarnings("unchecked")
+            Map<String, Object> typedMappings = (Map<String, Object>) mappings.get(typeName);
+
+            newSource.put("mappings", Collections.singletonMap(MapperService.SINGLE_MAPPING_NAME, typedMappings));
+            return newSource;
+        }else{
+            return prepareMappings(source);
+        }
     }
 }

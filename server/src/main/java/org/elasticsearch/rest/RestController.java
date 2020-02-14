@@ -42,12 +42,16 @@ import org.elasticsearch.usage.UsageService;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
@@ -146,11 +150,33 @@ public class RestController implements HttpServerTransport.Dispatcher {
      * @param handler The handler to actually execute
      * @param method GET, POST, etc.
      */
-    protected void registerHandler(RestRequest.Method method, String path, RestHandler handler) {
+//    protected void registerHandler(RestRequest.Method method, String path, RestHandler handler) {
+    public void registerHandler(RestRequest.Method method, String path, RestHandler handler) {
+        registerHandler(method, path, handler, CompatibleHandlers.compatibleHandlerWrapper(Collections.emptyList(), false));
+    }
+
+    /**
+     * A method to register handlers that are available in both compatible and current-version mode.
+     * Additional logic from parameterConsumers will only be applied if compatible mode is used.
+     * @param parameterConsumers a list of functions that will consume a parameter that was removed in this version
+     */
+    public void registerHandler(RestRequest.Method method, String path, RestHandler handler, List<Consumer<RestRequest>>  parameterConsumers) {
+        registerHandler(method, path, handler, CompatibleHandlers.compatibleHandlerWrapper(parameterConsumers,false));
+    }
+
+    /**
+     * A method to register handlers that are available only in compatible mode.
+     */
+    public void registerCompatibleHandler(RestRequest.Method method, String path, RestHandler handler, List<Consumer<RestRequest>> parameterConsumers) {
+//        Arrays.stream(warnings).forEach(Runnable::run);
+        registerHandler(method, path, handler, CompatibleHandlers.compatibleHandlerWrapper(parameterConsumers, true));
+    }
+
+    private void registerHandler(RestRequest.Method method, String path, RestHandler handler, UnaryOperator<RestHandler> additionalWrapper) {
         if (handler instanceof BaseRestHandler) {
             usageService.addRestHandler((BaseRestHandler) handler);
         }
-        final RestHandler maybeWrappedHandler = handlerWrapper.apply(handler);
+        final RestHandler maybeWrappedHandler = this.handlerWrapper.apply(additionalWrapper.apply(handler));
         handlers.insertOrUpdate(path, new MethodHandlers(path, maybeWrappedHandler, method),
             (mHandlers, newMHandler) -> mHandlers.addMethods(maybeWrappedHandler, method));
     }
@@ -160,11 +186,14 @@ public class RestController implements HttpServerTransport.Dispatcher {
      * and {@code path} combinations.
      */
     public void registerHandler(final RestHandler restHandler) {
-        restHandler.routes().forEach(route -> registerHandler(route.getMethod(), route.getPath(), restHandler));
+        restHandler.routes().forEach(route -> registerHandler(route.getMethod(), route.getPath(), restHandler, route.getParameterConsumers()));
         restHandler.deprecatedRoutes().forEach(route ->
-            registerAsDeprecatedHandler(route.getMethod(), route.getPath(), restHandler, route.getDeprecationMessage(), route.getLogger()));
+            registerAsDeprecatedHandler(route.getMethod(), route.getPath(), restHandler, route.getDeprecationMessage(),
+                route.getLogger()));
         restHandler.replacedRoutes().forEach(route -> registerWithDeprecatedHandler(route.getMethod(), route.getPath(),
             restHandler, route.getDeprecatedMethod(), route.getDeprecatedPath(), route.getLogger()));
+//        restHandler.compatibleRoutes().forEach(route -> registerCompatibleHandler(route.getMethod(), route.getPath(), restHandler,
+//            route.getParameterConsumers()));
     }
 
     @Override
@@ -280,7 +309,7 @@ public class RestController implements HttpServerTransport.Dispatcher {
                 if (restHeader.isMultiValueAllowed() == false && distinctHeaderValues.size() > 1) {
                     channel.sendResponse(
                         BytesRestResponse.
-                            createSimpleErrorResponse(channel, BAD_REQUEST, "multiple values for single-valued header [" + name + "]."));
+                            createSimpleErrorResponse(channel, BAD_REQUEST, "multiple values headersToCopy.toArray()for single-valued header [" + name + "]."));
                     return;
                 } else {
                     threadContext.putHeader(name, String.join(",", distinctHeaderValues));
@@ -316,7 +345,12 @@ public class RestController implements HttpServerTransport.Dispatcher {
                       return;
                   }
                 } else {
-                    dispatchRequest(request, channel, handler);
+                    if(handler.compatibilityRequired() == false //regular (not removed) handlers are always passed
+                        || CompatibleHandlers.isCompatible(request)) { //handlers that were registered compatible, require request to be compatible
+                        dispatchRequest(request, channel, handler);
+                    } else {
+                        handleCompatibleNotAllowed(rawPath,request.getHeaders(),channel);
+                    }
                     return;
                 }
             }
@@ -326,6 +360,22 @@ public class RestController implements HttpServerTransport.Dispatcher {
         }
         // If request has not been handled, fallback to a bad request error.
         handleBadRequest(uri, requestMethod, channel);
+    }
+
+    private void handleCompatibleNotAllowed(String rawPath, Map<String, List<String>> headers, RestChannel channel) throws IOException {
+        String msg = "compatible api can be only accessed with Compatible Header. path " + rawPath +" headers "+printMap(headers);
+        BytesRestResponse bytesRestResponse = BytesRestResponse.createSimpleErrorResponse(channel, RestStatus.NOT_FOUND, msg);
+
+        channel.sendResponse(bytesRestResponse);
+    }
+
+    private String printMap(Map<String, List<String>> headers) {
+        StringBuilder s = new StringBuilder();
+        for (String key : headers.keySet()) {
+            s.append(key + " "+headers.get(key).stream().map(Object::toString).collect(Collectors.joining(", ")));
+             s.append(";");
+        }
+        return s.toString();
     }
 
     Iterator<MethodHandlers> getAllHandlers(@Nullable Map<String, String> requestParamsRef, String rawPath) {

@@ -290,4 +290,5 @@ public class WatcherXContentParser implements XContentParser {
     public DeprecationHandler getDeprecationHandler() {
         return parser.getDeprecationHandler();
     }
+
 }

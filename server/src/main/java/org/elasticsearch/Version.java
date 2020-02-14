@@ -78,6 +78,10 @@ public class Version implements Comparable<Version>, ToXContentFragment {
     public static final Version V_8_0_0 = new Version(8000099, org.apache.lucene.util.Version.LUCENE_8_5_0);
     public static final Version CURRENT = V_8_0_0;
 
+    public static final String COMPATIBLE_HEADER = "Accept-Type";
+    public static final String COMPATIBLE_PARAMS_KEY = "Compatible-With";
+    public static final String COMPATIBLE_VERSION = "7";
+
     private static final ImmutableOpenIntMap<Version> idToVersion;
 
     static {

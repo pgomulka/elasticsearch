@@ -626,6 +626,7 @@ public class ActionModule extends AbstractModule {
         registerHandler.accept(new RestDeleteIndexTemplateAction());
 
         registerHandler.accept(new RestPutMappingAction());
+        registerHandler.accept(new RestPutMappingAction.CompatibleRestPutMappingAction());
         registerHandler.accept(new RestGetMappingAction());
         registerHandler.accept(new RestGetFieldMappingAction());
 
@@ -640,7 +641,13 @@ public class ActionModule extends AbstractModule {
         registerHandler.accept(new RestIndexAction());
         registerHandler.accept(new CreateHandler());
         registerHandler.accept(new AutoIdHandler(clusterService));
+        registerHandler.accept(new RestIndexAction.CompatibleRestIndexAction());
+        registerHandler.accept(new RestIndexAction.CompatibleCreateHandler());
+        registerHandler.accept(new RestIndexAction.CompatibleAutoIdHandler(clusterService));
+
         registerHandler.accept(new RestGetAction());
+        registerHandler.accept(new RestGetAction.CompatibleRestGetAction());
+
         registerHandler.accept(new RestGetSourceAction());
         registerHandler.accept(new RestMultiGetAction(settings));
         registerHandler.accept(new RestDeleteAction());
@@ -651,6 +658,7 @@ public class ActionModule extends AbstractModule {
         registerHandler.accept(new RestUpdateAction());
 
         registerHandler.accept(new RestSearchAction());
+        registerHandler.accept(new RestSearchAction.CompatibleRestSearchAction());
         registerHandler.accept(new RestSearchScrollAction());
         registerHandler.accept(new RestClearScrollAction());
         registerHandler.accept(new RestMultiSearchAction(settings));

@@ -1,0 +1,43 @@
+# Overriding since the type of the exception changed between versions
+"Test Pipeline Processor with Circular Pipelines":
+  - do:
+      ingest.put_pipeline:
+        id: "outer"
+        body:  >
+          {
+            "description" : "outer pipeline",
+            "processors" : [
+              {
+                "pipeline" : {
+                  "name": "inner"
+                }
+              }
+            ]
+          }
+  - match: { acknowledged: true }
+
+  - do:
+      ingest.put_pipeline:
+        id: "inner"
+        body:  >
+          {
+            "description" : "inner pipeline",
+            "processors" : [
+              {
+                "pipeline" : {
+                  "name": "outer"
+                }
+              }
+            ]
+          }
+  - match: { acknowledged: true }
+
+  - do:
+      catch: /illegal_state_exception/
+      index:
+        index: test
+        id: 1
+        pipeline: "outer"
+        body: {}
+  - match: { error.root_cause.0.type: "ingest_processor_exception" } # <-- changed
+  - match: { error.root_cause.0.reason: "java.lang.IllegalStateException: Cycle detected for pipeline: outer" }
