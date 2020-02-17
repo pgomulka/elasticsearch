@@ -18,6 +18,7 @@
  */
 package org.elasticsearch.rest;
 
+import org.elasticsearch.Version;
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.io.Streams;
@@ -127,6 +128,9 @@ public abstract class AbstractRestChannel implements RestChannel {
         }
 
         builder.humanReadable(human);
+
+        String compatibleVersion = request.param(Version.COMPATIBLE_PARAMS_KEY);
+        builder.compatibleVersion(compatibleVersion == null ? -1 : Byte.parseByte(compatibleVersion));
         return builder;
     }
 

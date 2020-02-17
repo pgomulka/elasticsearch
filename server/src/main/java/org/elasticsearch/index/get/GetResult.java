@@ -36,15 +36,10 @@ import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.index.mapper.IgnoredFieldMapper;
 import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.index.mapper.SourceFieldMapper;
-import org.elasticsearch.rest.CompatibleHandlers;
 import org.elasticsearch.search.lookup.SourceLookup;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 import static java.util.Collections.emptyMap;
 import static org.elasticsearch.common.xcontent.XContentParserUtils.ensureExpectedToken;
@@ -304,7 +299,7 @@ public class GetResult implements Writeable, Iterable<DocumentField>, ToXContent
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject();
         builder.field(_INDEX, index);
-        if (CompatibleHandlers.isCompatible(params)) {
+        if (builder.getCompatibleMajorVersion() == Version.V_7_0_0.major) {
             builder.field(TYPE_FIELD_NAME, SINGLE_MAPPING_TYPE);
         }
         builder.field(_ID, id);

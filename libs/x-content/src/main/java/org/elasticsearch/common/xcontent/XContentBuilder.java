@@ -19,28 +19,12 @@
 
 package org.elasticsearch.common.xcontent;
 
-import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
-import java.io.Flushable;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.file.Path;
 import java.time.ZonedDateTime;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.Date;
-import java.util.GregorianCalendar;
-import java.util.HashMap;
-import java.util.IdentityHashMap;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.ServiceLoader;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 
 /**
@@ -137,6 +121,7 @@ public final class XContentBuilder implements Closeable, Flushable {
         DATE_TRANSFORMERS = Collections.unmodifiableMap(dateTransformers);
     }
 
+
     @FunctionalInterface
     public interface Writer {
         void write(XContentBuilder builder, Object value) throws IOException;
@@ -164,6 +149,8 @@ public final class XContentBuilder implements Closeable, Flushable {
      * When this flag is set to true, some types of values are written in a format easier to read for a human.
      */
     private boolean humanReadable = false;
+
+    private byte compatibleVersion;
 
     /**
      * Constructs a new builder using the provided XContent and an OutputStream. Make sure
@@ -997,6 +984,16 @@ public final class XContentBuilder implements Closeable, Flushable {
         generator.copyCurrentStructure(parser);
         return this;
     }
+
+    public XContentBuilder compatibleVersion(byte compatibleVersion){
+        this.compatibleVersion = compatibleVersion;
+        return this;
+    }
+
+    public byte getCompatibleMajorVersion() {
+        return compatibleVersion;
+    }
+
 
     @Override
     public void flush() throws IOException {
