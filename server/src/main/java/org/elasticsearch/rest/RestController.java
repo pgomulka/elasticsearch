@@ -150,33 +150,11 @@ public class RestController implements HttpServerTransport.Dispatcher {
      * @param handler The handler to actually execute
      * @param method GET, POST, etc.
      */
-//    protected void registerHandler(RestRequest.Method method, String path, RestHandler handler) {
-    public void registerHandler(RestRequest.Method method, String path, RestHandler handler) {
-        registerHandler(method, path, handler, CompatibleHandlers.compatibleHandlerWrapper(Collections.emptyList(), false));
-    }
-
-    /**
-     * A method to register handlers that are available in both compatible and current-version mode.
-     * Additional logic from parameterConsumers will only be applied if compatible mode is used.
-     * @param parameterConsumers a list of functions that will consume a parameter that was removed in this version
-     */
-    public void registerHandler(RestRequest.Method method, String path, RestHandler handler, List<Consumer<RestRequest>>  parameterConsumers) {
-        registerHandler(method, path, handler, CompatibleHandlers.compatibleHandlerWrapper(parameterConsumers,false));
-    }
-
-    /**
-     * A method to register handlers that are available only in compatible mode.
-     */
-    public void registerCompatibleHandler(RestRequest.Method method, String path, RestHandler handler, List<Consumer<RestRequest>> parameterConsumers) {
-//        Arrays.stream(warnings).forEach(Runnable::run);
-        registerHandler(method, path, handler, CompatibleHandlers.compatibleHandlerWrapper(parameterConsumers, true));
-    }
-
-    private void registerHandler(RestRequest.Method method, String path, RestHandler handler, UnaryOperator<RestHandler> additionalWrapper) {
+    protected void registerHandler(RestRequest.Method method, String path, RestHandler handler) {
         if (handler instanceof BaseRestHandler) {
             usageService.addRestHandler((BaseRestHandler) handler);
         }
-        final RestHandler maybeWrappedHandler = this.handlerWrapper.apply(additionalWrapper.apply(handler));
+        final RestHandler maybeWrappedHandler = handlerWrapper.apply(handler);
         handlers.insertOrUpdate(path, new MethodHandlers(path, maybeWrappedHandler, method),
             (mHandlers, newMHandler) -> mHandlers.addMethods(maybeWrappedHandler, method));
     }
@@ -186,14 +164,11 @@ public class RestController implements HttpServerTransport.Dispatcher {
      * and {@code path} combinations.
      */
     public void registerHandler(final RestHandler restHandler) {
-        restHandler.routes().forEach(route -> registerHandler(route.getMethod(), route.getPath(), restHandler, route.getParameterConsumers()));
+        restHandler.routes().forEach(route -> registerHandler(route.getMethod(), route.getPath(), restHandler));
         restHandler.deprecatedRoutes().forEach(route ->
-            registerAsDeprecatedHandler(route.getMethod(), route.getPath(), restHandler, route.getDeprecationMessage(),
-                route.getLogger()));
+            registerAsDeprecatedHandler(route.getMethod(), route.getPath(), restHandler, route.getDeprecationMessage(), route.getLogger()));
         restHandler.replacedRoutes().forEach(route -> registerWithDeprecatedHandler(route.getMethod(), route.getPath(),
             restHandler, route.getDeprecatedMethod(), route.getDeprecatedPath(), route.getLogger()));
-//        restHandler.compatibleRoutes().forEach(route -> registerCompatibleHandler(route.getMethod(), route.getPath(), restHandler,
-//            route.getParameterConsumers()));
     }
 
     @Override
@@ -363,7 +338,7 @@ public class RestController implements HttpServerTransport.Dispatcher {
     }
 
     private void handleCompatibleNotAllowed(String rawPath, Map<String, List<String>> headers, RestChannel channel) throws IOException {
-        String msg = "compatible api can be only accessed with Compatible Header. path " + rawPath +" headers "+printMap(headers);
+        String msg = "compatible api can be only accessed with Compatible Header. path " + rawPath;
         BytesRestResponse bytesRestResponse = BytesRestResponse.createSimpleErrorResponse(channel, RestStatus.NOT_FOUND, msg);
 
         channel.sendResponse(bytesRestResponse);

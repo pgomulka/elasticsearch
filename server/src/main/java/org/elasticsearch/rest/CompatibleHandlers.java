@@ -17,25 +17,6 @@ import java.util.function.UnaryOperator;
 
 public class CompatibleHandlers {
     private static final Logger logger = LogManager.getLogger(CompatibleHandlers.class);
-    public static UnaryOperator<RestHandler> compatibleHandlerWrapper(List<Consumer<RestRequest>> parameterConsumers, final boolean requiresCompatibleHeader){
-        UnaryOperator<RestHandler> COMPATIBLE_HANDLER_WRAPPER = handler ->
-            new RestHandler() {
-                @Override
-                public void handleRequest(RestRequest request, RestChannel channel, NodeClient client) throws Exception {
-                    if (isCompatible(request)) {
-                        parameterConsumers.forEach(c -> c.accept(request));
-                    }
-                    handler.handleRequest(request, channel, client);
-                }
-
-                @Override
-                public boolean compatibilityRequired() {
-                    return requiresCompatibleHeader;
-                }
-            };
-
-        return COMPATIBLE_HANDLER_WRAPPER;
-    }
 
     public static Consumer<RestRequest> consumeParameterIncludeType(DeprecationLogger deprecationLogger) {
         final String TYPES_DEPRECATION_MESSAGE = "[types removal] Using include_type_name in create " +
