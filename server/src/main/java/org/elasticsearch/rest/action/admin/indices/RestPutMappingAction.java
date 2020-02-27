@@ -29,14 +29,10 @@ import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.CompatibleHandlers;
-import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.action.RestToXContentListener;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -72,7 +68,7 @@ public class RestPutMappingAction extends BaseRestHandler {
 
         Map<String, Object> sourceAsMap = XContentHelper.convertToMap(request.requiredContent(), false,
             request.getXContentType()).v2();
-        if(CompatibleHandlers.isCompatible(request)) {
+        if(CompatibleHandlers.isV7Compatible(request)) {
             final boolean includeTypeName = request.paramAsBoolean(INCLUDE_TYPE_NAME_PARAMETER,
                 DEFAULT_INCLUDE_TYPE_NAME_POLICY);
             if (request.hasParam(INCLUDE_TYPE_NAME_PARAMETER)) {

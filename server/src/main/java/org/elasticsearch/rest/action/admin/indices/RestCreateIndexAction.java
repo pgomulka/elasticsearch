@@ -58,7 +58,7 @@ public class RestCreateIndexAction extends BaseRestHandler {
 
     @Override
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
-        if(CompatibleHandlers.isCompatible(request)) {
+        if(CompatibleHandlers.isV7Compatible(request)) {
             CompatibleHandlers.consumeParameterIncludeType(deprecationLogger).accept(request);
         }
         CreateIndexRequest createIndexRequest = new CreateIndexRequest(request.param("index"));
@@ -66,7 +66,7 @@ public class RestCreateIndexAction extends BaseRestHandler {
         if (request.hasContent()) {
             Map<String, Object> sourceAsMap = XContentHelper.convertToMap(request.requiredContent(), false,
                 request.getXContentType()).v2();
-            if(CompatibleHandlers.isCompatible(request)){
+            if(CompatibleHandlers.isV7Compatible(request)){
                 sourceAsMap = prepareMappingsV7(sourceAsMap, request);
             }else {
                 sourceAsMap = prepareMappings(sourceAsMap);

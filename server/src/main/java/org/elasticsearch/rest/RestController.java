@@ -42,16 +42,12 @@ import org.elasticsearch.usage.UsageService;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
@@ -321,7 +317,7 @@ public class RestController implements HttpServerTransport.Dispatcher {
                   }
                 } else {
                     if(handler.compatibilityRequired() == false //regular (not removed) handlers are always passed
-                        || CompatibleHandlers.isCompatible(request)) { //handlers that were registered compatible, require request to be compatible
+                        || CompatibleHandlers.isV7Compatible(request)) { //handlers that were registered compatible, require request to be compatible
                         dispatchRequest(request, channel, handler);
                     } else {
                         handleCompatibleNotAllowed(rawPath,request.getHeaders(),channel);

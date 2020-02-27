@@ -39,7 +39,7 @@ public class CompatibleHandlers {
         };
     }
 
-    public static boolean isCompatible(ToXContent.Params params) {
+    public static boolean isV7Compatible(ToXContent.Params params) {
         String param = params.param(Version.COMPATIBLE_PARAMS_KEY);
         return Version.COMPATIBLE_VERSION.equals(param);
     }
