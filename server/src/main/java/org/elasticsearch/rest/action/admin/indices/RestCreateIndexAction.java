@@ -24,6 +24,7 @@ import org.elasticsearch.action.support.ActiveShardCount;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.xcontent.LoggingDeprecationHandler;
 import org.elasticsearch.common.xcontent.XContentHelper;
+import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.RestRequest;
@@ -53,8 +54,13 @@ public class RestCreateIndexAction extends BaseRestHandler {
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
 
         CreateIndexRequest createIndexRequest = new CreateIndexRequest(request.param("index"));
+        request.applyContentParser(p -> createIndexRequest.fromXContent(p));
 
         if (request.hasContent()) {
+            try(XContentParser parser = request.contentParser()) {
+            }
+
+
             Map<String, Object> sourceAsMap = XContentHelper.convertToMap(request.requiredContent(), false,
                 request.getXContentType()).v2();
             sourceAsMap = prepareMappings(sourceAsMap);
