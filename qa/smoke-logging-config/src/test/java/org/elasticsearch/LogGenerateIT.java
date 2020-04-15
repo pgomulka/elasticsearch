@@ -20,6 +20,7 @@
 package org.elasticsearch;
 
 import org.elasticsearch.client.Request;
+import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.test.rest.ESRestTestCase;
 import org.junit.Assert;
 
@@ -67,10 +68,17 @@ public class LogGenerateIT extends ESRestTestCase {
             "    }\n" +
             "\t}\n" +
             "}";
-        final Request putIndexRequest = new Request("PUT", "test_index");
+         Request putIndexRequest = new Request("PUT", "test_index");
         putIndexRequest.setJsonEntity(mappingWithDeprecatedPrecision);
         assertOK(client().performRequest(putIndexRequest));
 
+
+        putIndexRequest = new Request("PUT", "test_index");
+         RequestOptions.Builder options = putIndexRequest.getOptions().toBuilder();
+        options.addHeader("X-Opaque-Id", "my-identifier");
+        putIndexRequest.setOptions(options);
+        putIndexRequest.setJsonEntity(mappingWithDeprecatedPrecision);
+        assertOK(client().performRequest(putIndexRequest));
         Assert.fail();
     }
 
