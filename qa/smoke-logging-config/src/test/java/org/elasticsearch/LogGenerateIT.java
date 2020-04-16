@@ -50,13 +50,49 @@ public class LogGenerateIT extends ESRestTestCase {
         postDoc.setJsonEntity(docBody);
         assertOK(client().performRequest(postDoc));
 
+        String searchBody = "{\n" +
+            "    \"query\": {\n" +
+            "        \"match_all\": {}\n" +
+            "    }\n" +
+            "}";
         final Request searchRequest = new Request("GET", "test_index/_search");
+        searchRequest.setJsonEntity(searchBody);
         assertOK(client().performRequest(searchRequest));
+
+
+        final Request searchRequestWithId = new Request("GET", "test_index/_search");
+        RequestOptions.Builder options = searchRequestWithId.getOptions().toBuilder();
+        options.addHeader("X-Opaque-Id", "my-identifier");
+        searchRequestWithId.setOptions(options);
+        searchRequestWithId.setJsonEntity(searchBody);
+        assertOK(client().performRequest(searchRequestWithId));
 
         Assert.fail();
     }
 
-    public void testDeprecationLogs() throws IOException {
+    public void testSlowLogsLimitSource() throws IOException {
+        String indexSettings = "{\n" +
+            "  \"settings\": {\n" +
+            "    \"index.search.slowlog.level\": \"trace\",\n" +
+            "    \"index.search.slowlog.threshold.query.trace\": 0,\n" +
+            "    \"index.indexing.slowlog.level\": \"trace\",\n" +
+            "    \"index.indexing.slowlog.threshold.index.trace\": 0,\n" +
+            "    \"index.indexing.slowlog.source\": \"3\"\n" +
+            "  }\n" +
+            "}";
+        final Request putIndexRequest = new Request("PUT", "test_index");
+        putIndexRequest.setJsonEntity(indexSettings);
+        assertOK(client().performRequest(putIndexRequest));
+
+        String docBody = "{ \"field\":123 }";
+        final Request postDoc = new Request("POST", "test_index/_doc");
+        postDoc.setJsonEntity(docBody);
+        assertOK(client().performRequest(postDoc));
+
+        Assert.fail();
+    }
+
+    public void testDeprecationLogsWithOpaqueId() throws IOException, InterruptedException {
         String mappingWithDeprecatedPrecision = "{\n" +
             "\t\"mappings\":{\n" +
             "    \"properties\": {\n" +
@@ -68,17 +104,38 @@ public class LogGenerateIT extends ESRestTestCase {
             "    }\n" +
             "\t}\n" +
             "}";
-         Request putIndexRequest = new Request("PUT", "test_index");
-        putIndexRequest.setJsonEntity(mappingWithDeprecatedPrecision);
-        assertOK(client().performRequest(putIndexRequest));
 
-
-        putIndexRequest = new Request("PUT", "test_index");
-         RequestOptions.Builder options = putIndexRequest.getOptions().toBuilder();
+        Request putIndexRequest2 = new Request("PUT", "test_index_with_x_opaque_id");
+        RequestOptions.Builder options = putIndexRequest2.getOptions().toBuilder();
         options.addHeader("X-Opaque-Id", "my-identifier");
-        putIndexRequest.setOptions(options);
-        putIndexRequest.setJsonEntity(mappingWithDeprecatedPrecision);
-        assertOK(client().performRequest(putIndexRequest));
+        putIndexRequest2.setOptions(options);
+        putIndexRequest2.setJsonEntity(mappingWithDeprecatedPrecision);
+        assertOK(client().performRequest(putIndexRequest2));
+
+        Thread.sleep(2000);
+        Assert.fail();
+    }
+
+    public void testDeprecationLogsWithoutXOpaqueID() throws IOException, InterruptedException {
+        String mappingWithDeprecatedPrecision = "{\n" +
+            "\t\"mappings\":{\n" +
+            "    \"properties\": {\n" +
+            "         \"location\": {\n" +
+            "             \"type\": \"geo_shape\",\n" +
+            "             \"tree\": \"quadtree\",\n" +
+            "             \"precision\": \"1m\"\n" +
+            "         }\n" +
+            "    }\n" +
+            "\t}\n" +
+            "}";
+
+        Request putIndexRequest2 = new Request("PUT", "test_index");
+        RequestOptions.Builder options = putIndexRequest2.getOptions().toBuilder();
+        putIndexRequest2.setOptions(options);
+        putIndexRequest2.setJsonEntity(mappingWithDeprecatedPrecision);
+        assertOK(client().performRequest(putIndexRequest2));
+
+        Thread.sleep(2000);
         Assert.fail();
     }
 
