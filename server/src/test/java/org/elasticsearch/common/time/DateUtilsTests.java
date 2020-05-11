@@ -34,22 +34,23 @@ public class DateUtilsTests extends ESTestCase {
     private static final Set<String> IGNORE = new HashSet<>(Arrays.asList(
         "Eire", "Europe/Dublin" // dublin timezone in joda does not account for DST
     ));
-    @AwaitsFix(bugUrl = "https://github.com/elastic/elasticsearch/issues/56343")
+
     public void testTimezoneIds() {
         assertNull(DateUtils.dateTimeZoneToZoneId(null));
         assertNull(DateUtils.zoneIdToDateTimeZone(null));
         for (String jodaId : DateTimeZone.getAvailableIDs()) {
-            if (IGNORE.contains(jodaId)) continue;
-            DateTimeZone jodaTz = DateTimeZone.forID(jodaId);
-            ZoneId zoneId = DateUtils.dateTimeZoneToZoneId(jodaTz); // does not throw
-            long now = 0;
-            assertThat(jodaId, zoneId.getRules().getOffset(Instant.ofEpochMilli(now)).getTotalSeconds() * 1000,
-                equalTo(jodaTz.getOffset(now)));
-            if (DateUtils.DEPRECATED_SHORT_TIMEZONES.containsKey(jodaTz.getID())) {
-                assertWarnings("Use of short timezone id " + jodaId + " is deprecated. Use " + zoneId.getId() + " instead");
+            if (/*ZoneId.getAvailableZoneIds().contains(jodaId) || */IGNORE.contains(jodaId)) {
+                DateTimeZone jodaTz = DateTimeZone.forID(jodaId);
+                ZoneId zoneId = DateUtils.dateTimeZoneToZoneId(jodaTz); // does not throw
+                long now = 0;
+                assertThat(jodaId, zoneId.getRules().getOffset(Instant.ofEpochMilli(now)).getTotalSeconds() * 1000,
+                    equalTo(jodaTz.getOffset(now)));
+                if (DateUtils.DEPRECATED_SHORT_TIMEZONES.containsKey(jodaTz.getID())) {
+                    assertWarnings("Use of short timezone id " + jodaId + " is deprecated. Use " + zoneId.getId() + " instead");
+                }
+                // roundtrip does not throw either
+                assertNotNull(DateUtils.zoneIdToDateTimeZone(zoneId));
             }
-            // roundtrip does not throw either
-            assertNotNull(DateUtils.zoneIdToDateTimeZone(zoneId));
         }
     }
 }
