@@ -69,6 +69,7 @@ import org.elasticsearch.common.inject.Key;
 import org.elasticsearch.common.inject.ModulesBuilder;
 import org.elasticsearch.common.io.stream.NamedWriteableRegistry;
 import org.elasticsearch.common.lease.Releasables;
+import org.elasticsearch.common.logging.DeprecationIndexer;
 import org.elasticsearch.common.logging.DeprecationLogger;
 import org.elasticsearch.common.logging.NodeAndClusterIdStateListener;
 import org.elasticsearch.common.network.NetworkAddress;
@@ -634,6 +635,10 @@ public class Node implements Closeable {
             logger.debug("initializing HTTP handlers ...");
             actionModule.initRestHandlers(() -> clusterService.state().nodes());
             logger.info("initialized");
+
+            final DeprecationIndexer deprecationIndexer = new DeprecationIndexer(clusterService, client);
+            DeprecationLogger.setIndexer(deprecationIndexer);
+            resourcesToClose.add(() -> DeprecationLogger.removeIndexer(deprecationIndexer));
 
             success = true;
         } catch (IOException ex) {
