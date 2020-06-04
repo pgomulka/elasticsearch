@@ -197,7 +197,7 @@ public final class ClusterSettings extends AbstractScopedSettings {
             ClusterRebalanceAllocationDecider.CLUSTER_ROUTING_ALLOCATION_ALLOW_REBALANCE_SETTING,
             ConcurrentRebalanceAllocationDecider.CLUSTER_ROUTING_ALLOCATION_CLUSTER_CONCURRENT_REBALANCE_SETTING,
             DanglingIndicesState.AUTO_IMPORT_DANGLING_INDICES_SETTING,
-            DeprecationLogger.WRITE_DEPRECATION_LOGS_TO_INDEX,
+//            DeprecationLogger.WRITE_DEPRECATION_LOGS_TO_INDEX,
             EnableAllocationDecider.CLUSTER_ROUTING_ALLOCATION_ENABLE_SETTING,
             EnableAllocationDecider.CLUSTER_ROUTING_REBALANCE_ENABLE_SETTING,
             FilterAllocationDecider.CLUSTER_ROUTING_INCLUDE_GROUP_SETTING,

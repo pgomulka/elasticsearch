@@ -27,14 +27,15 @@ import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
+import org.apache.logging.log4j.core.appender.FileAppender;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
+import org.apache.logging.log4j.core.config.plugins.PluginBuilderFactory;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.DocWriteRequest;
 import org.elasticsearch.action.index.IndexAction;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.client.node.NodeClient;
-import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.xcontent.XContentType;
 
 import java.io.Serializable;
@@ -48,7 +49,7 @@ import static org.elasticsearch.common.Strings.isNullOrEmpty;
 
 @Plugin(name = DeprecationAppender.NAME, category = Core.CATEGORY_NAME, elementType = Appender.ELEMENT_TYPE, printObject = true)
 public class DeprecationAppender extends AbstractAppender{
-    public static final String NAME = "deprecation_indexer";
+    public static final String NAME = "DeprecationIndexer";
     private static final Logger logger = LogManager.getLogger(DeprecationAppender.class);
 
     private static final String TEMPLATE_NAME = ".deprecation_logs";
@@ -82,73 +83,18 @@ public class DeprecationAppender extends AbstractAppender{
 
         @Override
         public DeprecationAppender build() {
-            return new DeprecationAppender(getName(),getFilter(),getLayout());
+            return new DeprecationAppender(getName(),getFilter(),getOrCreateLayout());
         }
     }
 
-//    public DeprecationAppender(/*ClusterService clusterService, NodeClient nodeClient*/) {
-//        this.clusterService = clusterService;
-//        this.nodeClient = nodeClient;
-//
-//    }
-
-
-    /**
-     * Records a deprecation message to the `.deprecations` index.
-     *
-     * @param key       the key that was used to determine if this deprecation should have been be logged.
-     *                  This is potentially useful when aggregating the recorded messages.
-     * @param message   the message to log
-     * @param xOpaqueId the associated "X-Opaque-ID" header value, if any
-     * @param params    parameters to the message, if any
-     */
-    public void indexDeprecationMessage(String key, String message, String xOpaqueId, Object[] params) {
-//        if (isTemplateCreated == false) {
-//            return;
-//        }
-
-        Map<String, Object> payload = new HashMap<>();
-
-        // ECS fields
-        payload.put("@timestamp", Instant.now().toString());
-        payload.put("message", message);
-        if (isNullOrEmpty(key) == false) {
-            payload.put("tags", key);
-        }
-
-        // Other fields
-        if (isNullOrEmpty(xOpaqueId) == false) {
-            // I considered putting this under labels.x-opaque-id, per ECS,
-            // but wondered if that was a stretch? Also it may have high
-            // cardinality, meaning that describing it as a label might
-            // be a stretch.
-            payload.put("x-opaque-id", xOpaqueId);
-        }
-        if (params != null && params.length > 0) {
-            payload.put("params", params);
-        }
-
-        final String indexName = TEMPLATE_NAME + "." + DateTimeFormatter.ISO_LOCAL_DATE.format(LocalDate.now());
-
-        new IndexRequestBuilder(nodeClient, IndexAction.INSTANCE).setIndex(indexName)
-            .setOpType(DocWriteRequest.OpType.CREATE)
-            .setSource(payload)
-            .execute(new ActionListener<>() {
-                @Override
-                public void onResponse(IndexResponse indexResponse) {
-                    // Nothing to do
-                }
-
-                @Override
-                public void onFailure(Exception e) {
-                    logger.error("Failed to index deprecation message", e);
-                }
-            });
+    @PluginBuilderFactory
+    public static <B extends DeprecationAppender.Builder<B>> B newBuilder() {
+        return new DeprecationAppender.Builder<B>().asBuilder();
     }
 
     @Override
     public void append(LogEvent event) {
-        String payload = event.getMessage().getFormattedMessage();
+        byte[] payload = getLayout().toByteArray(event);
         final String indexName = TEMPLATE_NAME + "." + DateTimeFormatter.ISO_LOCAL_DATE.format(LocalDate.now());
 
         new IndexRequestBuilder(nodeClient, IndexAction.INSTANCE).setIndex(indexName)

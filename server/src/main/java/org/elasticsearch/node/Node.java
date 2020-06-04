@@ -21,7 +21,6 @@ package org.elasticsearch.node;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.lucene.util.Constants;
@@ -72,9 +71,7 @@ import org.elasticsearch.common.inject.Key;
 import org.elasticsearch.common.inject.ModulesBuilder;
 import org.elasticsearch.common.io.stream.NamedWriteableRegistry;
 import org.elasticsearch.common.lease.Releasables;
-import org.elasticsearch.common.logging.HeaderWarning;
 import org.elasticsearch.common.logging.DeprecationAppender;
-import org.elasticsearch.common.logging.DeprecationLogger;
 import org.elasticsearch.common.logging.HeaderWarning;
 import org.elasticsearch.common.logging.NodeAndClusterIdStateListener;
 import org.elasticsearch.common.network.NetworkAddress;
@@ -660,7 +657,7 @@ public class Node implements Closeable {
 
             final LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
             final Configuration config = ctx.getConfiguration();
-            DeprecationAppender deprecation_appender = (DeprecationAppender)config.getAppender(DeprecationAppender.NAME);
+            DeprecationAppender deprecation_appender = config.getAppender("deprecation_indexer");
             deprecation_appender.start(client);
 
             resourcesToClose.add(() -> deprecation_appender.stop());
