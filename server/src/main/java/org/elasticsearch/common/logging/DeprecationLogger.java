@@ -66,7 +66,7 @@ public class DeprecationLogger {
         Setting.Property.NodeScope,
         Setting.Property.Dynamic
     );
-    private static DeprecationIndexer deprecationIndexer;
+    private static DeprecationAppender deprecationAppender;
 
     private final Logger logger;
 
@@ -90,7 +90,7 @@ public class DeprecationLogger {
      * <p>
      * For actual usage, multiple nodes do not share the same JVM and therefore this will only be set once in practice.
      */
-    private static final CopyOnWriteArraySet<DeprecationIndexer> INDEXERS = new CopyOnWriteArraySet<>();
+    private static final CopyOnWriteArraySet<DeprecationAppender> INDEXERS = new CopyOnWriteArraySet<>();
     /**
      * Set the {@link ThreadContext} used to add deprecation headers to network responses.
      * <p>
@@ -156,7 +156,7 @@ public class DeprecationLogger {
      * @param indexer The node client owned by the {@code Node}
      * @throws IllegalStateException if this {@code client} has already been set
      */
-    public static void setIndexer(DeprecationIndexer indexer) {
+    public static void setIndexer(DeprecationAppender indexer) {
         Objects.requireNonNull(indexer, "Cannot register a null DeprecationIndexer");
 
         // add returning false means it _did_ have it already
@@ -166,14 +166,14 @@ public class DeprecationLogger {
     }
 
     /**
-     * Remove the {@link DeprecationIndexer} used to index deprecation logs.
+     * Remove the {@link DeprecationAppender} used to index deprecation logs.
      * <p>
      * This is expected to <em>only</em> be invoked by the {@code Node}'s {@code close} method (therefore once outside of tests).
      *
      * @param indexer The indexer owned by the {@code Node}
      * @throws IllegalStateException if this {@code indexer} is unknown (and presumably already unset before)
      */
-    public static void removeIndexer(DeprecationIndexer indexer) {
+    public static void removeIndexer(DeprecationAppender indexer) {
         assert indexer != null;
 
         // remove returning false means it did not have it already
@@ -321,7 +321,7 @@ public class DeprecationLogger {
                     return null;
                 }
             });
-            indexDeprecationMessage(key, message, params);
+//            indexDeprecationMessage(key, message, params);
         }
     }
 
@@ -334,7 +334,7 @@ public class DeprecationLogger {
      * @param params  parameters to the message, if any
      */
     private void indexDeprecationMessage(String key, String message, Object[] params) {
-        final Iterator<DeprecationIndexer> iterator = INDEXERS.iterator();
+        final Iterator<DeprecationAppender> iterator = INDEXERS.iterator();
 
         if (iterator.hasNext() == false) {
             return;

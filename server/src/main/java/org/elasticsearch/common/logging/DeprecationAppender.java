@@ -21,93 +21,77 @@ package org.elasticsearch.common.logging;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.Core;
+import org.apache.logging.log4j.core.Filter;
+import org.apache.logging.log4j.core.Layout;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.appender.AbstractAppender;
+import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.DocWriteRequest;
-import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequest;
 import org.elasticsearch.action.index.IndexAction;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.index.IndexResponse;
-import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.client.node.NodeClient;
-import org.elasticsearch.cluster.ClusterChangedEvent;
-import org.elasticsearch.cluster.ClusterStateListener;
 import org.elasticsearch.cluster.service.ClusterService;
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
 
-import java.io.IOException;
+import java.io.Serializable;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static org.elasticsearch.common.Strings.isNullOrEmpty;
 
-public class DeprecationIndexer implements ClusterStateListener {
-    private static final Logger logger = LogManager.getLogger(DeprecationIndexer.class);
+@Plugin(name = DeprecationAppender.NAME, category = Core.CATEGORY_NAME, elementType = Appender.ELEMENT_TYPE, printObject = true)
+public class DeprecationAppender extends AbstractAppender{
+    public static final String NAME = "deprecation_indexer";
+    private static final Logger logger = LogManager.getLogger(DeprecationAppender.class);
 
     private static final String TEMPLATE_NAME = ".deprecation_logs";
 
-    private final ClusterService clusterService;
-    private final NodeClient nodeClient;
+//    private final ClusterService clusterService;
+//    private final NodeClient nodeClient;
 
     private boolean isTemplateCreated = false;
+    private NodeClient nodeClient;
 
-    public DeprecationIndexer(ClusterService clusterService, NodeClient nodeClient) {
-        this.clusterService = clusterService;
-        this.nodeClient = nodeClient;
-
-        clusterService.addListener(this);
+    public DeprecationAppender(String name, Filter filter, Layout<? extends Serializable> layout) {
+        super(name, filter, layout);
     }
 
     @Override
-    public void clusterChanged(ClusterChangedEvent event) {
-        ensureIndexTemplate();
-        clusterService.removeListener(this);
-    }
-
-    private void ensureIndexTemplate() {
-        PutIndexTemplateRequest putRequest = new PutIndexTemplateRequest(TEMPLATE_NAME);
-        putRequest.patterns(List.of(TEMPLATE_NAME + ".*"));
-        putRequest.create(true);
-        putRequest.settings(Map.of("number_of_shards", 1));
-
-        try {
-            XContentBuilder builder = XContentFactory.contentBuilder(XContentType.JSON);
-            builder.startObject()
-                .startObject("properties")
-                .field("@timestamp", Map.of("type", "date"))
-                .field("message", Map.of("type", "text"))
-                .field("keys", Map.of("type", "keyword"))
-                .field("x-opaque-id", Map.of("type", "keyword"))
-                .field("params", Map.of("type", "keyword"))
-                .endObject()
-                .endObject();
-            putRequest.mapping(builder);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+    public void start() {
+        this.setStarting();
+        if (getFilter() != null) {
+            getFilter().start();
         }
-
-        nodeClient.admin().indices().putTemplate(putRequest, new ActionListener<>() {
-            @Override
-            public void onResponse(AcknowledgedResponse acknowledgedResponse) {
-                isTemplateCreated = true;
-            }
-
-            @Override
-            public void onFailure(Exception e) {
-                if (e instanceof IllegalArgumentException && e.getMessage().contains("already exists")) {
-                    // Template already exists, that's OK
-                    isTemplateCreated = true;
-                } else {
-                    logger.error("Failed to create index template [" + TEMPLATE_NAME + "]", e);
-                }
-            }
-        });
+//        this.setStarted();
     }
+
+    public void start(NodeClient client) {
+        this.nodeClient = client;
+        setStarted();//sets volatile variable
+    }
+
+    public static class Builder<B extends DeprecationAppender.Builder<B>> extends AbstractAppender.Builder<B>
+        implements org.apache.logging.log4j.core.util.Builder<DeprecationAppender> {
+
+        @Override
+        public DeprecationAppender build() {
+            return new DeprecationAppender(getName(),getFilter(),getLayout());
+        }
+    }
+
+//    public DeprecationAppender(/*ClusterService clusterService, NodeClient nodeClient*/) {
+//        this.clusterService = clusterService;
+//        this.nodeClient = nodeClient;
+//
+//    }
+
 
     /**
      * Records a deprecation message to the `.deprecations` index.
@@ -119,9 +103,9 @@ public class DeprecationIndexer implements ClusterStateListener {
      * @param params    parameters to the message, if any
      */
     public void indexDeprecationMessage(String key, String message, String xOpaqueId, Object[] params) {
-        if (isTemplateCreated == false) {
-            return;
-        }
+//        if (isTemplateCreated == false) {
+//            return;
+//        }
 
         Map<String, Object> payload = new HashMap<>();
 
@@ -149,6 +133,27 @@ public class DeprecationIndexer implements ClusterStateListener {
         new IndexRequestBuilder(nodeClient, IndexAction.INSTANCE).setIndex(indexName)
             .setOpType(DocWriteRequest.OpType.CREATE)
             .setSource(payload)
+            .execute(new ActionListener<>() {
+                @Override
+                public void onResponse(IndexResponse indexResponse) {
+                    // Nothing to do
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    logger.error("Failed to index deprecation message", e);
+                }
+            });
+    }
+
+    @Override
+    public void append(LogEvent event) {
+        String payload = event.getMessage().getFormattedMessage();
+        final String indexName = TEMPLATE_NAME + "." + DateTimeFormatter.ISO_LOCAL_DATE.format(LocalDate.now());
+
+        new IndexRequestBuilder(nodeClient, IndexAction.INSTANCE).setIndex(indexName)
+            .setOpType(DocWriteRequest.OpType.CREATE)
+            .setSource(payload, XContentType.JSON)
             .execute(new ActionListener<>() {
                 @Override
                 public void onResponse(IndexResponse indexResponse) {

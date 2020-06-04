@@ -21,6 +21,9 @@ package org.elasticsearch.node;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.lucene.util.Constants;
 import org.apache.lucene.util.SetOnce;
 import org.elasticsearch.Assertions;
@@ -69,7 +72,7 @@ import org.elasticsearch.common.inject.Key;
 import org.elasticsearch.common.inject.ModulesBuilder;
 import org.elasticsearch.common.io.stream.NamedWriteableRegistry;
 import org.elasticsearch.common.lease.Releasables;
-import org.elasticsearch.common.logging.DeprecationIndexer;
+import org.elasticsearch.common.logging.DeprecationAppender;
 import org.elasticsearch.common.logging.DeprecationLogger;
 import org.elasticsearch.common.logging.NodeAndClusterIdStateListener;
 import org.elasticsearch.common.network.NetworkAddress;
@@ -636,9 +639,17 @@ public class Node implements Closeable {
             actionModule.initRestHandlers(() -> clusterService.state().nodes());
             logger.info("initialized");
 
-            final DeprecationIndexer deprecationIndexer = new DeprecationIndexer(clusterService, client);
-            DeprecationLogger.setIndexer(deprecationIndexer);
-            resourcesToClose.add(() -> DeprecationLogger.removeIndexer(deprecationIndexer));
+            final LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
+            final Configuration config = ctx.getConfiguration();
+            DeprecationAppender deprecation_appender = (DeprecationAppender)config.getAppender(DeprecationAppender.NAME);
+            deprecation_appender.start(client);
+
+            resourcesToClose.add(() -> deprecation_appender.stop());
+
+//            Logger rootLogger = LogManager.getRootLogger();
+//            final DeprecationAppender deprecationAppender = new DeprecationAppender(clusterService, client);
+//            DeprecationLogger.setIndexer(deprecationAppender);
+//            resourcesToClose.add(() -> DeprecationLogger.removeIndexer(deprecationAppender));
 
             success = true;
         } catch (IOException ex) {
