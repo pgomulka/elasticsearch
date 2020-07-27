@@ -28,6 +28,7 @@ import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalAccessor;
+import java.time.temporal.TemporalAdjuster;
 import java.time.temporal.TemporalField;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -54,6 +55,32 @@ class JavaDateFormatter implements DateFormatter {
         ROUND_UP_BASE_FIELDS.put(ChronoField.SECOND_OF_MINUTE, 59L);
         ROUND_UP_BASE_FIELDS.put(ChronoField.NANO_OF_SECOND, 999_999_999L);
     }
+    private static final List<TemporalAdjuster> ADJUSTERS = new ArrayList<>();
+
+    {
+        ADJUSTERS.add(getTemporalAdjuster(ChronoField.MONTH_OF_YEAR, 1L));
+        ADJUSTERS.add(getTemporalAdjuster(ChronoField.DAY_OF_MONTH, 1L));
+        ADJUSTERS.add(temporal -> {
+            if (temporal.isSupported(ChronoField.HOUR_OF_DAY) == false &&
+                temporal.isSupported(ChronoField.CLOCK_HOUR_OF_DAY) == false &&
+                temporal.isSupported(ChronoField.HOUR_OF_AMPM) == false) {
+                return temporal.with(ChronoField.HOUR_OF_DAY, 23L);
+            }
+            return temporal;
+        });
+        ADJUSTERS.add(getTemporalAdjuster(ChronoField.MINUTE_OF_HOUR, 59L));
+        ADJUSTERS.add(getTemporalAdjuster(ChronoField.SECOND_OF_MINUTE, 59L));
+        ADJUSTERS.add(getTemporalAdjuster(ChronoField.NANO_OF_SECOND, 999_999_999L));
+    }
+
+    private TemporalAdjuster getTemporalAdjuster(ChronoField monthOfYear, long l) {
+        return temporal -> {
+            if (temporal.isSupported(monthOfYear) == false) {
+                return temporal.with(monthOfYear, l);
+            }
+            return temporal;
+        };
+    }
 
     private final String format;
     private final DateTimeFormatter printer;
@@ -62,8 +89,8 @@ class JavaDateFormatter implements DateFormatter {
 
     static class RoundUpFormatter extends JavaDateFormatter{
 
-        RoundUpFormatter(String format, List<DateTimeFormatter> roundUpParsers) {
-            super(format,  firstFrom(roundUpParsers),null, roundUpParsers);
+        RoundUpFormatter(String format, List<DateTimeFormatter> parsers, List<DateTimeFormatter> roundUpParsers) {
+            super(format,  firstFrom(roundUpParsers),null, parsers);
         }
 
         private static DateTimeFormatter firstFrom(List<DateTimeFormatter> roundUpParsers) {
@@ -74,12 +101,45 @@ class JavaDateFormatter implements DateFormatter {
         JavaDateFormatter getRoundupParser() {
             throw new UnsupportedOperationException("RoundUpFormatter does not have another roundUpFormatter");
         }
+
+        @Override
+        public TemporalAccessor parse(String input) {
+            List<DateTimeFormatter> list = new ArrayList<>();
+
+            for (DateTimeFormatter parser : getParsers()) {
+                ParsePosition pos = new ParsePosition(0);
+                TemporalAccessor temporalAccessor = parser.parseUnresolved(input, pos);
+//                if (parsingSucceeded(temporalAccessor, input, pos)) {
+//                }
+                DateTimeFormatterBuilder builder2 = new DateTimeFormatterBuilder();
+                builder2.append(parser);
+                if(temporalAccessor!=null){
+                    for (TemporalField temporalField : ROUND_UP_BASE_FIELDS.keySet()) {
+                        if(temporalAccessor.isSupported(temporalField) == false){
+                            builder2.parseDefaulting(temporalField,ROUND_UP_BASE_FIELDS.get(temporalField));
+                        }
+                    }
+                }
+                list.add(builder2.toFormatter(locale()));
+            }
+
+            try {
+                return doParse(input, list);
+            } catch (DateTimeParseException e) {
+                throw new IllegalArgumentException("failed to parse date field [" + input + "] with format [" + pattern() + "]", e);
+            }
+        }
     }
 
     // named formatters use default roundUpParser
     JavaDateFormatter(String format, DateTimeFormatter printer, DateTimeFormatter... parsers) {
         this(format, printer, builder -> ROUND_UP_BASE_FIELDS.forEach(builder::parseDefaulting), parsers);
     }
+
+    private static void parseDefaulting(DateTimeFormatterBuilder builder, TemporalField field, Long value) {
+//        builder.parseDefaulting(field,value);
+    }
+
 
     // subclasses override roundUpParser
     JavaDateFormatter(String format,
@@ -107,7 +167,7 @@ class JavaDateFormatter implements DateFormatter {
         }
         //this is when the RoundUp Formatter is created. In further merges (with ||) it will only append this one to a list.
         List<DateTimeFormatter> roundUp = createRoundUpParser(format, roundupParserConsumer);
-        this.roundupParser = new RoundUpFormatter(format, roundUp) ;
+        this.roundupParser = new RoundUpFormatter(format,this.parsers, roundUp) ;
     }
 
     private List<DateTimeFormatter> createRoundUpParser(String format,
@@ -145,7 +205,7 @@ class JavaDateFormatter implements DateFormatter {
                                List<DateTimeFormatter> parsers) {
         this.format = format;
         this.printer = printer;
-        this.roundupParser = roundUpParsers != null ? new RoundUpFormatter(format,  roundUpParsers ) : null;
+        this.roundupParser = roundUpParsers != null ? new RoundUpFormatter(format, parsers, roundUpParsers ) : null;
         this.parsers = parsers;
     }
 
@@ -164,7 +224,7 @@ class JavaDateFormatter implements DateFormatter {
         }
 
         try {
-            return doParse(input);
+            return doParse(input, parsers);
         } catch (DateTimeParseException e) {
             throw new IllegalArgumentException("failed to parse date field [" + input + "] with format [" + format + "]", e);
         }
@@ -181,10 +241,11 @@ class JavaDateFormatter implements DateFormatter {
      * https://bugs.openjdk.java.net/browse/JDK-8188771
      *
      * @param input An arbitrary string resembling the string representation of a date or time
+     * @param parsers
      * @return a TemporalAccessor if parsing was successful.
      * @throws DateTimeParseException when unable to parse with any parsers
      */
-    private TemporalAccessor doParse(String input) {
+    private static TemporalAccessor doParse(String input, List<DateTimeFormatter> parsers) {
         if (parsers.size() > 1) {
             for (DateTimeFormatter formatter : parsers) {
                 ParsePosition pos = new ParsePosition(0);
@@ -195,10 +256,10 @@ class JavaDateFormatter implements DateFormatter {
             }
             throw new DateTimeParseException("Failed to parse with all enclosed parsers", input, 0);
         }
-        return this.parsers.get(0).parse(input);
+        return parsers.get(0).parse(input);
     }
 
-    private boolean parsingSucceeded(Object object, String input, ParsePosition pos) {
+    private static boolean  parsingSucceeded(Object object, String input, ParsePosition pos) {
         return object != null && pos.getIndex() == input.length();
     }
 
