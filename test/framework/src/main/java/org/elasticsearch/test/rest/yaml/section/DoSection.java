@@ -207,6 +207,13 @@ public class DoSection implements ExecutableSection {
     private ApiCallSection apiCallSection;
     private List<String> expectedWarningHeaders = emptyList();
     private List<String> allowedWarningHeaders = emptyList();
+    //TODO: be more selective in what is ignored
+    private boolean ignoreWarnings = false;
+
+    public void setIgnoreWarnings(boolean ignoreWarnings) {
+        this.ignoreWarnings = ignoreWarnings;
+    }
+
 
     public DoSection(XContentLocation location) {
         this.location = location;
@@ -316,6 +323,9 @@ public class DoSection implements ExecutableSection {
      * Check that the response contains only the warning headers that we expect.
      */
     void checkWarningHeaders(final List<String> warningHeaders, final Version masterVersion) {
+        if (ignoreWarnings) {
+            return;
+        }
         final List<String> unexpected = new ArrayList<>();
         final List<String> unmatched = new ArrayList<>();
         final List<String> missing = new ArrayList<>();
@@ -487,6 +497,7 @@ public class DoSection implements ExecutableSection {
             }
         };
     }
+
 
     /**
      * Selector that composes two selectors, running the "right" most selector

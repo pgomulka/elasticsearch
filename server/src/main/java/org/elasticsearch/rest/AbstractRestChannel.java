@@ -127,6 +127,8 @@ public abstract class AbstractRestChannel implements RestChannel {
         }
 
         builder.humanReadable(human);
+
+        builder.setCompatibleMajorVersion(request.getCompatibleApiVersion().major);
         return builder;
     }
 

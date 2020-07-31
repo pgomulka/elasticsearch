@@ -19,6 +19,7 @@
 
 package org.elasticsearch.rest;
 
+import org.elasticsearch.Version;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.xcontent.XContent;
 import org.elasticsearch.rest.RestRequest.Method;
@@ -87,6 +88,16 @@ public interface RestHandler {
      */
     default List<ReplacedRoute> replacedRoutes() {
         return Collections.emptyList();
+    }
+
+    /**
+     * Returns a version a handler is compatible with.
+     * This version is then used to math a handler with a request that specified a version.
+     * If no version is specified, handler is assumed to be compatible with <code>Version.CURRENT</code>
+     * @return a version
+     */
+    default Version compatibleWithVersion(){
+        return Version.CURRENT;
     }
 
     class Route {

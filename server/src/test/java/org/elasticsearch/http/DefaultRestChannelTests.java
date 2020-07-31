@@ -19,6 +19,8 @@
 
 package org.elasticsearch.http;
 
+import org.apache.http.HttpHeaders;
+import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
@@ -210,6 +212,15 @@ public class DefaultRestChannelTests extends ESTestCase {
         assertEquals("abc", headers.get(Task.X_OPAQUE_ID).get(0));
         assertEquals(Integer.toString(resp.content().length()), headers.get(DefaultRestChannel.CONTENT_LENGTH).get(0));
         assertEquals(resp.contentType(), headers.get(DefaultRestChannel.CONTENT_TYPE).get(0));
+    }
+
+    public void testCompatibleParamIsSet() {
+        int majorVersion = Version.CURRENT.major - 1;
+        final TestRequest httpRequest = new TestRequest(HttpRequest.HttpVersion.HTTP_1_1, RestRequest.Method.GET, "/");
+        httpRequest.getHeaders().put(HttpHeaders.ACCEPT, List.of("application/vnd.elasticsearch+json;compatible-with=" + majorVersion));
+        final RestRequest request = RestRequest.request(xContentRegistry(), httpRequest, httpChannel);
+
+        assertEquals(Version.fromString(majorVersion+".0.0"), request.getCompatibleApiVersion());
     }
 
     public void testCookiesSet() {
@@ -404,7 +415,7 @@ public class DefaultRestChannelTests extends ESTestCase {
         return responseCaptor.getValue();
     }
 
-    private static class TestRequest implements HttpRequest {
+    public static class TestRequest implements HttpRequest {
 
         private final Supplier<HttpVersion> version;
         private final RestRequest.Method method;
