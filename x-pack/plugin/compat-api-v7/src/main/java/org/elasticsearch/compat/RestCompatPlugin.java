@@ -18,6 +18,8 @@ import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestHandler;
 import org.elasticsearch.rest.action.admin.indices.RestCreateIndexActionV7;
+import org.elasticsearch.rest.action.document.RestGetActionV7;
+import org.elasticsearch.rest.action.document.RestIndexActionV7;
 
 
 import java.util.Collections;
@@ -40,7 +42,11 @@ public class RestCompatPlugin extends Plugin implements ActionPlugin {
         if (Version.CURRENT.major == 8) {
             return validateCompatibleHandlers(
                 7,
-                new RestCreateIndexActionV7()
+                new RestCreateIndexActionV7(),
+                new RestGetActionV7(),
+                new RestIndexActionV7.CompatibleRestIndexAction(),
+                new RestIndexActionV7.CompatibleCreateHandler(),
+                new RestIndexActionV7.CompatibleAutoIdHandler(nodesInCluster)
 
             );
         }

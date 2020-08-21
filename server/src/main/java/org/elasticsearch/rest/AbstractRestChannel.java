@@ -127,8 +127,7 @@ public abstract class AbstractRestChannel implements RestChannel {
             builder.prettyPrint().lfAtEnd();
         }
         //todo USAGE_2 here we can set a compatible version on a builder
-        Version requestedCompatibility = request.getCompatibleVersion();
-        // builder.setCompatibleMajorVersion(request.getCompatibleApiVersion().major);
+        builder.setCompatibleMajorVersion(request.getCompatibleVersion().major);
         builder.humanReadable(human);
         return builder;
     }

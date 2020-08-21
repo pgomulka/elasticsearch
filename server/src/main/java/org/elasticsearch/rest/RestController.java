@@ -146,12 +146,17 @@ public class RestController implements HttpServerTransport.Dispatcher {
      * @param method GET, POST, etc.
      */
     protected void registerHandler(RestRequest.Method method, String path, RestHandler handler) {
+        assert Version.minimumRestCompatibilityVersion() == handler.compatibleWithVersion() ||
+            Version.CURRENT == handler.compatibleWithVersion()
+            : "REST API compatibility is only supported for version " + Version.minimumRestCompatibilityVersion().major;
+
         if (handler instanceof BaseRestHandler) {
             usageService.addRestHandler((BaseRestHandler) handler);
         }
+        final Version version = handler.compatibleWithVersion();
         final RestHandler maybeWrappedHandler = handlerWrapper.apply(handler);
-        handlers.insertOrUpdate(path, new MethodHandlers(path, maybeWrappedHandler, method),
-            (mHandlers, newMHandler) -> mHandlers.addMethods(maybeWrappedHandler, method));
+        handlers.insertOrUpdate(path, new MethodHandlers(path, maybeWrappedHandler, version, method),
+            (mHandlers, newMHandler) -> mHandlers.addMethods(maybeWrappedHandler, version, method));
     }
 
     /**
@@ -296,6 +301,7 @@ public class RestController implements HttpServerTransport.Dispatcher {
 
         final String rawPath = request.rawPath();
         final String uri = request.uri();
+
         final RestRequest.Method requestMethod;
         //TODO: USAGE_1 now that we have a version we can implement a REST handler that accepts path, method AND version
         Version version = request.getCompatibleVersion();
@@ -310,7 +316,7 @@ public class RestController implements HttpServerTransport.Dispatcher {
                 if (handlers == null) {
                     handler = null;
                 } else {
-                    handler = handlers.getHandler(requestMethod);
+                    handler = handlers.getHandler(requestMethod, version);
                 }
                 if (handler == null) {
                   if (handleNoHandlerFound(rawPath, requestMethod, uri, channel)) {

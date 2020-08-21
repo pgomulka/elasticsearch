@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.apache.logging.log4j.util.Supplier;
 import org.elasticsearch.ExceptionsHelper;
+import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
@@ -134,5 +135,10 @@ public class SecurityRestFilter implements RestHandler {
             return ((RestRequestFilter)restHandler).getFilteredRequest(restRequest);
         }
         return restRequest;
+    }
+
+    @Override
+    public Version compatibleWithVersion() {
+        return restHandler.compatibleWithVersion();
     }
 }
