@@ -27,10 +27,15 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.ResolverStyle;
+import java.time.format.SignStyle;
 import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalAccessor;
 import java.util.Locale;
 
+import static java.time.temporal.ChronoField.*;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
@@ -216,15 +221,52 @@ public class DateFormattersTests extends ESTestCase {
     }
 
     public void testParsingStrictNanoDates() {
-        DateFormatter formatter = DateFormatters.forPattern("strict_date_optional_time_nanos");
-        formatter.format(formatter.parse("2016-01-01T00:00:00.000"));
-        formatter.format(formatter.parse("2018-05-15T17:14:56"));
-        formatter.format(formatter.parse("2018-05-15T17:14:56Z"));
-        formatter.format(formatter.parse("2018-05-15T17:14:56+0100"));
-        formatter.format(formatter.parse("2018-05-15T17:14:56+01:00"));
-        formatter.format(formatter.parse("2018-05-15T17:14:56.123456789Z"));
-        formatter.format(formatter.parse("2018-05-15T17:14:56.123456789+0100"));
-        formatter.format(formatter.parse("2018-05-15T17:14:56.123456789+01:00"));
+//        DateFormatter formatter = DateFormatters.forPattern("strict_date_optional_time_nanos");
+
+//        formatter.format(formatter.parse("2020-06-19T07:16:17.02"));
+        DateTimeFormatter zoneFormatter = new DateTimeFormatterBuilder()
+            .appendValue(YEAR, 4, 10, SignStyle.EXCEEDS_PAD)
+            .appendLiteral("-")
+            .appendValue(MONTH_OF_YEAR, 2, 2, SignStyle.NOT_NEGATIVE)
+            .appendLiteral('-')
+            .appendValue(DAY_OF_MONTH, 2, 2, SignStyle.NOT_NEGATIVE)
+            .appendLiteral('T')
+            .appendValue(HOUR_OF_DAY, 2, 2, SignStyle.NOT_NEGATIVE)
+            .appendLiteral(':')
+            .appendValue(MINUTE_OF_HOUR, 2, 2, SignStyle.NOT_NEGATIVE)
+            .appendLiteral(':')
+            .appendValue(SECOND_OF_MINUTE, 2, 2, SignStyle.NOT_NEGATIVE)
+            .appendFraction(NANO_OF_SECOND, 3, 9, true)
+            .appendOffset("+HHmm", "Z")
+            .toFormatter(Locale.ROOT)
+            .withResolverStyle(ResolverStyle.STRICT);
+        System.out.println(zoneFormatter.parse("2020-06-19T07:16:17.02Z"));
+
+
+        DateTimeFormatter noZoneFormatter = new DateTimeFormatterBuilder()
+            .appendValue(YEAR, 4, 10, SignStyle.EXCEEDS_PAD)
+            .appendLiteral("-")
+            .appendValue(MONTH_OF_YEAR, 2, 2, SignStyle.NOT_NEGATIVE)
+            .appendLiteral('-')
+            .appendValue(DAY_OF_MONTH, 2, 2, SignStyle.NOT_NEGATIVE)
+            .appendLiteral('T')
+            .appendValue(HOUR_OF_DAY, 2, 2, SignStyle.NOT_NEGATIVE)
+            .appendLiteral(':')
+            .appendValue(MINUTE_OF_HOUR, 2, 2, SignStyle.NOT_NEGATIVE)
+            .appendLiteral(':')
+            .appendValue(SECOND_OF_MINUTE, 2, 2, SignStyle.NOT_NEGATIVE)
+            .appendFraction(NANO_OF_SECOND, 3, 9, true)
+            .toFormatter(Locale.ROOT)
+            .withResolverStyle(ResolverStyle.STRICT);
+        System.out.println(noZoneFormatter.parse("2020-06-19T07:16:17.02"));
+//        formatter.format(formatter.parse("2016-01-01T00:00:00.000"));
+//        formatter.format(formatter.parse("2018-05-15T17:14:56"));
+//        formatter.format(formatter.parse("2018-05-15T17:14:56Z"));
+//        formatter.format(formatter.parse("2018-05-15T17:14:56+0100"));
+//        formatter.format(formatter.parse("2018-05-15T17:14:56+01:00"));
+//        formatter.format(formatter.parse("2018-05-15T17:14:56.123456789Z"));
+//        formatter.format(formatter.parse("2018-05-15T17:14:56.123456789+0100"));
+//        formatter.format(formatter.parse("2018-05-15T17:14:56.123456789+01:00"));
     }
 
     public void testIso8601Parsing() {
