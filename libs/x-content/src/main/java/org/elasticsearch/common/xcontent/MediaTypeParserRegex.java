@@ -53,16 +53,9 @@ public class MediaTypeParserRegex<T extends MediaType> {
     static String quotedString = "\"((?:\t| |!|[\\x23-\\x5B]|[\\x5D-\\x7E]|[\\x80-\\xFF]|\\\\|\\\\\")*)\"";
     static String parameter = token + "=" + "(" + token + "|" + quotedString + ")";
     private static final Pattern COMPATIBLE_API_HEADER_PATTERN = Pattern.compile(
-        "(" + token + ")/(" + token + ")((\\s*;\\s*" + parameter + ")*$|$)", Pattern.CASE_INSENSITIVE);
+        "(" + token + "/" + token + ")((\\s*;\\s*" + parameter + ")*$|$)", Pattern.CASE_INSENSITIVE);
 
-    static final Pattern PARAMETER_PATTERN = Pattern.compile(parameter, Pattern.CASE_INSENSITIVE);
     /**
-     * // type with custom subtype and a version: vnd.elasticsearch+json;compatible-with=7
-     * // custom subtype and a version: vnd.elasticsearch+json;compatible-with=7
-     * "((vnd\\.elasticsearch\\+([^;\\s]+)(\\s*;\\s*compatible-with=(\\d+)))" +
-     * "|([^;\\s]+))" + //subtype: json,yaml,etc some of these are defined in x-pack so can't be enumerated
-     * "(?:\\s*;\\s*(charset=UTF-8)?)?$",
-     * <p>
      * parsing media type that follows https://tools.ietf.org/html/rfc7231#section-3.1.1.1
      *
      * @param headerValue a header value from Accept or Content-Type
@@ -73,17 +66,14 @@ public class MediaTypeParserRegex<T extends MediaType> {
         if (headerValue != null) {
             Matcher matcher = COMPATIBLE_API_HEADER_PATTERN.matcher(headerValue.toLowerCase(Locale.ROOT).trim());
             if (matcher.find()) {
-                String type = matcher.group(1);
-                String subtype = matcher.group(2);
-                String typeWithSubtype = type + "/" + subtype;
+                String typeWithSubtype = matcher.group(1);
                 T xContentType = typeWithSubtypeToMediaType.get(typeWithSubtype);
 
                 if (xContentType != null) {
 
-                    String params = matcher.group(3);
+                    String params = matcher.group(2);
                     Map<String, String> parameters = new HashMap<>();
                     if (params != null && params.length() > 0) {
-
 
                         String[] split = params.trim().split(";");
 
