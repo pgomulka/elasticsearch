@@ -88,4 +88,16 @@ public class MediaTypeParsingBenchmark {
     public MediaType parseRegex() {
         return parser2.fromMediaType("application/vnd.elasticsearch+json;compatible-with=7 ; charset=UTF-8");
     }
+
+    @Benchmark
+    @Threads(1)
+    public MediaType parseIterNoParams() {
+        return parser.fromMediaType("application/vnd.elasticsearch+json");
+    }
+
+    @Benchmark
+    @Threads(1)
+    public MediaType parseRegexNoParams() {
+        return parser2.fromMediaType("application/vnd.elasticsearch+json");
+    }
 }
