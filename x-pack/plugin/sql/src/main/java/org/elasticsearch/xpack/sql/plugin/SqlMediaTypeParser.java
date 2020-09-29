@@ -7,7 +7,7 @@
 package org.elasticsearch.xpack.sql.plugin;
 
 import org.elasticsearch.common.xcontent.MediaType;
-import org.elasticsearch.common.xcontent.MediaTypeParser;
+import org.elasticsearch.common.xcontent.MediaTypeParserRegex;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.xpack.sql.action.SqlQueryRequest;
@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
 import static org.elasticsearch.xpack.sql.proto.Protocol.URL_PARAM_FORMAT;
 
 public class SqlMediaTypeParser {
-    private static final MediaTypeParser<? extends MediaType> parser = new MediaTypeParser.Builder<>()
+    private static final MediaTypeParserRegex<? extends MediaType> parser = new MediaTypeParserRegex.Builder<>()
         .copyFromMediaTypeParser(XContentType.mediaTypeParser)
         .withMediaTypeAndParams(TextFormat.PLAIN_TEXT.typeWithSubtype(), TextFormat.PLAIN_TEXT,
             Map.of("header", Pattern.compile("present|absent"), "charset", Pattern.compile("utf-8")))
