@@ -1634,9 +1634,7 @@ public class DateFormatters {
     // end lenient formatters
     //
     /////////////////////////////////////////
-
-    static DateFormatter
-    forPattern(String input) {
+    static DateFormatter forPattern(String input, boolean caseSensitivity) {
         if (Strings.hasLength(input)) {
             input = input.trim();
         }
@@ -1736,7 +1734,7 @@ public class DateFormatters {
             return EpochTime.SECONDS_FORMATTER;
         } else if (FormatNames.EPOCH_MILLIS.matches(input)) {
             return EpochTime.MILLIS_FORMATTER;
-        // strict date formats here, must be at least 4 digits for year and two for months and two for day
+            // strict date formats here, must be at least 4 digits for year and two for months and two for day
         } else if (FormatNames.STRICT_BASIC_WEEK_DATE.matches(input)) {
             return STRICT_BASIC_WEEK_DATE;
         } else if (FormatNames.STRICT_BASIC_WEEK_DATE_TIME.matches(input)) {
@@ -1807,14 +1805,27 @@ public class DateFormatters {
             return STRICT_YEAR_MONTH_DAY;
         } else {
             try {
-                return new JavaDateFormatter(input, new DateTimeFormatterBuilder()
-                    .appendPattern(input)
-                    .toFormatter(Locale.ROOT)
-                    .withResolverStyle(ResolverStyle.STRICT));
+                return customDateFormatter(input, caseSensitivity);
             } catch (IllegalArgumentException e) {
                 throw new IllegalArgumentException("Invalid format: [" + input + "]: " + e.getMessage(), e);
             }
         }
+    }
+
+    private static JavaDateFormatter customDateFormatter(String input, boolean caseSensitivity) {
+        DateTimeFormatterBuilder builder = new DateTimeFormatterBuilder();
+        if (caseSensitivity == false) {
+            builder.parseCaseInsensitive();
+        }
+        DateTimeFormatter printerParser = builder
+            .appendPattern(input)
+            .toFormatter(Locale.ROOT)
+            .withResolverStyle(ResolverStyle.STRICT);
+        return new JavaDateFormatter(input, printerParser);
+    }
+
+    static DateFormatter forPattern(String input) {
+        return forPattern(input, true);
     }
 
 

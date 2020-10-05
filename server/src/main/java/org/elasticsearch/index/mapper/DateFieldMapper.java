@@ -58,6 +58,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatterBuilder;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -201,6 +202,9 @@ public final class DateFieldMapper extends ParametrizedFieldMapper {
 
         private final Parameter<String> nullValue
             = Parameter.stringParam("null_value", false, m -> toType(m).nullValueAsString, null).acceptsNull();
+        private final Parameter<Boolean> caseSensitivity
+            = Parameter.boolParam("caseSensitivity", false, m -> toType(m).caseSensitivity, true);
+
         private final Parameter<Boolean> ignoreMalformed;
 
         private final Resolution resolution;
@@ -216,12 +220,14 @@ public final class DateFieldMapper extends ParametrizedFieldMapper {
             if (dateFormatter != null) {
                 this.format.setValue(dateFormatter.pattern());
                 this.locale.setValue(dateFormatter.locale());
+                this.caseSensitivity.setValue(dateFormatter.caseSensitivity());
             }
         }
 
         private DateFormatter buildFormatter() {
             try {
-                return DateFormatter.forPattern(format.getValue()).withLocale(locale.getValue());
+                return DateFormatter.forPattern(format.getValue(), caseSensitivity.getValue())
+                    .withLocale(locale.getValue());
             } catch (IllegalArgumentException e) {
                 throw new IllegalArgumentException("Error parsing [format] on field [" + name() + "]: " + e.getMessage(), e);
             }
@@ -229,7 +235,7 @@ public final class DateFieldMapper extends ParametrizedFieldMapper {
 
         @Override
         protected List<Parameter<?>> getParameters() {
-            return List.of(index, docValues, store, format, locale, nullValue, ignoreMalformed, boost, meta);
+            return List.of(index, docValues, store, format, locale, nullValue, ignoreMalformed, boost, meta, caseSensitivity);
         }
 
         private Long parseNullValue(DateFieldType fieldType) {
@@ -527,6 +533,7 @@ public final class DateFieldMapper extends ParametrizedFieldMapper {
     private final Long nullValue;
     private final String nullValueAsString;
     private final Resolution resolution;
+    private final boolean caseSensitivity;
 
     private final boolean ignoreMalformedByDefault;
     private final Version indexCreatedVersion;
@@ -551,6 +558,7 @@ public final class DateFieldMapper extends ParametrizedFieldMapper {
         this.resolution = resolution;
         this.ignoreMalformedByDefault = builder.ignoreMalformed.getDefaultValue();
         this.indexCreatedVersion = builder.indexCreatedVersion;
+        this.caseSensitivity = builder.caseSensitivity.getValue();
     }
 
     @Override

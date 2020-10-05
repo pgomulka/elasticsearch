@@ -158,6 +158,10 @@ class JavaDateFormatter implements DateFormatter {
     }
 
     @Override
+    public boolean caseSensitivity() {
+        return false;
+    }
+    @Override
     public TemporalAccessor parse(String input) {
         if (Strings.isNullOrEmpty(input)) {
             throw new IllegalArgumentException("cannot parse empty date");

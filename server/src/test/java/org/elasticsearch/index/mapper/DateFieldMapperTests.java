@@ -35,8 +35,12 @@ import java.io.IOException;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.ResolverStyle;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
@@ -49,6 +53,8 @@ public class DateFieldMapperTests extends MapperTestCase {
     protected void minimalMapping(XContentBuilder b) throws IOException {
         b.field("type", "date");
     }
+
+
 
     public void testDefaults() throws Exception {
         DocumentMapper mapper = createDocumentMapper(fieldMapping(this::minimalMapping));
@@ -166,6 +172,26 @@ public class DateFieldMapperTests extends MapperTestCase {
             .field("locale", "de")));
 
         mapper.parse(source(b -> b.field("field", "Mi, 06 Dez 2000 02:55:00 -0800")));
+    }
+
+    public void testChangeCaseSensitivity() throws IOException {
+
+        DocumentMapper mapper = createDocumentMapper(fieldMapping(b -> b
+            .field("type", "date")
+            .field("format", "uuuu MMM")
+            .field("locale", "uk")
+            .field("caseSensitivity", false)));
+
+        mapper.parse(source(b -> b.field("field", "2020 jan")));
+    }
+
+    public void testx(){
+        DateTimeFormatter f = new DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern("uuuu MMM").toFormatter(Locale.ROOT)
+            .withResolverStyle(ResolverStyle.STRICT)
+            .withLocale(Locale.UK);
+        System.out.println(f.parse("2010 jan"));
+
+        System.out.println(f.parse("2010 Jan"));
     }
 
     public void testNullValue() throws IOException {

@@ -118,6 +118,11 @@ public class JodaDateFormatter implements DateFormatter {
     }
 
     @Override
+    public boolean caseSensitivity() {
+        return false;
+    }
+
+    @Override
     public DateMathParser toDateMathParser() {
         return new JodaDateMathParser(this);
     }

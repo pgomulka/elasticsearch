@@ -121,13 +121,19 @@ public interface DateFormatter {
     ZoneId zone();
 
     /**
+     * Returns the configured case sensitivity of the date formatter
+     * @return The case sensitivity of this formatter
+     */
+    boolean caseSensitivity();
+
+    /**
      * Create a DateMathParser from the existing formatter
      *
      * @return The DateMathParser object
      */
     DateMathParser toDateMathParser();
 
-    static DateFormatter forPattern(String input) {
+    static DateFormatter forPattern(String input, boolean caseSensitivity) {
         if (Strings.hasLength(input) == false) {
             throw new IllegalArgumentException("No date pattern provided");
         }
@@ -142,7 +148,7 @@ public interface DateFormatter {
             if (Strings.hasLength(pattern) == false) {
                 throw new IllegalArgumentException("Cannot have empty element in multi date format pattern: " + input);
             }
-            formatters.add(DateFormatters.forPattern(pattern));
+            formatters.add(DateFormatters.forPattern(pattern, caseSensitivity));
         }
 
         if (formatters.size() == 1) {
@@ -151,4 +157,9 @@ public interface DateFormatter {
 
         return JavaDateFormatter.combined(input, formatters);
     }
+
+    static DateFormatter forPattern(String input) {
+        return forPattern(input,true);
+    }
+
 }
