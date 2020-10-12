@@ -34,6 +34,7 @@ import org.elasticsearch.common.settings.IndexScopedSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsFilter;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
+import org.elasticsearch.common.xcontent.MediaTypeDefinition;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestHandler;
 import org.elasticsearch.rest.RestHeaderDefinition;
@@ -181,4 +182,7 @@ public interface ActionPlugin {
         return Collections.emptyList();
     }
 
+    default Collection<MediaTypeDefinition> getAdditionalMediaTypes(){
+        return Collections.emptyList();
+    }
 }

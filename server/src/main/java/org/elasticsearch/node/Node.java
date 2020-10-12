@@ -87,7 +87,10 @@ import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.util.PageCacheRecycler;
+import org.elasticsearch.common.xcontent.MediaTypeDefinition;
+import org.elasticsearch.common.xcontent.MediaTypeRegistry;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.core.internal.io.IOUtils;
 import org.elasticsearch.discovery.Discovery;
 import org.elasticsearch.discovery.DiscoveryModule;
@@ -137,6 +140,7 @@ import org.elasticsearch.plugins.EnginePlugin;
 import org.elasticsearch.plugins.IndexStorePlugin;
 import org.elasticsearch.plugins.IngestPlugin;
 import org.elasticsearch.plugins.MapperPlugin;
+import org.elasticsearch.plugins.MediaTypeRegistryPlugin;
 import org.elasticsearch.plugins.MetadataUpgrader;
 import org.elasticsearch.plugins.NetworkPlugin;
 import org.elasticsearch.plugins.PersistentTaskPlugin;
@@ -329,6 +333,20 @@ public class Node implements Closeable {
                 .flatMap(Set::stream)
                 .collect(Collectors.toSet());
             DiscoveryNode.setAdditionalRoles(additionalRoles);
+
+            Set<MediaTypeDefinition> mediaTypes = pluginsService.filterPlugins(ActionPlugin.class)
+                .stream()
+                .map(ActionPlugin::getAdditionalMediaTypes)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toSet());
+
+            MediaTypeRegistry globalMediaTypeRegistry = new MediaTypeRegistry();
+            globalMediaTypeRegistry.register(mediaTypes);
+            XContentType.addMediaTypesToRegistry(globalMediaTypeRegistry);
+
+            // passes down to SQL and CompatibleVersion plugins
+            pluginsService.filterPlugins(MediaTypeRegistryPlugin.class)
+                .forEach(plugin -> plugin.setGlobalMediaTypeRegistry(globalMediaTypeRegistry));
 
             /*
              * Create the environment based on the finalized view of the settings. This is to ensure that components get the same setting

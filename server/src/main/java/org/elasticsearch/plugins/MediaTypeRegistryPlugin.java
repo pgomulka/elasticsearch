@@ -19,23 +19,9 @@
 
 package org.elasticsearch.plugins;
 
-import org.elasticsearch.Version;
-import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.xcontent.MediaTypeRegistry;
 
-
-/**
- * An extension point for Compatible API plugin implementation.
- */
-public interface RestCompatibilityPlugin {
-    /**
-     * Returns a version which was requested on Accept and Content-Type headers
-     *
-     * @param acceptHeader      - a media-type value from Accept header
-     * @param contentTypeHeader - a media-type value from Content-Type header
-     * @param hasContent        - a flag indicating if a request has content
-     * @return a requested Compatible API Version
-     */
-    Version getCompatibleVersion(@Nullable String acceptHeader, @Nullable String contentTypeHeader, boolean hasContent);
+public interface MediaTypeRegistryPlugin {
+    void setGlobalMediaTypeRegistry(MediaTypeRegistry globalMediaTypeRegistry);
 
 }

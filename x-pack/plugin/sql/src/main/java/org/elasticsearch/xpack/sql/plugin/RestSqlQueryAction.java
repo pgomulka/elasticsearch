@@ -8,6 +8,7 @@ package org.elasticsearch.xpack.sql.plugin;
 
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.xcontent.MediaType;
+import org.elasticsearch.common.xcontent.MediaTypeParser;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.XContentType;
@@ -34,8 +35,12 @@ import static org.elasticsearch.xpack.sql.proto.Protocol.URL_PARAM_DELIMITER;
 
 public class RestSqlQueryAction extends BaseRestHandler {
 
-    private final SqlMediaTypeParser sqlMediaTypeParser = new SqlMediaTypeParser();
     MediaType responseMediaType;
+    private final SqlMediaTypeParser sqlMediaTypeParser;
+
+    public RestSqlQueryAction(MediaTypeParser<MediaType> mediaTypeParser) {
+        this.sqlMediaTypeParser = new SqlMediaTypeParser(mediaTypeParser);
+    }
 
     @Override
     public List<Route> routes() {
@@ -83,6 +88,8 @@ public class RestSqlQueryAction extends BaseRestHandler {
             }
         });
     }
+
+    //we should override
 
 
 

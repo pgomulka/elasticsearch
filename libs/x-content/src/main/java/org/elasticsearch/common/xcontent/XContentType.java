@@ -114,26 +114,35 @@ public enum XContentType implements MediaType {
         }
     };
 
-    private static final String COMPATIBLE_WITH_PARAMETER_NAME = "compatible-with";
-    private static final String VERSION_PATTERN = "\\d+";
-    public static final MediaTypeParser<XContentType> mediaTypeParser = new MediaTypeParser.Builder<XContentType>()
-        .withMediaTypeAndParams("application/smile", SMILE, Collections.emptyMap())
-        .withMediaTypeAndParams("application/cbor", CBOR, Collections.emptyMap())
-        .withMediaTypeAndParams("application/json", JSON, Map.of("charset", "UTF-8"))
-        .withMediaTypeAndParams("application/yaml", YAML, Map.of("charset", "UTF-8"))
-        .withMediaTypeAndParams("application/*", JSON, Map.of("charset", "UTF-8"))
-        .withMediaTypeAndParams("application/x-ndjson", JSON, Map.of("charset", "UTF-8"))
-        .withMediaTypeAndParams("application/vnd.elasticsearch+json", JSON,
-            Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8"))
-        .withMediaTypeAndParams("application/vnd.elasticsearch+smile", SMILE,
-            Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8"))
-        .withMediaTypeAndParams("application/vnd.elasticsearch+yaml", YAML,
-            Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8"))
-        .withMediaTypeAndParams("application/vnd.elasticsearch+cbor", CBOR,
-            Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8"))
-        .withMediaTypeAndParams("application/vnd.elasticsearch+x-ndjson", JSON,
-            Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8"))
-        .build();
+    public static final String COMPATIBLE_WITH_PARAMETER_NAME = "compatible-with";
+    public static final String VERSION_PATTERN = "\\d+";
+    public static MediaTypeParser<XContentType> mediaTypeParser;
+
+    public static void addMediaTypesToRegistry(MediaTypeRegistry global) {
+        MediaTypeRegistry xContentTypeRegistry = new MediaTypeRegistry()
+            .register("application/smile", SMILE, Collections.emptyMap())
+            .register("application/cbor", CBOR, Collections.emptyMap())
+            .register("application/json", JSON, Map.of("charset", "UTF-8"))
+            .register("application/yaml", YAML, Map.of("charset", "UTF-8"))
+            .register("application/*", JSON, Map.of("charset", "UTF-8"))
+            .register("application/x-ndjson", JSON, Map.of("charset", "UTF-8"))
+            .register("application/vnd.elasticsearch+json", JSON,
+                Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8"))
+            .register("application/vnd.elasticsearch+smile", SMILE,
+                Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8"))
+            .register("application/vnd.elasticsearch+yaml", YAML,
+                Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8"))
+            .register("application/vnd.elasticsearch+cbor", CBOR,
+                Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8"))
+            .register("application/vnd.elasticsearch+x-ndjson", JSON,
+                Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8"));
+        global.add(xContentTypeRegistry);
+        mediaTypeParser = new MediaTypeParser<>(xContentTypeRegistry);
+    }
+
+    public static MediaTypeParser<XContentType> getMediaTypeParser() {
+        return mediaTypeParser;
+    }
 
     /**
      * Accepts a format string, which is most of the time is equivalent to {@link XContentType#subtype()}
