@@ -334,15 +334,15 @@ public class Node implements Closeable {
                 .collect(Collectors.toSet());
             DiscoveryNode.setAdditionalRoles(additionalRoles);
 
-            Set<MediaTypeDefinition> mediaTypes = pluginsService.filterPlugins(ActionPlugin.class)
+            Set<MediaTypeDefinition> mediaTypesFromPlugins = pluginsService.filterPlugins(ActionPlugin.class)
                 .stream()
                 .map(ActionPlugin::getAdditionalMediaTypes)
                 .flatMap(Collection::stream)
                 .collect(Collectors.toSet());
 
-            MediaTypeRegistry globalMediaTypeRegistry = new MediaTypeRegistry();
-            globalMediaTypeRegistry.register(mediaTypes);
-            XContentType.addMediaTypesToRegistry(globalMediaTypeRegistry);
+            MediaTypeRegistry globalMediaTypeRegistry = new MediaTypeRegistry()
+                .register(mediaTypesFromPlugins)
+                .register(XContentType.getMediaTypeRegistry());
 
             // passes down to SQL and CompatibleVersion plugins
             pluginsService.filterPlugins(MediaTypeRegistryPlugin.class)

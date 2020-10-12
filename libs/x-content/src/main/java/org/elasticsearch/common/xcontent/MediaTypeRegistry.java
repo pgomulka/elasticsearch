@@ -77,9 +77,10 @@ public class MediaTypeRegistry {
         return this;
     }
 
-    public void add(MediaTypeRegistry xContentTypeRegistry) {
+    public MediaTypeRegistry register(MediaTypeRegistry xContentTypeRegistry) {
         formatToMediaType.putAll(xContentTypeRegistry.formatToMediaType);
         typeWithSubtypeToMediaType.putAll(xContentTypeRegistry.typeWithSubtypeToMediaType);
         parametersMap.putAll(xContentTypeRegistry.parametersMap);
+        return this;
     }
 }
