@@ -141,10 +141,6 @@ public enum XContentType implements MediaType {
         return mediaTypeRegistry;
     }
 
-    public static MediaTypeParser<XContentType> getMediaTypeParser() {
-        return mediaTypeParser;
-    }
-
     /**
      * Accepts a format string, which is most of the time is equivalent to {@link XContentType#subtype()}
      * and attempts to match the value to an {@link XContentType}.

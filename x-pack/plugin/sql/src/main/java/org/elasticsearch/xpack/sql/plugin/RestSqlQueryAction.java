@@ -9,6 +9,7 @@ package org.elasticsearch.xpack.sql.plugin;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.xcontent.MediaType;
 import org.elasticsearch.common.xcontent.MediaTypeParser;
+import org.elasticsearch.common.xcontent.MediaTypeRegistry;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.XContentType;
@@ -38,8 +39,8 @@ public class RestSqlQueryAction extends BaseRestHandler {
     MediaType responseMediaType;
     private final SqlMediaTypeParser sqlMediaTypeParser;
 
-    public RestSqlQueryAction(MediaTypeParser<MediaType> mediaTypeParser) {
-        this.sqlMediaTypeParser = new SqlMediaTypeParser(mediaTypeParser);
+    public RestSqlQueryAction(MediaTypeRegistry globalMediaTypeRegistry) {
+        this.sqlMediaTypeParser = new SqlMediaTypeParser(globalMediaTypeRegistry);
     }
 
     @Override

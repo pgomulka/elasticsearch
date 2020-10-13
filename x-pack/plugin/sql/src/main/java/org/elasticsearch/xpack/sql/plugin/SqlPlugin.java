@@ -16,9 +16,6 @@ import org.elasticsearch.common.settings.ClusterSettings;
 import org.elasticsearch.common.settings.IndexScopedSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsFilter;
-import org.elasticsearch.common.xcontent.MediaType;
-import org.elasticsearch.common.xcontent.MediaTypeDefinition;
-import org.elasticsearch.common.xcontent.MediaTypeParser;
 import org.elasticsearch.common.xcontent.MediaTypeRegistry;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.XContentType;
@@ -82,7 +79,7 @@ public class SqlPlugin extends Plugin implements ActionPlugin, MediaTypeRegistry
             }
         }
     );
-    private MediaTypeParser<MediaType> mediaTypeParser;
+    private MediaTypeRegistry globalMediaTypeRegistry;
 
     public SqlPlugin(Settings settings) {
     }
@@ -115,7 +112,7 @@ public class SqlPlugin extends Plugin implements ActionPlugin, MediaTypeRegistry
                                              SettingsFilter settingsFilter, IndexNameExpressionResolver indexNameExpressionResolver,
                                              Supplier<DiscoveryNodes> nodesInCluster) {
 
-        return Arrays.asList(new RestSqlQueryAction(mediaTypeParser),
+        return Arrays.asList(new RestSqlQueryAction(globalMediaTypeRegistry),
                 new RestSqlTranslateAction(),
                 new RestSqlClearCursorAction(),
                 new RestSqlStatsAction());
@@ -135,44 +132,44 @@ public class SqlPlugin extends Plugin implements ActionPlugin, MediaTypeRegistry
     }
 
     @Override
-    public Collection<MediaTypeDefinition> getAdditionalMediaTypes() {
-        List<MediaTypeDefinition> mediaTypeDefinitions = new ArrayList<>();
-        mediaTypeDefinitions.add(MediaTypeDefinition.of(TextFormat.PLAIN_TEXT.typeWithSubtype(),
+    public MediaTypeRegistry getAdditionalMediaTypes() {
+        MediaTypeRegistry mediaTypeRegistry = new MediaTypeRegistry();
+        mediaTypeRegistry.register(TextFormat.PLAIN_TEXT.typeWithSubtype(),
             TextFormat.PLAIN_TEXT,
             TextFormat.PLAIN_TEXT.format(),
-            Map.of("header", "present|absent", "charset", "utf-8")));
-        mediaTypeDefinitions.add(MediaTypeDefinition.of(TextFormat.CSV.typeWithSubtype(),
+            Map.of("header", "present|absent", "charset", "utf-8"))
+        .register(TextFormat.CSV.typeWithSubtype(),
             TextFormat.CSV,
             TextFormat.CSV.format(),
             Map.of("header", "present|absent", "charset", "utf-8",
-                "delimiter", ".+")));
-        mediaTypeDefinitions.add(MediaTypeDefinition.of(TextFormat.TSV.typeWithSubtype(),
+                "delimiter", ".+"))
+        .register(TextFormat.TSV.typeWithSubtype(),
             TextFormat.TSV,
             TextFormat.TSV.format(),
-            Map.of("header", "present|absent", "charset", "utf-8")));
+            Map.of("header", "present|absent", "charset", "utf-8"))
 
-        mediaTypeDefinitions.add(MediaTypeDefinition.of("text/vnd.elasticsearch+plain",
+        .register("text/vnd.elasticsearch+plain",
             TextFormat.PLAIN_TEXT,
             null,
             Map.of("header", "present|absent", "charset", "utf-8",
-                XContentType.COMPATIBLE_WITH_PARAMETER_NAME, XContentType.VERSION_PATTERN)));
-        mediaTypeDefinitions.add(MediaTypeDefinition.of("text/vnd.elasticsearch+csv",
+                XContentType.COMPATIBLE_WITH_PARAMETER_NAME, XContentType.VERSION_PATTERN))
+        .register("text/vnd.elasticsearch+csv",
             TextFormat.CSV,
             null,
             Map.of("header", "present|absent", "charset", "utf-8",
-                "delimiter", ".+", XContentType.COMPATIBLE_WITH_PARAMETER_NAME, XContentType.VERSION_PATTERN)));
-        mediaTypeDefinitions.add(MediaTypeDefinition.of("text/vnd.elasticsearch+tsv",
+                "delimiter", ".+", XContentType.COMPATIBLE_WITH_PARAMETER_NAME, XContentType.VERSION_PATTERN))
+        .register("text/vnd.elasticsearch+tsv",
             TextFormat.TSV,
             null,
             Map.of("header", "present|absent", "charset", "utf-8",
-                XContentType.COMPATIBLE_WITH_PARAMETER_NAME, XContentType.VERSION_PATTERN)));
+                XContentType.COMPATIBLE_WITH_PARAMETER_NAME, XContentType.VERSION_PATTERN));
 
-        return mediaTypeDefinitions;
+        return mediaTypeRegistry;
     }
 
 
     @Override
     public void setGlobalMediaTypeRegistry(MediaTypeRegistry globalMediaTypeRegistry) {
-        this.mediaTypeParser = new MediaTypeParser<>(globalMediaTypeRegistry);
+        this.globalMediaTypeRegistry = globalMediaTypeRegistry;
     }
 }

@@ -12,6 +12,7 @@ import org.elasticsearch.common.xcontent.MediaType;
 import org.elasticsearch.common.xcontent.MediaTypeParser;
 import org.elasticsearch.common.xcontent.MediaTypeRegistry;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.test.rest.FakeRestRequest;
@@ -30,10 +31,10 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 
 public class SqlMediaTypeParserTests extends ESTestCase {
-    SqlMediaTypeParser parser = new SqlMediaTypeParser(new MediaTypeParser(
+    SqlMediaTypeParser parser = new SqlMediaTypeParser(
         new MediaTypeRegistry()
             .register(new SqlPlugin(Settings.EMPTY).getAdditionalMediaTypes())
-            /*.register(XContentType)*/));
+            .register(XContentType.getMediaTypeRegistry()));
 
     public void testPlainTextDetection() {
         MediaType text = parser.getMediaType(reqWithAccept("text/plain"), createTestInstance(false, Mode.PLAIN, false));

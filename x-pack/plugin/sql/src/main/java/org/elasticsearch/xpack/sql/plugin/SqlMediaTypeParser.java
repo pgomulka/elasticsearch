@@ -8,6 +8,7 @@ package org.elasticsearch.xpack.sql.plugin;
 
 import org.elasticsearch.common.xcontent.MediaType;
 import org.elasticsearch.common.xcontent.MediaTypeParser;
+import org.elasticsearch.common.xcontent.MediaTypeRegistry;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.xpack.sql.action.SqlQueryRequest;
@@ -19,9 +20,9 @@ import static org.elasticsearch.xpack.sql.proto.Protocol.URL_PARAM_FORMAT;
 public class SqlMediaTypeParser {
     private MediaTypeParser<MediaType> mediaTypeParser;
 
-    public SqlMediaTypeParser(MediaTypeParser<MediaType> mediaTypeParser) {
+    public SqlMediaTypeParser(MediaTypeRegistry globalMediaTypeRegistry) {
         //sql media types are already registered via plugin api
-        this.mediaTypeParser = mediaTypeParser;
+        this.mediaTypeParser = new MediaTypeParser<>(globalMediaTypeRegistry);
     }
 
 

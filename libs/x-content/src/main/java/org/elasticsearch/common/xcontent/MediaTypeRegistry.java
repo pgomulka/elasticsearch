@@ -39,6 +39,21 @@ public class MediaTypeRegistry {
         return this;
     }
 
+    public <T extends MediaType> MediaTypeRegistry register(String typeWithSubtype, T mediaType, String format, Map<String, String> parametersMap) {
+        if (format != null) {
+            this.formatToMediaType.put(format, mediaType);
+        }
+        this.typeWithSubtypeToMediaType.put(typeWithSubtype,mediaType);
+        Map<String, Pattern> parametersForMediaType = new HashMap<>(parametersMap.size());
+        for (Map.Entry<String, String> params : parametersMap.entrySet()) {
+            String parameterName = params.getKey().toLowerCase(Locale.ROOT);
+            String parameterRegex = params.getValue();
+            Pattern pattern = Pattern.compile(parameterRegex, Pattern.CASE_INSENSITIVE);
+            parametersForMediaType.put(parameterName, pattern);
+        }
+        this.parametersMap.put(typeWithSubtype,parametersForMediaType);
+        return this;
+    }
     public MediaType formatToMediaType(String format) {
         return formatToMediaType.get(format);
     }
@@ -66,21 +81,17 @@ public class MediaTypeRegistry {
         return this;
     }
 
-    public MediaTypeRegistry register(Collection<MediaTypeDefinition> mediaTypes) {
-        for (MediaTypeDefinition mediaTypeDefinition : mediaTypes) {
-            this.typeWithSubtypeToMediaType.put(mediaTypeDefinition.getTypeWithSubtype(), mediaTypeDefinition.getMediaType());
-            this.parametersMap.put(mediaTypeDefinition.getTypeWithSubtype(), mediaTypeDefinition.getParameters());
-            if(mediaTypeDefinition.getFormat() != null){
-                this.formatToMediaType.put(mediaTypeDefinition.getFormat(), mediaTypeDefinition.getMediaType());
-            }
-        }
-        return this;
-    }
-
     public MediaTypeRegistry register(MediaTypeRegistry xContentTypeRegistry) {
         formatToMediaType.putAll(xContentTypeRegistry.formatToMediaType);
         typeWithSubtypeToMediaType.putAll(xContentTypeRegistry.typeWithSubtypeToMediaType);
         parametersMap.putAll(xContentTypeRegistry.parametersMap);
         return this;
     }
+    public MediaTypeRegistry register(Collection<MediaTypeRegistry> mediaTypeRegistries ) {
+        for (MediaTypeRegistry mediaTypeRegistry : mediaTypeRegistries) {
+            register(mediaTypeRegistry);
+        }
+        return this;
+    }
+
 }

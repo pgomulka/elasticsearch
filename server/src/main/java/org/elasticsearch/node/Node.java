@@ -87,7 +87,6 @@ import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.util.PageCacheRecycler;
-import org.elasticsearch.common.xcontent.MediaTypeDefinition;
 import org.elasticsearch.common.xcontent.MediaTypeRegistry;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.XContentType;
@@ -334,11 +333,10 @@ public class Node implements Closeable {
                 .collect(Collectors.toSet());
             DiscoveryNode.setAdditionalRoles(additionalRoles);
 
-            Set<MediaTypeDefinition> mediaTypesFromPlugins = pluginsService.filterPlugins(ActionPlugin.class)
+            Collection<MediaTypeRegistry> mediaTypesFromPlugins = pluginsService.filterPlugins(ActionPlugin.class)
                 .stream()
                 .map(ActionPlugin::getAdditionalMediaTypes)
-                .flatMap(Collection::stream)
-                .collect(Collectors.toSet());
+                .collect(toList());
 
             MediaTypeRegistry globalMediaTypeRegistry = new MediaTypeRegistry()
                 .register(mediaTypesFromPlugins)
