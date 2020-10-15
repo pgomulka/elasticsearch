@@ -728,7 +728,6 @@ public class Node implements Closeable {
     /**
      * @return A function that can be used to determine the requested REST compatible version
      * package scope for testing
-     * @param globalMediaTypeRegistry
      */
     CompatibleVersion getRestCompatibleFunction(MediaTypeRegistry globalMediaTypeRegistry) {
         List<RestCompatibilityPlugin> restCompatibilityPlugins = pluginsService.filterPlugins(RestCompatibilityPlugin.class);

@@ -37,10 +37,10 @@ import static org.elasticsearch.xpack.sql.proto.Protocol.URL_PARAM_DELIMITER;
 public class RestSqlQueryAction extends BaseRestHandler {
 
     MediaType responseMediaType;
-    private final SqlMediaTypeParser sqlMediaTypeParser;
+    private final SqlMediaTypeParser sqlMediaTypeParser ;
 
-    public RestSqlQueryAction(MediaTypeRegistry globalMediaTypeRegistry) {
-        this.sqlMediaTypeParser = new SqlMediaTypeParser(globalMediaTypeRegistry);
+    public RestSqlQueryAction(MediaTypeRegistry additionalMediaTypes) {
+        sqlMediaTypeParser = new SqlMediaTypeParser(additionalMediaTypes);
     }
 
     @Override

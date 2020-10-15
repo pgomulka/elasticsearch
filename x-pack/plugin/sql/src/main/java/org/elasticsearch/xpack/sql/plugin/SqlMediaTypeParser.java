@@ -18,11 +18,13 @@ import org.elasticsearch.xpack.sql.proto.Mode;
 import static org.elasticsearch.xpack.sql.proto.Protocol.URL_PARAM_FORMAT;
 
 public class SqlMediaTypeParser {
-    private MediaTypeParser<MediaType> mediaTypeParser;
+    private MediaTypeParser<MediaType> mediaTypeParser ;
 
-    public SqlMediaTypeParser(MediaTypeRegistry globalMediaTypeRegistry) {
-        //sql media types are already registered via plugin api
-        this.mediaTypeParser = new MediaTypeParser<>(globalMediaTypeRegistry);
+    public SqlMediaTypeParser(MediaTypeRegistry additionalMediaTypes) {
+        MediaTypeRegistry register = new MediaTypeRegistry()
+            .register(XContentType.getMediaTypeRegistry())
+            .register(additionalMediaTypes);
+        mediaTypeParser = new MediaTypeParser<>(register);
     }
 
 

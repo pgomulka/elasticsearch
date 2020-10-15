@@ -11,12 +11,11 @@ import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.xcontent.MediaType;
 import org.elasticsearch.common.xcontent.MediaTypeParser;
 import org.elasticsearch.common.xcontent.MediaTypeRegistry;
-import org.elasticsearch.plugins.MediaTypeRegistryPlugin;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.plugins.RestCompatibilityPlugin;
 import org.elasticsearch.rest.RestStatus;
 
-public class CompatibleVersionPlugin extends Plugin implements RestCompatibilityPlugin, MediaTypeRegistryPlugin {
+public class CompatibleVersionPlugin extends Plugin implements RestCompatibilityPlugin {
 
 //    private MediaTypeParser<MediaType> mediaTypeParser;
 
@@ -80,8 +79,4 @@ public class CompatibleVersionPlugin extends Plugin implements RestCompatibility
         return Version.CURRENT;
     }
 
-    @Override
-    public void setGlobalMediaTypeRegistry(MediaTypeRegistry globalMediaTypeRegistry) {
-//        this.mediaTypeParser = new MediaTypeParser<>(globalMediaTypeRegistry);
-    }
 }

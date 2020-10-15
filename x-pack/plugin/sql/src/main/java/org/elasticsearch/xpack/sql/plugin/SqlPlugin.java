@@ -24,7 +24,6 @@ import org.elasticsearch.env.NodeEnvironment;
 import org.elasticsearch.license.LicenseUtils;
 import org.elasticsearch.license.XPackLicenseState;
 import org.elasticsearch.plugins.ActionPlugin;
-import org.elasticsearch.plugins.MediaTypeRegistryPlugin;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.repositories.RepositoriesService;
 import org.elasticsearch.rest.RestController;
@@ -45,14 +44,13 @@ import org.elasticsearch.xpack.sql.action.SqlTranslateAction;
 import org.elasticsearch.xpack.sql.execution.PlanExecutor;
 import org.elasticsearch.xpack.sql.type.SqlDataTypeRegistry;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
-public class SqlPlugin extends Plugin implements ActionPlugin, MediaTypeRegistryPlugin {
+public class SqlPlugin extends Plugin implements ActionPlugin {
 
     private final SqlLicenseChecker sqlLicenseChecker = new SqlLicenseChecker(
         (mode) -> {
@@ -79,7 +77,6 @@ public class SqlPlugin extends Plugin implements ActionPlugin, MediaTypeRegistry
             }
         }
     );
-    private MediaTypeRegistry globalMediaTypeRegistry;
 
     public SqlPlugin(Settings settings) {
     }
@@ -112,7 +109,7 @@ public class SqlPlugin extends Plugin implements ActionPlugin, MediaTypeRegistry
                                              SettingsFilter settingsFilter, IndexNameExpressionResolver indexNameExpressionResolver,
                                              Supplier<DiscoveryNodes> nodesInCluster) {
 
-        return Arrays.asList(new RestSqlQueryAction(globalMediaTypeRegistry),
+        return Arrays.asList(new RestSqlQueryAction(getAdditionalMediaTypes()),
                 new RestSqlTranslateAction(),
                 new RestSqlClearCursorAction(),
                 new RestSqlStatsAction());
@@ -167,9 +164,4 @@ public class SqlPlugin extends Plugin implements ActionPlugin, MediaTypeRegistry
         return mediaTypeRegistry;
     }
 
-
-    @Override
-    public void setGlobalMediaTypeRegistry(MediaTypeRegistry globalMediaTypeRegistry) {
-        this.globalMediaTypeRegistry = globalMediaTypeRegistry;
-    }
 }
