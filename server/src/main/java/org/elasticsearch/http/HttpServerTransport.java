@@ -22,9 +22,12 @@ package org.elasticsearch.http;
 import org.elasticsearch.common.component.LifecycleComponent;
 import org.elasticsearch.common.transport.BoundTransportAddress;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
+import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.node.ReportingService;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestRequest;
+
+import java.util.function.Function;
 
 public interface HttpServerTransport extends LifecycleComponent, ReportingService<HttpInfo> {
 
@@ -52,6 +55,9 @@ public interface HttpServerTransport extends LifecycleComponent, ReportingServic
          */
         void dispatchRequest(RestRequest request, RestChannel channel, ThreadContext threadContext);
 
+        default void dispatchRequest(HttpRequest request, RestChannel channel, ThreadContext threadContext, NamedXContentRegistry xContentRegistry, Function<RestRequest, RestChannel> restChannelFunction){
+
+        }
         /**
          * Dispatches a bad request. For example, if a request is malformed it will be dispatched via this method with the cause of the bad
          * request.

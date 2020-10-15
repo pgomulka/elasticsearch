@@ -58,6 +58,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 import static org.elasticsearch.http.HttpTransportSettings.SETTING_HTTP_BIND_HOST;
 import static org.elasticsearch.http.HttpTransportSettings.SETTING_HTTP_MAX_CONTENT_LENGTH;
@@ -310,13 +311,15 @@ public abstract class AbstractHttpServerTransport extends AbstractLifecycleCompo
     }
 
     // Visible for testing
-    void dispatchRequest(final RestRequest restRequest, final RestChannel channel, final Throwable badRequestCause) {
+    void dispatchRequest(final RestRequest restRequest, final RestChannel channel, final Throwable badRequestCause, HttpRequest httpRequest,
+                         NamedXContentRegistry xContentRegistry, Function<RestRequest,RestChannel> restChannelFunction) {
         final ThreadContext threadContext = threadPool.getThreadContext();
         try (ThreadContext.StoredContext ignore = threadContext.stashContext()) {
             if (badRequestCause != null) {
                 dispatcher.dispatchBadRequest(channel, threadContext, badRequestCause);
             } else {
-                dispatcher.dispatchRequest(restRequest, channel, threadContext);
+                dispatcher.dispatchRequest(httpRequest, channel, threadContext, xContentRegistry,restChannelFunction);
+//                dispatcher.dispatchRequest(restRequest, channel, threadContext);
             }
         }
     }
@@ -340,20 +343,20 @@ public abstract class AbstractHttpServerTransport extends AbstractLifecycleCompo
          * or skip decoding the parameters). Once we have a request in hand, we then dispatch the request as a bad request with the
          * underlying exception that caused us to treat the request as bad.
          */
-        final RestRequest restRequest;
-        {
-            RestRequest innerRestRequest;
-            try {
-                innerRestRequest = RestRequest.request(xContentRegistry, httpRequest, httpChannel);
-            } catch (final RestRequest.ContentTypeHeaderException e) {
-                badRequestCause = ExceptionsHelper.useOrSuppress(badRequestCause, e);
-                innerRestRequest = requestWithoutContentTypeHeader(httpRequest, httpChannel, badRequestCause);
-            } catch (final RestRequest.BadParameterException e) {
-                badRequestCause = ExceptionsHelper.useOrSuppress(badRequestCause, e);
-                innerRestRequest = RestRequest.requestWithoutParameters(xContentRegistry, httpRequest, httpChannel);
-            }
-            restRequest = innerRestRequest;
-        }
+         RestRequest restRequest = null;
+//        {
+//            RestRequest innerRestRequest;
+//            try {
+//                innerRestRequest = RestRequest.request(xContentRegistry, httpRequest, httpChannel);
+//            } catch (final RestRequest.ContentTypeHeaderException e) {
+//                badRequestCause = ExceptionsHelper.useOrSuppress(badRequestCause, e);
+//                innerRestRequest = requestWithoutContentTypeHeader(httpRequest, httpChannel, badRequestCause);
+//            } catch (final RestRequest.BadParameterException e) {
+//                badRequestCause = ExceptionsHelper.useOrSuppress(badRequestCause, e);
+//                innerRestRequest = RestRequest.requestWithoutParameters(xContentRegistry, httpRequest, httpChannel);
+//            }
+//            restRequest = innerRestRequest;
+//        }
 
         final HttpTracer trace = tracer.maybeTraceRequest(restRequest, exception);
 
@@ -363,31 +366,52 @@ public abstract class AbstractHttpServerTransport extends AbstractLifecycleCompo
          * IllegalArgumentException from the channel constructor and then attempt to create a new channel that bypasses parsing of these
          * parameter values.
          */
-        final RestChannel channel;
-        {
-            RestChannel innerChannel;
-            ThreadContext threadContext = threadPool.getThreadContext();
-            try {
-                innerChannel =
-                    new DefaultRestChannel(httpChannel, httpRequest, restRequest, bigArrays, handlingSettings, threadContext, corsHandler,
-                        trace);
-            } catch (final IllegalArgumentException e) {
-                badRequestCause = ExceptionsHelper.useOrSuppress(badRequestCause, e);
-                final RestRequest innerRequest = RestRequest.requestWithoutParameters(xContentRegistry, httpRequest, httpChannel);
-                innerChannel =
-                    new DefaultRestChannel(httpChannel, httpRequest, innerRequest, bigArrays, handlingSettings, threadContext, corsHandler,
-                        trace);
-            }
-            channel = innerChannel;
-        }
+//        final RestChannel channel;
+//        {
+//            RestChannel innerChannel;
+//            ThreadContext threadContext = threadPool.getThreadContext();
+//            try {
+//                innerChannel =
+//                    new DefaultRestChannel(httpChannel, httpRequest, restRequest, bigArrays, handlingSettings, threadContext, corsHandler,
+//                        trace);
+//            } catch (final IllegalArgumentException e) {
+//                badRequestCause = ExceptionsHelper.useOrSuppress(badRequestCause, e);
+//                final RestRequest innerRequest = RestRequest.requestWithoutParameters(xContentRegistry, httpRequest, httpChannel);
+//                innerChannel =
+//                    new DefaultRestChannel(httpChannel, httpRequest, innerRequest, bigArrays, handlingSettings, threadContext, corsHandler,
+//                        trace);
+//            }
+//            channel = innerChannel;
+//        }
 
-        dispatchRequest(restRequest, channel, badRequestCause);
-    }
+        Function<RestRequest, RestChannel> restRequestRestChannelFunction = (r) -> {
+
+                RestChannel channel = null;
+                {
+                    RestChannel innerChannel;
+                    ThreadContext threadContext = threadPool.getThreadContext();
+                    try {
+                        innerChannel =
+                            new DefaultRestChannel(httpChannel, httpRequest, r, bigArrays, handlingSettings, threadContext, corsHandler,
+                                trace);
+                    } catch (final IllegalArgumentException e) {
+                        Exception badRequestCause2 = ExceptionsHelper.useOrSuppress(badRequestCause, e);
+                        final RestRequest innerRequest = RestRequest.requestWithoutParameters(xContentRegistry, httpRequest, httpChannel);
+                        innerChannel =
+                            new DefaultRestChannel(httpChannel, httpRequest, innerRequest, bigArrays, handlingSettings, threadContext, corsHandler,
+                                trace);
+                    }
+                    channel = innerChannel;
+                }
+                return channel;
+        };
+            dispatchRequest(null, null, badRequestCause, httpRequest, xContentRegistry, restRequestRestChannelFunction);
+        }
 
     private RestRequest requestWithoutContentTypeHeader(HttpRequest httpRequest, HttpChannel httpChannel, Exception badRequestCause) {
         HttpRequest httpRequestWithoutContentType = httpRequest.removeHeader("Content-Type");
         try {
-            return RestRequest.request(xContentRegistry, httpRequestWithoutContentType, httpChannel);
+            return RestRequest.request(xContentRegistry, httpRequestWithoutContentType, httpChannel, null);
         } catch (final RestRequest.BadParameterException e) {
             badRequestCause.addSuppressed(e);
             return RestRequest.requestWithoutParameters(xContentRegistry, httpRequestWithoutContentType, httpChannel);

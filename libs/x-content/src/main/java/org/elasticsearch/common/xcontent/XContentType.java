@@ -162,7 +162,7 @@ public enum XContentType implements MediaType {
     }
 
     public static Byte parseVersion(String mediaType) {
-        MediaTypeParser<XContentType>.ParsedMediaType parsedMediaType = mediaTypeParser.parseMediaType(mediaType);
+        IMediaTypeParser.ParsedMediaType<XContentType> parsedMediaType = mediaTypeParser.parseMediaType(mediaType);
         if (parsedMediaType != null) {
             String version = parsedMediaType
                 .getParameters()

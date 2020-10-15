@@ -97,7 +97,7 @@ public class RestControllerTests extends ESTestCase {
 
         HttpServerTransport httpServerTransport = new TestHttpServerTransport();
         client = new NoOpNodeClient(this.getTestName());
-        restController = new RestController(Collections.emptySet(), null, client, circuitBreakerService, usageService,
+        restController = new RestController(Collections.emptySet(), null, client, circuitBreakerService, usageService
             , CompatibleVersion.CURRENT_VERSION);
         restController.registerHandler(RestRequest.Method.GET, "/",
             (request, channel, client) -> channel.sendResponse(
@@ -616,7 +616,7 @@ public class RestControllerTests extends ESTestCase {
             public Exception getInboundException() {
                 return null;
             }
-        }, null);
+        }, null, null);
 
         final AssertingChannel channel = new AssertingChannel(request, true, RestStatus.METHOD_NOT_ALLOWED);
         assertFalse(channel.getSendResponseCalled());

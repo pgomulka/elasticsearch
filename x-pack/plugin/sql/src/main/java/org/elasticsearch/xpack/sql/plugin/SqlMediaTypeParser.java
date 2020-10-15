@@ -6,6 +6,7 @@
 
 package org.elasticsearch.xpack.sql.plugin;
 
+import org.elasticsearch.common.xcontent.IMediaTypeParser;
 import org.elasticsearch.common.xcontent.MediaType;
 import org.elasticsearch.common.xcontent.MediaTypeParser;
 import org.elasticsearch.common.xcontent.XContentType;
@@ -16,8 +17,8 @@ import org.elasticsearch.xpack.sql.proto.Mode;
 import java.util.Map;
 
 import static org.elasticsearch.xpack.sql.proto.Protocol.URL_PARAM_FORMAT;
-
-public class SqlMediaTypeParser {
+@SuppressWarnings({ "rawtypes", "unchecked" })
+public class SqlMediaTypeParser implements IMediaTypeParser {
     private static final MediaTypeParser<? extends MediaType> parser = new MediaTypeParser.Builder<>()
         .copyFromMediaTypeParser(XContentType.mediaTypeParser)
         .withMediaTypeAndParams(TextFormat.PLAIN_TEXT.typeWithSubtype(), TextFormat.PLAIN_TEXT,
@@ -71,4 +72,18 @@ public class SqlMediaTypeParser {
         return fromMediaType;
     }
 
+    @Override
+    public MediaType fromMediaType(String mediaType) {
+        return null;
+    }
+
+    @Override
+    public MediaType fromFormat(String format) {
+        return null;
+    }
+
+    @Override
+    public ParsedMediaType parseMediaType(String headerValue) {
+        return null;
+    }
 }

@@ -21,7 +21,9 @@ package org.elasticsearch.rest;
 
 import org.elasticsearch.Version;
 import org.elasticsearch.client.node.NodeClient;
+import org.elasticsearch.common.xcontent.IMediaTypeParser;
 import org.elasticsearch.common.xcontent.XContent;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.rest.RestRequest.Method;
 
 import java.util.Collections;
@@ -168,5 +170,9 @@ public interface RestHandler {
         public Method getDeprecatedMethod() {
             return deprecatedMethod;
         }
+    }
+
+    default IMediaTypeParser getMediaTypeParser(){
+        return XContentType.mediaTypeParser;
     }
 }

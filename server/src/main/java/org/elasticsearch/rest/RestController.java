@@ -34,9 +34,12 @@ import org.elasticsearch.common.io.stream.BytesStreamOutput;
 import org.elasticsearch.common.logging.DeprecationLogger;
 import org.elasticsearch.common.path.PathTrie;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
+import org.elasticsearch.common.xcontent.IMediaTypeParser;
+import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.core.internal.io.Streams;
+import org.elasticsearch.http.HttpRequest;
 import org.elasticsearch.http.HttpServerTransport;
 import org.elasticsearch.indices.breaker.CircuitBreakerService;
 import org.elasticsearch.usage.UsageService;
@@ -50,6 +53,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
@@ -189,10 +193,23 @@ public class RestController implements HttpServerTransport.Dispatcher {
             restHandler, route.getDeprecatedMethod(), route.getDeprecatedPath()));
     }
 
+    public void dispatchRequest(HttpRequest request, RestChannel channel, ThreadContext threadContext, NamedXContentRegistry xContentRegistry, Function<RestRequest,RestChannel> restChannelFunction) {
+         try {
+             tryAllHandlers(request, channel, threadContext,xContentRegistry,restChannelFunction);
+         } catch (Exception e) {
+             try {
+                 channel.sendResponse(new BytesRestResponse(channel, e));
+             } catch (Exception inner) {
+                 inner.addSuppressed(e);
+                 logger.error(() ->
+                     new ParameterizedMessage("failed to send failure response for uri [{}]", request.uri()), inner);
+             }
+         }
+     }
     @Override
     public void dispatchRequest(RestRequest request, RestChannel channel, ThreadContext threadContext) {
         try {
-            tryAllHandlers(request, channel, threadContext);
+//            tryAllHandlers(request, channel, threadContext);
         } catch (Exception e) {
             try {
                 channel.sendResponse(new BytesRestResponse(channel, e));
@@ -225,9 +242,18 @@ public class RestController implements HttpServerTransport.Dispatcher {
         }
     }
 
-    private void dispatchRequest(RestRequest request, RestChannel channel, RestHandler handler, Version compatibleApiVersion)
+    private void dispatchRequest(HttpRequest httpRequest, RestChannel channel, RestHandler handler, NamedXContentRegistry xContentRegistry, Function<RestRequest, RestChannel> restChannelFunction)
         throws Exception {
+        //        boolean hasContent = request.hasContent();
+//        Version version = compatibleVersion.get(request.header("Accept"), request.header("Content-Type"), hasContent);
+        IMediaTypeParser mediaTypeParser = handler.getMediaTypeParser();
+        RestRequest request = RestRequest.request(xContentRegistry, httpRequest, channel.getHttpChannel(), mediaTypeParser);
+
+
+        Version compatibleApiVersion = compatibleVersion.get(request.header("Accept"), request.header("Content-Type"), request.hasContent());
+
         final int contentLength = request.contentLength();
+
         if (contentLength > 0) {
             final XContentType xContentType = request.getXContentType();
             if (xContentType == null) {
@@ -297,47 +323,49 @@ public class RestController implements HttpServerTransport.Dispatcher {
         channel.sendResponse(BytesRestResponse.createSimpleErrorResponse(channel, NOT_ACCEPTABLE, errorMessage));
     }
 
-    private void tryAllHandlers(final RestRequest request, final RestChannel channel, final ThreadContext threadContext) throws Exception {
-        for (final RestHeaderDefinition restHeader : headersToCopy) {
-            final String name = restHeader.getName();
-            final List<String> headerValues = request.getAllHeaderValues(name);
-            if (headerValues != null && headerValues.isEmpty() == false) {
-                final List<String> distinctHeaderValues = headerValues.stream().distinct().collect(Collectors.toList());
-                if (restHeader.isMultiValueAllowed() == false && distinctHeaderValues.size() > 1) {
-                    channel.sendResponse(
-                        BytesRestResponse.
-                            createSimpleErrorResponse(channel, BAD_REQUEST, "multiple values for single-valued header [" + name + "]."));
-                    return;
-                } else {
-                    threadContext.putHeader(name, String.join(",", distinctHeaderValues));
-                }
-            }
-        }
-        // error_trace cannot be used when we disable detailed errors
-        // we consume the error_trace parameter first to ensure that it is always consumed
-        if (request.paramAsBoolean("error_trace", false) && channel.detailedErrorsEnabled() == false) {
-            channel.sendResponse(
-                    BytesRestResponse.createSimpleErrorResponse(channel, BAD_REQUEST, "error traces in responses are disabled."));
-            return;
-        }
+    private void tryAllHandlers(final HttpRequest request, final RestChannel channel, final ThreadContext threadContext, NamedXContentRegistry xContentRegistry, Function<RestRequest, RestChannel> restChannelFunction) throws Exception {
+//        for (final RestHeaderDefinition restHeader : headersToCopy) {
+//            final String name = restHeader.getName();
+//            final List<String> headerValues = request.getAllHeaderValues(name);
+//            if (headerValues != null && headerValues.isEmpty() == false) {
+//                final List<String> distinctHeaderValues = headerValues.stream().distinct().collect(Collectors.toList());
+//                if (restHeader.isMultiValueAllowed() == false && distinctHeaderValues.size() > 1) {
+//                    channel.sendResponse(
+//                        BytesRestResponse.
+//                            createSimpleErrorResponse(channel, BAD_REQUEST, "multiple values for single-valued header [" + name + "]."));
+//                    return;
+//                } else {
+//                    threadContext.putHeader(name, String.join(",", distinctHeaderValues));
+//                }
+//            }
+//        }
+//        // error_trace cannot be used when we disable detailed errors
+//        // we consume the error_trace parameter first to ensure that it is always consumed
+//        if (request.paramAsBoolean("error_trace", false) && channel.detailedErrorsEnabled() == false) {
+//            channel.sendResponse(
+//                    BytesRestResponse.createSimpleErrorResponse(channel, BAD_REQUEST, "error traces in responses are disabled."));
+//            return;
+//        }
 
-        final String rawPath = request.rawPath();
+        final String rawPath = RestRequest.path(request.uri());
         final String uri = request.uri();
         final RestRequest.Method requestMethod;
         //TODO: USAGE_1 now that we have a version we can implement a REST handler that accepts path, method AND version
-        Version version = compatibleVersion.get(request.header("Accept"), request.header("Content-Type"), request.hasContent());
+//        boolean hasContent = request.hasContent();
+//        Version version = compatibleVersion.get(request.header("Accept"), request.header("Content-Type"), hasContent);
 
         try {
             // Resolves the HTTP method and fails if the method is invalid
             requestMethod = request.method();
             // Loop through all possible handlers, attempting to dispatch the request
-            Iterator<MethodHandlers> allHandlers = getAllHandlers(request.params(), rawPath);
+            Iterator<MethodHandlers> allHandlers = getAllHandlers(RestRequest.params(request.uri()), rawPath);
             while (allHandlers.hasNext()) {
                 final RestHandler handler;
                 final MethodHandlers handlers = allHandlers.next();
                 if (handlers == null) {
                     handler = null;
                 } else {
+                    //TODO PG VERSION HAS TO BE USED HERE FIRST
                     handler = handlers.getHandler(requestMethod);
                 }
                 if (handler == null) {
@@ -345,7 +373,7 @@ public class RestController implements HttpServerTransport.Dispatcher {
                       return;
                   }
                 } else {
-                    dispatchRequest(request, channel, handler, version);
+                    dispatchRequest(request, channel, handler,xContentRegistry,restChannelFunction);
                     return;
                 }
             }

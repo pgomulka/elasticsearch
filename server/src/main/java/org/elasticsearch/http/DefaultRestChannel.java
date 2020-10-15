@@ -151,6 +151,11 @@ public class DefaultRestChannel extends AbstractRestChannel implements RestChann
         }
     }
 
+    @Override
+    public HttpChannel getHttpChannel() {
+        return httpChannel;
+    }
+
     private void setHeaderField(HttpResponse response, String headerField, String value) {
         setHeaderField(response, headerField, value, true);
     }

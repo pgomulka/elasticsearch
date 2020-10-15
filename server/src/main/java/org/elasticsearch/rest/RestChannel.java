@@ -23,6 +23,7 @@ import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.io.stream.BytesStreamOutput;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.http.HttpChannel;
 
 import java.io.IOException;
 
@@ -36,7 +37,7 @@ public interface RestChannel {
     XContentBuilder newErrorBuilder() throws IOException;
 
     XContentBuilder newBuilder(@Nullable XContentType xContentType, boolean useFiltering) throws IOException;
-    
+
     XContentBuilder newBuilder(@Nullable XContentType xContentType, @Nullable XContentType responseContentType,
             boolean useFiltering) throws IOException;
 
@@ -50,4 +51,8 @@ public interface RestChannel {
     boolean detailedErrorsEnabled();
 
     void sendResponse(RestResponse response);
+
+    default HttpChannel getHttpChannel(){
+        return null;
+    }
 }

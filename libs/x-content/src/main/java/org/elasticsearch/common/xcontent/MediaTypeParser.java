@@ -24,7 +24,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-public class MediaTypeParser<T extends MediaType> {
+public class MediaTypeParser<T extends MediaType> implements IMediaTypeParser<T> {
     private final Map<String, T> formatToMediaType;
     private final Map<String, T> typeWithSubtypeToMediaType;
     private final Map<String, Map<String, Pattern>> parametersMap;
@@ -37,7 +37,7 @@ public class MediaTypeParser<T extends MediaType> {
     }
 
     public T fromMediaType(String mediaType) {
-        ParsedMediaType parsedMediaType = parseMediaType(mediaType);
+        IMediaTypeParser.ParsedMediaType<T> parsedMediaType = parseMediaType(mediaType);
         return parsedMediaType != null ? parsedMediaType.getMediaType() : null;
     }
 
@@ -54,7 +54,7 @@ public class MediaTypeParser<T extends MediaType> {
      * @param headerValue a header value from Accept or Content-Type
      * @return a parsed media-type
      */
-    public ParsedMediaType parseMediaType(String headerValue) {
+    public IMediaTypeParser.ParsedMediaType<T> parseMediaType(String headerValue) {
         if (headerValue != null) {
             String[] split = headerValue.toLowerCase(Locale.ROOT).split(";");
 
@@ -81,7 +81,7 @@ public class MediaTypeParser<T extends MediaType> {
                         }
                         parameters.put(parameterName, parameterValue);
                     }
-                    return new ParsedMediaType(xContentType, parameters);
+                    return new IMediaTypeParser.ParsedMediaType<T>(xContentType, parameters);
                 }
             }
 

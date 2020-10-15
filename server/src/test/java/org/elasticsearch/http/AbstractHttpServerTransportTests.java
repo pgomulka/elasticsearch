@@ -163,11 +163,11 @@ public class AbstractHttpServerTransportTests extends ESTestCase {
                      }
                  }) {
 
-            transport.dispatchRequest(null, null, null);
+            transport.dispatchRequest(null, null, null, null, null,null);
             assertNull(threadPool.getThreadContext().getHeader("foo"));
             assertNull(threadPool.getThreadContext().getTransient("bar"));
 
-            transport.dispatchRequest(null, null, new Exception());
+            transport.dispatchRequest(null, null, new Exception(), null, null,null);
             assertNull(threadPool.getThreadContext().getHeader("foo_bad"));
             assertNull(threadPool.getThreadContext().getTransient("bar_bad"));
         }
