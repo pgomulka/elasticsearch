@@ -8,6 +8,7 @@ package org.elasticsearch.compat;
 
 import org.elasticsearch.ElasticsearchStatusException;
 import org.elasticsearch.Version;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.test.hamcrest.ElasticsearchMatchers;
 import org.hamcrest.Matcher;
@@ -206,7 +207,8 @@ public class CompatibleVersionPluginTests extends ESTestCase {
     }
 
     private Version requestWith(String accept, String contentType, String body) {
-        return compatibleVersionPlugin.getCompatibleVersion(accept, contentType, body.isEmpty() == false);
+        return compatibleVersionPlugin.getCompatibleVersion(accept, contentType, body.isEmpty() == false,
+            XContentType.getMediaTypeRegistry());
     }
 
 }

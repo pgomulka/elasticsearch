@@ -139,7 +139,6 @@ import org.elasticsearch.plugins.EnginePlugin;
 import org.elasticsearch.plugins.IndexStorePlugin;
 import org.elasticsearch.plugins.IngestPlugin;
 import org.elasticsearch.plugins.MapperPlugin;
-import org.elasticsearch.plugins.MediaTypeRegistryPlugin;
 import org.elasticsearch.plugins.MetadataUpgrader;
 import org.elasticsearch.plugins.NetworkPlugin;
 import org.elasticsearch.plugins.PersistentTaskPlugin;
@@ -333,18 +332,6 @@ public class Node implements Closeable {
                 .collect(Collectors.toSet());
             DiscoveryNode.setAdditionalRoles(additionalRoles);
 
-            Collection<MediaTypeRegistry> mediaTypesFromPlugins = pluginsService.filterPlugins(ActionPlugin.class)
-                .stream()
-                .map(ActionPlugin::getAdditionalMediaTypes)
-                .collect(toList());
-
-            MediaTypeRegistry globalMediaTypeRegistry = new MediaTypeRegistry()
-                .register(mediaTypesFromPlugins)
-                .register(XContentType.getMediaTypeRegistry());
-
-            // passes down to SQL and CompatibleVersion plugins
-            pluginsService.filterPlugins(MediaTypeRegistryPlugin.class)
-                .forEach(plugin -> plugin.setGlobalMediaTypeRegistry(globalMediaTypeRegistry));
 
             /*
              * Create the environment based on the finalized view of the settings. This is to ensure that components get the same setting
@@ -545,10 +532,25 @@ public class Node implements Closeable {
                                                  repositoriesServiceReference::get).stream())
                 .collect(Collectors.toList());
 
+            Collection<MediaTypeRegistry> mediaTypesFromPlugins = pluginsService.filterPlugins(ActionPlugin.class)
+                .stream()
+                .map(ActionPlugin::getAdditionalMediaTypes)
+                .collect(toList());
+
+            MediaTypeRegistry globalMediaTypeRegistry = new MediaTypeRegistry()
+                .register(mediaTypesFromPlugins)
+                .register(XContentType.getMediaTypeRegistry());
+
+            // passes down to SQL and CompatibleVersion plugins
+//            pluginsService.filterPlugins(MediaTypeRegistryPlugin.class)
+//                .forEach(plugin -> plugin.setGlobalMediaTypeRegistry(globalMediaTypeRegistry));
+
+            CompatibleVersion restCompatibleFunction = getRestCompatibleFunction(globalMediaTypeRegistry);
+
             ActionModule actionModule = new ActionModule(settings, clusterModule.getIndexNameExpressionResolver(),
                 settingsModule.getIndexScopedSettings(), settingsModule.getClusterSettings(), settingsModule.getSettingsFilter(),
                 threadPool, pluginsService.filterPlugins(ActionPlugin.class), client, circuitBreakerService, usageService,
-                systemIndices, getRestCompatibleFunction());
+                systemIndices, restCompatibleFunction);
             modules.add(actionModule);
 
             final RestController restController = actionModule.getRestController();
@@ -726,14 +728,16 @@ public class Node implements Closeable {
     /**
      * @return A function that can be used to determine the requested REST compatible version
      * package scope for testing
+     * @param globalMediaTypeRegistry
      */
-    CompatibleVersion getRestCompatibleFunction() {
+    CompatibleVersion getRestCompatibleFunction(MediaTypeRegistry globalMediaTypeRegistry) {
         List<RestCompatibilityPlugin> restCompatibilityPlugins = pluginsService.filterPlugins(RestCompatibilityPlugin.class);
         final CompatibleVersion compatibleVersion;
         if (restCompatibilityPlugins.size() > 1) {
             throw new IllegalStateException("Only one RestCompatibilityPlugin is allowed");
         } else if (restCompatibilityPlugins.size() == 1) {
-            compatibleVersion = restCompatibilityPlugins.get(0)::getCompatibleVersion;
+            compatibleVersion = (acceptHeader, contentTypeHeader, hasContent) ->
+                restCompatibilityPlugins.get(0).getCompatibleVersion(acceptHeader, contentTypeHeader, hasContent, globalMediaTypeRegistry);
         } else {
             compatibleVersion = CompatibleVersion.CURRENT_VERSION;
         }

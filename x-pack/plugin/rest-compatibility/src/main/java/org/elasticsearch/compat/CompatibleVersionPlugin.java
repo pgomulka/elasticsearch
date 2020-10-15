@@ -18,10 +18,12 @@ import org.elasticsearch.rest.RestStatus;
 
 public class CompatibleVersionPlugin extends Plugin implements RestCompatibilityPlugin, MediaTypeRegistryPlugin {
 
-    private MediaTypeParser<MediaType> mediaTypeParser;
+//    private MediaTypeParser<MediaType> mediaTypeParser;
 
     @Override
-    public Version getCompatibleVersion(@Nullable String acceptHeader, @Nullable String contentTypeHeader, boolean hasContent) {
+    public Version getCompatibleVersion(@Nullable String acceptHeader, @Nullable String contentTypeHeader, boolean hasContent,
+                                        MediaTypeRegistry mediaTypeRegistry) {
+        MediaTypeParser<MediaType> mediaTypeParser = new MediaTypeParser<>(mediaTypeRegistry);
         Byte aVersion = mediaTypeParser.parseVersion(acceptHeader);
         byte acceptVersion = aVersion == null ? Version.CURRENT.major : Integer.valueOf(aVersion).byteValue();
         Byte cVersion = mediaTypeParser.parseVersion(contentTypeHeader);
@@ -80,6 +82,6 @@ public class CompatibleVersionPlugin extends Plugin implements RestCompatibility
 
     @Override
     public void setGlobalMediaTypeRegistry(MediaTypeRegistry globalMediaTypeRegistry) {
-        this.mediaTypeParser = new MediaTypeParser<>(globalMediaTypeRegistry);
+//        this.mediaTypeParser = new MediaTypeParser<>(globalMediaTypeRegistry);
     }
 }

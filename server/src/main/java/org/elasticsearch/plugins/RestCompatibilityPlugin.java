@@ -36,6 +36,6 @@ public interface RestCompatibilityPlugin {
      * @param hasContent        - a flag indicating if a request has content
      * @return a requested Compatible API Version
      */
-    Version getCompatibleVersion(@Nullable String acceptHeader, @Nullable String contentTypeHeader, boolean hasContent);
+    Version getCompatibleVersion(@Nullable String acceptHeader, @Nullable String contentTypeHeader, boolean hasContent, MediaTypeRegistry mediaTypeRegistry);
 
 }
