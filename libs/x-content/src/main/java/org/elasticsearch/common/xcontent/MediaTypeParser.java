@@ -1,3 +1,4 @@
+
 /*
  * Licensed to Elasticsearch under one or more contributor
  * license agreements. See the NOTICE file distributed with
@@ -133,30 +134,4 @@ public class MediaTypeParser<T extends MediaType> {
         }
     }
 
-    public static class Builder<T extends MediaType> {
-        private final Map<String, MediaType> formatToMediaType = new HashMap<>();
-        private final Map<String, MediaType> typeWithSubtypeToMediaType = new HashMap<>();
-        private final Map<String, Map<String, Pattern>> parametersMap = new HashMap<>();
-
-        public Builder<T> withMediaTypeAndParams(String alternativeMediaType, MediaType mediaType, Map<String, String> paramNameAndValueRegex) {
-            typeWithSubtypeToMediaType.put(alternativeMediaType.toLowerCase(Locale.ROOT), mediaType);
-            formatToMediaType.put(mediaType.format(), mediaType);
-
-            Map<String, Pattern> parametersForMediaType = new HashMap<>(paramNameAndValueRegex.size());
-            for (Map.Entry<String, String> params : paramNameAndValueRegex.entrySet()) {
-                String parameterName = params.getKey().toLowerCase(Locale.ROOT);
-                String parameterRegex = params.getValue();
-                Pattern pattern = Pattern.compile(parameterRegex, Pattern.CASE_INSENSITIVE);
-                parametersForMediaType.put(parameterName, pattern);
-            }
-            parametersMap.put(alternativeMediaType, parametersForMediaType);
-
-            return this;
-        }
-
-        public MediaTypeParser<T> build(MediaTypeRegistry mediaTypeRegistry) {
-            mediaTypeRegistry.register(formatToMediaType, typeWithSubtypeToMediaType, parametersMap);
-            return new MediaTypeParser<T>(mediaTypeRegistry);
-        }
-    }
 }
