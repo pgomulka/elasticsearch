@@ -8,26 +8,25 @@ package org.elasticsearch.xpack.sql.plugin;
 
 import org.elasticsearch.common.xcontent.MediaType;
 import org.elasticsearch.common.xcontent.MediaTypeParser;
+import org.elasticsearch.common.xcontent.MediaTypeRegistry;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.xpack.sql.action.SqlQueryRequest;
 import org.elasticsearch.xpack.sql.proto.Mode;
 
-import java.util.Map;
 
 import static org.elasticsearch.xpack.sql.proto.Protocol.URL_PARAM_FORMAT;
 
 public class SqlMediaTypeParser {
-    private static final MediaTypeParser<? extends MediaType> parser = new MediaTypeParser.Builder<>()
-        .copyFromMediaTypeParser(XContentType.mediaTypeParser)
-        .withMediaTypeAndParams(TextFormat.PLAIN_TEXT.typeWithSubtype(), TextFormat.PLAIN_TEXT,
-            Map.of("header", "present|absent", "charset", "utf-8"))
-        .withMediaTypeAndParams(TextFormat.CSV.typeWithSubtype(), TextFormat.CSV,
-            Map.of("header", "present|absent", "charset", "utf-8",
-                "delimiter", ".+"))// more detailed parsing is in TextFormat.CSV#delimiter
-        .withMediaTypeAndParams(TextFormat.TSV.typeWithSubtype(), TextFormat.TSV,
-            Map.of("header", "present|absent", "charset", "utf-8"))
-        .build();
+    private MediaTypeParser<MediaType> mediaTypeParser ;
+
+    public SqlMediaTypeParser(MediaTypeRegistry additionalMediaTypes) {
+        MediaTypeRegistry register = new MediaTypeRegistry()
+            .register(XContentType.getMediaTypeRegistry())
+            .register(additionalMediaTypes);
+        mediaTypeParser = new MediaTypeParser<>(register);
+    }
+
 
     /*
      * Since we support {@link TextFormat} <strong>and</strong>
@@ -48,19 +47,19 @@ public class SqlMediaTypeParser {
             // enforce CBOR response for drivers and CLI (unless instructed differently through the config param)
             return XContentType.CBOR;
         } else if (request.hasParam(URL_PARAM_FORMAT)) {
-            return validateColumnarRequest(sqlRequest.columnar(), parser.fromFormat(request.param(URL_PARAM_FORMAT)));
+            return validateColumnarRequest(sqlRequest.columnar(), mediaTypeParser.fromFormat(request.param(URL_PARAM_FORMAT)));
         }
         if (request.getHeaders().containsKey("Accept")) {
             String accept = request.header("Accept");
             // */* means "I don't care" which we should treat like not specifying the header
             if ("*/*".equals(accept) == false) {
-                return validateColumnarRequest(sqlRequest.columnar(), parser.fromMediaType(accept));
+                return validateColumnarRequest(sqlRequest.columnar(), mediaTypeParser.fromMediaType(accept));
             }
         }
 
         String contentType = request.header("Content-Type");
         assert contentType != null : "The Content-Type header is required";
-        return validateColumnarRequest(sqlRequest.columnar(), parser.fromMediaType(contentType));
+        return validateColumnarRequest(sqlRequest.columnar(), mediaTypeParser.fromMediaType(contentType));
     }
 
     private static MediaType validateColumnarRequest(boolean requestIsColumnar, MediaType fromMediaType) {
