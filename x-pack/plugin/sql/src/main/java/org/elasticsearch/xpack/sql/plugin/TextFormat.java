@@ -24,8 +24,10 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 
 import static org.elasticsearch.xpack.sql.action.BasicFormatter.FormatOption.TEXT;
 import static org.elasticsearch.xpack.sql.proto.Protocol.URL_PARAM_DELIMITER;
@@ -107,7 +109,11 @@ enum TextFormat implements MediaType {
             return "plain";
         }
 
-
+        @Override
+        public Map<String, Pattern> validatedParameters() {
+            return Map.of("header", Pattern.compile("present|absent", Pattern.CASE_INSENSITIVE),
+                "charset", Pattern.compile("utf-8", Pattern.CASE_INSENSITIVE));
+        }
     },
 
     /**
@@ -227,6 +233,13 @@ enum TextFormat implements MediaType {
         public String subtype() {
             return "csv";
         }
+
+        @Override
+        public Map<String, Pattern> validatedParameters() {
+            return Map.of("header", Pattern.compile("present|absent", Pattern.CASE_INSENSITIVE),
+                "charset", Pattern.compile("utf-8", Pattern.CASE_INSENSITIVE),
+                "delimiter", Pattern.compile(".+", Pattern.CASE_INSENSITIVE));
+        }
     },
 
     TSV() {
@@ -280,6 +293,12 @@ enum TextFormat implements MediaType {
         @Override
         public String subtype() {
             return "tab-separated-values";
+        }
+
+        @Override
+        public Map<String, Pattern> validatedParameters() {
+            return Map.of("header", Pattern.compile("present|absent", Pattern.CASE_INSENSITIVE),
+                "charset", Pattern.compile("utf-8", Pattern.CASE_INSENSITIVE));
         }
     };
 

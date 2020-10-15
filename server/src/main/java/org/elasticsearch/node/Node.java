@@ -87,7 +87,9 @@ import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.util.PageCacheRecycler;
+import org.elasticsearch.common.xcontent.MediaTypeRegistry;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.core.internal.io.IOUtils;
 import org.elasticsearch.discovery.Discovery;
 import org.elasticsearch.discovery.DiscoveryModule;
@@ -330,6 +332,7 @@ public class Node implements Closeable {
                 .collect(Collectors.toSet());
             DiscoveryNode.setAdditionalRoles(additionalRoles);
 
+
             /*
              * Create the environment based on the finalized view of the settings. This is to ensure that components get the same setting
              * values, no matter they ask for them from.
@@ -529,10 +532,25 @@ public class Node implements Closeable {
                                                  repositoriesServiceReference::get).stream())
                 .collect(Collectors.toList());
 
+            Collection<MediaTypeRegistry> mediaTypesFromPlugins = pluginsService.filterPlugins(ActionPlugin.class)
+                .stream()
+                .map(ActionPlugin::getAdditionalMediaTypes)
+                .collect(toList());
+
+            MediaTypeRegistry globalMediaTypeRegistry = new MediaTypeRegistry()
+                .register(mediaTypesFromPlugins)
+                .register(XContentType.getMediaTypeRegistry());
+
+            // passes down to SQL and CompatibleVersion plugins
+//            pluginsService.filterPlugins(MediaTypeRegistryPlugin.class)
+//                .forEach(plugin -> plugin.setGlobalMediaTypeRegistry(globalMediaTypeRegistry));
+
+            CompatibleVersion restCompatibleFunction = getRestCompatibleFunction(globalMediaTypeRegistry);
+
             ActionModule actionModule = new ActionModule(settings, clusterModule.getIndexNameExpressionResolver(),
                 settingsModule.getIndexScopedSettings(), settingsModule.getClusterSettings(), settingsModule.getSettingsFilter(),
                 threadPool, pluginsService.filterPlugins(ActionPlugin.class), client, circuitBreakerService, usageService,
-                systemIndices, getRestCompatibleFunction());
+                systemIndices, restCompatibleFunction);
             modules.add(actionModule);
 
             final RestController restController = actionModule.getRestController();
@@ -711,13 +729,14 @@ public class Node implements Closeable {
      * @return A function that can be used to determine the requested REST compatible version
      * package scope for testing
      */
-    CompatibleVersion getRestCompatibleFunction() {
+    CompatibleVersion getRestCompatibleFunction(MediaTypeRegistry globalMediaTypeRegistry) {
         List<RestCompatibilityPlugin> restCompatibilityPlugins = pluginsService.filterPlugins(RestCompatibilityPlugin.class);
         final CompatibleVersion compatibleVersion;
         if (restCompatibilityPlugins.size() > 1) {
             throw new IllegalStateException("Only one RestCompatibilityPlugin is allowed");
         } else if (restCompatibilityPlugins.size() == 1) {
-            compatibleVersion = restCompatibilityPlugins.get(0)::getCompatibleVersion;
+            compatibleVersion = (acceptHeader, contentTypeHeader, hasContent) ->
+                restCompatibilityPlugins.get(0).getCompatibleVersion(acceptHeader, contentTypeHeader, hasContent, globalMediaTypeRegistry);
         } else {
             compatibleVersion = CompatibleVersion.CURRENT_VERSION;
         }

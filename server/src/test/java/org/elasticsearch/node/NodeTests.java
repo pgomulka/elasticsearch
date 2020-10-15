@@ -28,6 +28,8 @@ import org.elasticsearch.common.breaker.CircuitBreaker;
 import org.elasticsearch.common.network.NetworkModule;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.BoundTransportAddress;
+import org.elasticsearch.common.xcontent.MediaTypeRegistry;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.index.IndexService;
 import org.elasticsearch.index.engine.Engine.Searcher;
@@ -345,14 +347,16 @@ public class NodeTests extends ESTestCase {
 
     public static class TestRestCompatibility1 extends Plugin implements RestCompatibilityPlugin {
         @Override
-        public Version getCompatibleVersion(String acceptHeader, String contentTypeHeader, boolean hasContent) {
+        public Version getCompatibleVersion(String acceptHeader, String contentTypeHeader, boolean hasContent,
+                                            MediaTypeRegistry mediaTypeRegistry) {
             return Version.CURRENT.previousMajor();
         }
     }
 
     public static class TestRestCompatibility2 extends Plugin implements RestCompatibilityPlugin {
         @Override
-        public Version getCompatibleVersion(String acceptHeader, String contentTypeHeader, boolean hasContent) {
+        public Version getCompatibleVersion(String acceptHeader, String contentTypeHeader, boolean hasContent,
+                                            MediaTypeRegistry mediaTypeRegistry) {
             return null;
         }
     }
@@ -376,7 +380,7 @@ public class NodeTests extends ESTestCase {
         plugins.add(TestRestCompatibility1.class);
 
         try (Node node = new MockNode(settings.build(), plugins)) {
-            CompatibleVersion restCompatibleFunction = node.getRestCompatibleFunction();
+            CompatibleVersion restCompatibleFunction = node.getRestCompatibleFunction(XContentType.getMediaTypeRegistry());
             assertThat(restCompatibleFunction.get("", "", false), equalTo(Version.CURRENT.previousMajor()));
         }
     }
@@ -389,7 +393,7 @@ public class NodeTests extends ESTestCase {
         List<Class<? extends Plugin>> plugins = basePlugins();
 
         try (Node node = new MockNode(settings.build(), plugins)) {
-            CompatibleVersion restCompatibleFunction = node.getRestCompatibleFunction();
+            CompatibleVersion restCompatibleFunction = node.getRestCompatibleFunction(XContentType.getMediaTypeRegistry());
             assertThat(restCompatibleFunction.get("", "", false), equalTo(Version.CURRENT));
         }
     }
