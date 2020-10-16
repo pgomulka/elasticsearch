@@ -12,6 +12,7 @@ import org.elasticsearch.common.settings.ClusterSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.util.PageCacheRecycler;
+import org.elasticsearch.common.xcontent.MediaTypeParser;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.http.nio.HttpReadWriteHandler;
 import org.elasticsearch.http.nio.NioHttpChannel;
@@ -55,9 +56,9 @@ public class SecurityNioHttpServerTransport extends NioHttpServerTransport {
                                           PageCacheRecycler pageCacheRecycler, ThreadPool threadPool,
                                           NamedXContentRegistry xContentRegistry, Dispatcher dispatcher, IPFilter ipFilter,
                                           SSLService sslService, NioGroupFactory nioGroupFactory,
-                                          ClusterSettings clusterSettings) {
+                                          ClusterSettings clusterSettings, MediaTypeParser<?> mediaTypeParser) {
         super(settings, networkService, bigArrays, pageCacheRecycler, threadPool, xContentRegistry, dispatcher, nioGroupFactory,
-            clusterSettings);
+            clusterSettings, mediaTypeParser);
         this.securityExceptionHandler = new SecurityHttpExceptionHandler(logger, lifecycle, (c, e) -> super.onException(c, e));
         this.ipFilter = ipFilter;
         this.sslEnabled = HTTP_SSL_ENABLED.get(settings);

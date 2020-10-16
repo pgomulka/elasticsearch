@@ -21,6 +21,7 @@ package org.elasticsearch.rest;
 
 import org.elasticsearch.Version;
 import org.elasticsearch.common.Nullable;
+import org.elasticsearch.common.xcontent.MediaTypeParser.ParsedMediaType;
 
 /**
  * An interface used to specify a function that returns a compatible API version
@@ -28,7 +29,7 @@ import org.elasticsearch.common.Nullable;
  */
 @FunctionalInterface
 public interface CompatibleVersion {
-    Version get(@Nullable String acceptHeader, @Nullable String contentTypeHeader, boolean hasContent);
+    Version get(@Nullable ParsedMediaType acceptMediaType, @Nullable ParsedMediaType contentTypeHeader, boolean hasContent);
 
     CompatibleVersion CURRENT_VERSION = (acceptHeader, contentTypeHeader, hasContent) -> Version.CURRENT;
 }

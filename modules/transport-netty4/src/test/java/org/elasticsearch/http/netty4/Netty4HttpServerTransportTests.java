@@ -57,6 +57,9 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.util.MockBigArrays;
 import org.elasticsearch.common.util.MockPageCacheRecycler;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
+import org.elasticsearch.common.xcontent.MediaTypeParser;
+import org.elasticsearch.common.xcontent.MediaTypeRegistry;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.http.BindHttpException;
 import org.elasticsearch.http.CorsHandler;
 import org.elasticsearch.http.HttpServerTransport;
@@ -70,8 +73,8 @@ import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.test.rest.FakeRestRequest;
 import org.elasticsearch.threadpool.TestThreadPool;
 import org.elasticsearch.threadpool.ThreadPool;
-import org.elasticsearch.transport.SharedGroupFactory;
 import org.elasticsearch.transport.NettyAllocator;
+import org.elasticsearch.transport.SharedGroupFactory;
 import org.junit.After;
 import org.junit.Before;
 
@@ -101,6 +104,7 @@ public class Netty4HttpServerTransportTests extends ESTestCase {
     private ThreadPool threadPool;
     private MockBigArrays bigArrays;
     private ClusterSettings clusterSettings;
+    private MediaTypeParser<?> mediaTypeParser;
 
     @Before
     public void setup() throws Exception {
@@ -108,6 +112,7 @@ public class Netty4HttpServerTransportTests extends ESTestCase {
         threadPool = new TestThreadPool("test");
         bigArrays = new MockBigArrays(new MockPageCacheRecycler(Settings.EMPTY), new NoneCircuitBreakerService());
         clusterSettings = new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS);
+        mediaTypeParser = new MediaTypeParser<>(new MediaTypeRegistry(XContentType.MEDIA_TYPE_DEFINITIONS));
     }
 
     @After
@@ -174,7 +179,7 @@ public class Netty4HttpServerTransportTests extends ESTestCase {
             }
         };
         try (Netty4HttpServerTransport transport = new Netty4HttpServerTransport(settings, networkService, bigArrays, threadPool,
-                xContentRegistry(), dispatcher, clusterSettings, new SharedGroupFactory(settings))) {
+                xContentRegistry(), dispatcher, clusterSettings, new SharedGroupFactory(settings), mediaTypeParser)) {
             transport.start();
             final TransportAddress remoteAddress = randomFrom(transport.boundAddress().boundAddresses());
             try (Netty4HttpClient client = new Netty4HttpClient()) {
@@ -208,7 +213,7 @@ public class Netty4HttpServerTransportTests extends ESTestCase {
     public void testBindUnavailableAddress() {
         Settings initialSettings = createSettings();
         try (Netty4HttpServerTransport transport = new Netty4HttpServerTransport(initialSettings, networkService, bigArrays, threadPool,
-                xContentRegistry(), new NullDispatcher(), clusterSettings, new SharedGroupFactory(Settings.EMPTY))) {
+                xContentRegistry(), new NullDispatcher(), clusterSettings, new SharedGroupFactory(Settings.EMPTY), mediaTypeParser)) {
             transport.start();
             TransportAddress remoteAddress = randomFrom(transport.boundAddress().boundAddresses());
             Settings settings = Settings.builder()
@@ -216,7 +221,7 @@ public class Netty4HttpServerTransportTests extends ESTestCase {
                 .put("network.host", remoteAddress.getAddress())
                 .build();
             try (Netty4HttpServerTransport otherTransport = new Netty4HttpServerTransport(settings, networkService, bigArrays, threadPool,
-                    xContentRegistry(), new NullDispatcher(), clusterSettings, new SharedGroupFactory(settings))) {
+                    xContentRegistry(), new NullDispatcher(), clusterSettings, new SharedGroupFactory(settings), mediaTypeParser)) {
                 BindHttpException bindHttpException = expectThrows(BindHttpException.class, otherTransport::start);
                 assertEquals(
                     "Failed to bind to " + NetworkAddress.format(remoteAddress.address()),
@@ -262,7 +267,7 @@ public class Netty4HttpServerTransportTests extends ESTestCase {
 
         try (Netty4HttpServerTransport transport = new Netty4HttpServerTransport(
             settings, networkService, bigArrays, threadPool, xContentRegistry(), dispatcher, clusterSettings,
-            new SharedGroupFactory(settings))) {
+            new SharedGroupFactory(settings), mediaTypeParser)) {
             transport.start();
             final TransportAddress remoteAddress = randomFrom(transport.boundAddress().boundAddresses());
 
@@ -312,7 +317,7 @@ public class Netty4HttpServerTransportTests extends ESTestCase {
 
         try (Netty4HttpServerTransport transport = new Netty4HttpServerTransport(
             Settings.EMPTY, networkService, bigArrays, threadPool, xContentRegistry(), dispatcher, clusterSettings,
-            new SharedGroupFactory(Settings.EMPTY))) {
+            new SharedGroupFactory(Settings.EMPTY), mediaTypeParser)) {
             transport.start();
             final TransportAddress remoteAddress = randomFrom(transport.boundAddress().boundAddresses());
 
@@ -372,7 +377,7 @@ public class Netty4HttpServerTransportTests extends ESTestCase {
 
         try (Netty4HttpServerTransport transport = new Netty4HttpServerTransport(settings, networkService, bigArrays, threadPool,
             xContentRegistry(), dispatcher, new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS),
-            new SharedGroupFactory(settings))) {
+            new SharedGroupFactory(settings), mediaTypeParser)) {
             transport.start();
             final TransportAddress remoteAddress = randomFrom(transport.boundAddress().boundAddresses());
 
@@ -435,7 +440,7 @@ public class Netty4HttpServerTransportTests extends ESTestCase {
         NioEventLoopGroup group = new NioEventLoopGroup();
         try (Netty4HttpServerTransport transport = new Netty4HttpServerTransport(settings, networkService, bigArrays, threadPool,
             xContentRegistry(), dispatcher, new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS),
-            new SharedGroupFactory(settings))) {
+            new SharedGroupFactory(settings), mediaTypeParser)) {
             transport.start();
             final TransportAddress remoteAddress = randomFrom(transport.boundAddress().boundAddresses());
 

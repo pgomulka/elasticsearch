@@ -26,22 +26,24 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 public class MediaTypeParser<T extends MediaType> {
-    private MediaTypeRegistry mediaTypeRegistry;
+    private final MediaTypeRegistry mediaTypeRegistry;
 
     public MediaTypeParser(MediaTypeRegistry mediaTypeRegistry) {
         this.mediaTypeRegistry = mediaTypeRegistry;
     }
+
     @SuppressWarnings("unchecked")
     public T fromMediaType(String mediaType) {
         ParsedMediaType parsedMediaType = parseMediaType(mediaType);
-        return parsedMediaType != null ? (T)parsedMediaType.getMediaType() : null;
+        return parsedMediaType != null ? (T) parsedMediaType.getMediaType() : null;
     }
+
     @SuppressWarnings("unchecked")
     public T fromFormat(String format) {
         if (format == null) {
             return null;
         }
-        return (T)mediaTypeRegistry.formatToMediaType(format.toLowerCase(Locale.ROOT));
+        return (T) mediaTypeRegistry.formatToMediaType(format.toLowerCase(Locale.ROOT));
     }
 
     /**
@@ -102,7 +104,7 @@ public class MediaTypeParser<T extends MediaType> {
 
     private static final String COMPATIBLE_WITH_PARAMETER_NAME = "compatible-with";
 
-    public  Byte parseVersion(String mediaType) {
+    public Byte parseVersion(String mediaType) {
         ParsedMediaType parsedMediaType = parseMediaType(mediaType);
         if (parsedMediaType != null) {
             String version = parsedMediaType
@@ -116,7 +118,7 @@ public class MediaTypeParser<T extends MediaType> {
     /**
      * A media type object that contains all the information provided on a Content-Type or Accept header
      */
-    public class ParsedMediaType {
+    public static class ParsedMediaType {
         private final Map<String, String> parameters;
         private final MediaType mediaType;
 

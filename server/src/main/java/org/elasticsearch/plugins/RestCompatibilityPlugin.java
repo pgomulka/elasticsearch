@@ -21,7 +21,7 @@ package org.elasticsearch.plugins;
 
 import org.elasticsearch.Version;
 import org.elasticsearch.common.Nullable;
-import org.elasticsearch.common.xcontent.MediaTypeRegistry;
+import org.elasticsearch.common.xcontent.MediaTypeParser.ParsedMediaType;
 
 
 /**
@@ -36,6 +36,6 @@ public interface RestCompatibilityPlugin {
      * @param hasContent        - a flag indicating if a request has content
      * @return a requested Compatible API Version
      */
-    Version getCompatibleVersion(@Nullable String acceptHeader, @Nullable String contentTypeHeader, boolean hasContent, MediaTypeRegistry mediaTypeRegistry);
+    Version getCompatibleVersion(@Nullable ParsedMediaType acceptHeader, @Nullable ParsedMediaType contentTypeHeader, boolean hasContent);
 
 }

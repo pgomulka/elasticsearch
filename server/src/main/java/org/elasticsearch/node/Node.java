@@ -87,6 +87,8 @@ import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.util.PageCacheRecycler;
+import org.elasticsearch.common.xcontent.MediaTypeDefinition;
+import org.elasticsearch.common.xcontent.MediaTypeParser;
 import org.elasticsearch.common.xcontent.MediaTypeRegistry;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.XContentType;
@@ -532,20 +534,15 @@ public class Node implements Closeable {
                                                  repositoriesServiceReference::get).stream())
                 .collect(Collectors.toList());
 
-            Collection<MediaTypeRegistry> mediaTypesFromPlugins = pluginsService.filterPlugins(ActionPlugin.class)
+            List<MediaTypeDefinition> mediaTypeDefinitions = pluginsService.filterPlugins(ActionPlugin.class)
                 .stream()
-                .map(ActionPlugin::getAdditionalMediaTypes)
+                .flatMap(plugin -> plugin.getAdditionalMediaTypes().stream())
                 .collect(toList());
+            mediaTypeDefinitions.addAll(XContentType.MEDIA_TYPE_DEFINITIONS);
 
-            MediaTypeRegistry globalMediaTypeRegistry = new MediaTypeRegistry()
-                .register(mediaTypesFromPlugins)
-                .register(XContentType.getMediaTypeRegistry());
+            MediaTypeRegistry globalMediaTypeRegistry = new MediaTypeRegistry(mediaTypeDefinitions);
 
-            // passes down to SQL and CompatibleVersion plugins
-//            pluginsService.filterPlugins(MediaTypeRegistryPlugin.class)
-//                .forEach(plugin -> plugin.setGlobalMediaTypeRegistry(globalMediaTypeRegistry));
-
-            CompatibleVersion restCompatibleFunction = getRestCompatibleFunction(globalMediaTypeRegistry);
+            CompatibleVersion restCompatibleFunction = getRestCompatibleFunction();
 
             ActionModule actionModule = new ActionModule(settings, clusterModule.getIndexNameExpressionResolver(),
                 settingsModule.getIndexScopedSettings(), settingsModule.getClusterSettings(), settingsModule.getSettingsFilter(),
@@ -556,7 +553,7 @@ public class Node implements Closeable {
             final RestController restController = actionModule.getRestController();
             final NetworkModule networkModule = new NetworkModule(settings, pluginsService.filterPlugins(NetworkPlugin.class),
                 threadPool, bigArrays, pageCacheRecycler, circuitBreakerService, namedWriteableRegistry, xContentRegistry,
-                networkService, restController, clusterService.getClusterSettings());
+                networkService, restController, clusterService.getClusterSettings(), new MediaTypeParser<>(globalMediaTypeRegistry));
             Collection<UnaryOperator<Map<String, IndexTemplateMetadata>>> indexTemplateMetadataUpgraders =
                 pluginsService.filterPlugins(Plugin.class).stream()
                     .map(Plugin::getIndexTemplateMetadataUpgrader)
@@ -729,14 +726,13 @@ public class Node implements Closeable {
      * @return A function that can be used to determine the requested REST compatible version
      * package scope for testing
      */
-    CompatibleVersion getRestCompatibleFunction(MediaTypeRegistry globalMediaTypeRegistry) {
+    CompatibleVersion getRestCompatibleFunction() {
         List<RestCompatibilityPlugin> restCompatibilityPlugins = pluginsService.filterPlugins(RestCompatibilityPlugin.class);
         final CompatibleVersion compatibleVersion;
         if (restCompatibilityPlugins.size() > 1) {
             throw new IllegalStateException("Only one RestCompatibilityPlugin is allowed");
         } else if (restCompatibilityPlugins.size() == 1) {
-            compatibleVersion = (acceptHeader, contentTypeHeader, hasContent) ->
-                restCompatibilityPlugins.get(0).getCompatibleVersion(acceptHeader, contentTypeHeader, hasContent, globalMediaTypeRegistry);
+            compatibleVersion = restCompatibilityPlugins.get(0)::getCompatibleVersion;
         } else {
             compatibleVersion = CompatibleVersion.CURRENT_VERSION;
         }

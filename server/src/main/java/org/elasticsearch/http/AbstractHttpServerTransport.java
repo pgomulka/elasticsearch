@@ -40,6 +40,7 @@ import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
+import org.elasticsearch.common.xcontent.MediaTypeParser;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestRequest;
@@ -77,6 +78,7 @@ public abstract class AbstractHttpServerTransport extends AbstractLifecycleCompo
     protected final Dispatcher dispatcher;
     protected final CorsHandler corsHandler;
     private final NamedXContentRegistry xContentRegistry;
+    private final MediaTypeParser mediaTypeParser;
 
     protected final PortsRange port;
     protected final ByteSizeValue maxContentLength;
@@ -91,12 +93,14 @@ public abstract class AbstractHttpServerTransport extends AbstractLifecycleCompo
     private final HttpTracer tracer;
 
     protected AbstractHttpServerTransport(Settings settings, NetworkService networkService, BigArrays bigArrays, ThreadPool threadPool,
-                                          NamedXContentRegistry xContentRegistry, Dispatcher dispatcher, ClusterSettings clusterSettings) {
+                                          NamedXContentRegistry xContentRegistry, Dispatcher dispatcher, ClusterSettings clusterSettings,
+                                          MediaTypeParser mediaTypeParser) {
         this.settings = settings;
         this.networkService = networkService;
         this.bigArrays = bigArrays;
         this.threadPool = threadPool;
         this.xContentRegistry = xContentRegistry;
+        this.mediaTypeParser = mediaTypeParser;
         this.dispatcher = dispatcher;
         this.handlingSettings = HttpHandlingSettings.fromSettings(settings);
         this.corsHandler = CorsHandler.fromSettings(settings);
@@ -344,13 +348,13 @@ public abstract class AbstractHttpServerTransport extends AbstractLifecycleCompo
         {
             RestRequest innerRestRequest;
             try {
-                innerRestRequest = RestRequest.request(xContentRegistry, httpRequest, httpChannel);
+                innerRestRequest = RestRequest.request(xContentRegistry, httpRequest, httpChannel, mediaTypeParser);
             } catch (final RestRequest.ContentTypeHeaderException e) {
                 badRequestCause = ExceptionsHelper.useOrSuppress(badRequestCause, e);
                 innerRestRequest = requestWithoutContentTypeHeader(httpRequest, httpChannel, badRequestCause);
             } catch (final RestRequest.BadParameterException e) {
                 badRequestCause = ExceptionsHelper.useOrSuppress(badRequestCause, e);
-                innerRestRequest = RestRequest.requestWithoutParameters(xContentRegistry, httpRequest, httpChannel);
+                innerRestRequest = RestRequest.requestWithoutParameters(xContentRegistry, httpRequest, httpChannel, mediaTypeParser);
             }
             restRequest = innerRestRequest;
         }
@@ -373,7 +377,8 @@ public abstract class AbstractHttpServerTransport extends AbstractLifecycleCompo
                         trace);
             } catch (final IllegalArgumentException e) {
                 badRequestCause = ExceptionsHelper.useOrSuppress(badRequestCause, e);
-                final RestRequest innerRequest = RestRequest.requestWithoutParameters(xContentRegistry, httpRequest, httpChannel);
+                final RestRequest innerRequest =
+                    RestRequest.requestWithoutParameters(xContentRegistry, httpRequest, httpChannel, mediaTypeParser);
                 innerChannel =
                     new DefaultRestChannel(httpChannel, httpRequest, innerRequest, bigArrays, handlingSettings, threadContext, corsHandler,
                         trace);
@@ -387,10 +392,10 @@ public abstract class AbstractHttpServerTransport extends AbstractLifecycleCompo
     private RestRequest requestWithoutContentTypeHeader(HttpRequest httpRequest, HttpChannel httpChannel, Exception badRequestCause) {
         HttpRequest httpRequestWithoutContentType = httpRequest.removeHeader("Content-Type");
         try {
-            return RestRequest.request(xContentRegistry, httpRequestWithoutContentType, httpChannel);
+            return RestRequest.request(xContentRegistry, httpRequestWithoutContentType, httpChannel, mediaTypeParser);
         } catch (final RestRequest.BadParameterException e) {
             badRequestCause.addSuppressed(e);
-            return RestRequest.requestWithoutParameters(xContentRegistry, httpRequestWithoutContentType, httpChannel);
+            return RestRequest.requestWithoutParameters(xContentRegistry, httpRequestWithoutContentType, httpChannel, mediaTypeParser);
         }
     }
 

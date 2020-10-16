@@ -27,9 +27,13 @@ import org.elasticsearch.common.transport.BoundTransportAddress;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.util.PageCacheRecycler;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
+import org.elasticsearch.common.xcontent.MediaTypeParser;
+import org.elasticsearch.common.xcontent.MediaTypeRegistry;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.http.HttpInfo;
 import org.elasticsearch.http.HttpServerTransport;
+import org.elasticsearch.http.HttpServerTransport.Dispatcher;
 import org.elasticsearch.http.HttpStats;
 import org.elasticsearch.http.NullDispatcher;
 import org.elasticsearch.indices.breaker.CircuitBreakerService;
@@ -112,14 +116,17 @@ public class NetworkModuleTests extends ESTestCase {
 
         NetworkModule module = newNetworkModule(settings, new NetworkPlugin() {
             @Override
-            public Map<String, Supplier<HttpServerTransport>> getHttpTransports(Settings settings, ThreadPool threadPool,
+            public Map<String, Supplier<HttpServerTransport>> getHttpTransports(Settings settings,
+                                                                                ThreadPool threadPool,
                                                                                 BigArrays bigArrays,
                                                                                 PageCacheRecycler pageCacheRecycler,
                                                                                 CircuitBreakerService circuitBreakerService,
                                                                                 NamedXContentRegistry xContentRegistry,
                                                                                 NetworkService networkService,
-                                                                                HttpServerTransport.Dispatcher requestDispatcher,
-                                                                                ClusterSettings clusterSettings) {
+                                                                                Dispatcher requestDispatcher,
+                                                                                ClusterSettings clusterSettings,
+                                                                                MediaTypeParser<?> mediaTypeParser
+            ) {
                 return Collections.singletonMap("custom", custom);
             }
         });
@@ -150,14 +157,17 @@ public class NetworkModuleTests extends ESTestCase {
             }
 
             @Override
-            public Map<String, Supplier<HttpServerTransport>> getHttpTransports(Settings settings, ThreadPool threadPool,
+            public Map<String, Supplier<HttpServerTransport>> getHttpTransports(Settings settings,
+                                                                                ThreadPool threadPool,
                                                                                 BigArrays bigArrays,
                                                                                 PageCacheRecycler pageCacheRecycler,
                                                                                 CircuitBreakerService circuitBreakerService,
                                                                                 NamedXContentRegistry xContentRegistry,
                                                                                 NetworkService networkService,
-                                                                                HttpServerTransport.Dispatcher requestDispatcher,
-                                                                                ClusterSettings clusterSettings) {
+                                                                                Dispatcher requestDispatcher,
+                                                                                ClusterSettings clusterSettings,
+                                                                                MediaTypeParser<?> mediaTypeParser
+            ) {
                 Map<String, Supplier<HttpServerTransport>> supplierMap = new HashMap<>();
                 supplierMap.put("custom", custom);
                 supplierMap.put("default_custom", def);
@@ -186,14 +196,17 @@ public class NetworkModuleTests extends ESTestCase {
             }
 
             @Override
-            public Map<String, Supplier<HttpServerTransport>> getHttpTransports(Settings settings, ThreadPool threadPool,
+            public Map<String, Supplier<HttpServerTransport>> getHttpTransports(Settings settings,
+                                                                                ThreadPool threadPool,
                                                                                 BigArrays bigArrays,
                                                                                 PageCacheRecycler pageCacheRecycler,
                                                                                 CircuitBreakerService circuitBreakerService,
                                                                                 NamedXContentRegistry xContentRegistry,
                                                                                 NetworkService networkService,
-                                                                                HttpServerTransport.Dispatcher requestDispatcher,
-                                                                                ClusterSettings clusterSettings) {
+                                                                                Dispatcher requestDispatcher,
+                                                                                ClusterSettings clusterSettings,
+                                                                                MediaTypeParser<?> mediaTypeParser
+            ) {
                 Map<String, Supplier<HttpServerTransport>> supplierMap = new HashMap<>();
                 supplierMap.put("custom", custom);
                 supplierMap.put("default_custom", def);
@@ -259,6 +272,7 @@ public class NetworkModuleTests extends ESTestCase {
     private NetworkModule newNetworkModule(Settings settings, NetworkPlugin... plugins) {
         return new NetworkModule(settings, Arrays.asList(plugins), threadPool, null, null, null, null,
             xContentRegistry(), null, new NullDispatcher(),
-            new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS));
+            new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS),
+            new MediaTypeParser<>(new MediaTypeRegistry(XContentType.MEDIA_TYPE_DEFINITIONS)));
     }
 }

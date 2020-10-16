@@ -19,7 +19,6 @@
 
 package org.elasticsearch.rest;
 
-import org.apache.lucene.util.SetOnce;
 import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.common.Booleans;
 import org.elasticsearch.common.CheckedConsumer;
@@ -31,6 +30,9 @@ import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.LoggingDeprecationHandler;
+import org.elasticsearch.common.xcontent.MediaType;
+import org.elasticsearch.common.xcontent.MediaTypeParser;
+import org.elasticsearch.common.xcontent.MediaTypeParser.ParsedMediaType;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentParser;
@@ -48,16 +50,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.elasticsearch.common.unit.ByteSizeValue.parseBytesSizeValue;
 import static org.elasticsearch.common.unit.TimeValue.parseTimeValue;
 
 public class RestRequest implements ToXContent.Params {
-
-    // tchar pattern as defined by RFC7230 section 3.2.6
-    private static final Pattern TCHAR_PATTERN = Pattern.compile("[a-zA-z0-9!#$%&'*+\\-.\\^_`|~]+");
 
     private static final AtomicLong requestIdGenerator = new AtomicLong();
 
@@ -66,8 +64,14 @@ public class RestRequest implements ToXContent.Params {
     private final Map<String, List<String>> headers;
     private final String rawPath;
     private final Set<String> consumedParams = new HashSet<>();
-    private final SetOnce<XContentType> xContentType = new SetOnce<>();
     private final HttpChannel httpChannel;
+    private final MediaTypeParser<?> mediaTypeParser;
+    @Nullable
+    private final ParsedMediaType contentType;
+    @Nullable
+    private final ParsedMediaType acceptMediaType;
+    @Nullable
+    private final MediaType formatMediaType;
 
     private HttpRequest httpRequest;
 
@@ -81,27 +85,21 @@ public class RestRequest implements ToXContent.Params {
 
     // for testing
     protected RestRequest(NamedXContentRegistry xContentRegistry, Map<String, String> params, String path,
-                          Map<String, List<String>> headers, HttpRequest httpRequest, HttpChannel httpChannel) {
-        this(xContentRegistry, params, path, headers, httpRequest, httpChannel, requestIdGenerator.incrementAndGet());
+                          Map<String, List<String>> headers, HttpRequest httpRequest, HttpChannel httpChannel,
+                          MediaTypeParser<?> mediaTypeParser) {
+        this(xContentRegistry, params, path, headers, httpRequest, httpChannel, mediaTypeParser, requestIdGenerator.incrementAndGet());
     }
 
     protected RestRequest(RestRequest restRequest) {
         this(restRequest.getXContentRegistry(), restRequest.params(), restRequest.path(), restRequest.getHeaders(),
-            restRequest.getHttpRequest(), restRequest.getHttpChannel(), restRequest.getRequestId());
+            restRequest.getHttpRequest(), restRequest.getHttpChannel(), restRequest.mediaTypeParser, restRequest.getRequestId());
     }
 
 
     private RestRequest(NamedXContentRegistry xContentRegistry, Map<String, String> params, String path,
-                        Map<String, List<String>> headers, HttpRequest httpRequest, HttpChannel httpChannel, long requestId) {
-        final XContentType xContentType;
-        try {
-            xContentType = parseContentType(headers.get("Content-Type"));
-        } catch (final IllegalArgumentException e) {
-            throw new ContentTypeHeaderException(e);
-        }
-        if (xContentType != null) {
-            this.xContentType.set(xContentType);
-        }
+                        Map<String, List<String>> headers, HttpRequest httpRequest, HttpChannel httpChannel,
+                        MediaTypeParser<?> mediaTypeParser, long requestId) {
+        this.mediaTypeParser = mediaTypeParser;
         this.xContentRegistry = xContentRegistry;
         this.httpRequest = httpRequest;
         this.httpChannel = httpChannel;
@@ -109,6 +107,9 @@ public class RestRequest implements ToXContent.Params {
         this.rawPath = path;
         this.headers = Collections.unmodifiableMap(headers);
         this.requestId = requestId;
+        this.acceptMediaType = mediaTypeParser.parseMediaType(header("Accept"));
+        this.contentType = mediaTypeParser.parseMediaType(header("Content-Type"));
+        this.formatMediaType = mediaTypeParser.fromFormat(param("format"));
     }
 
 
@@ -132,10 +133,11 @@ public class RestRequest implements ToXContent.Params {
      * @throws BadParameterException      if the parameters can not be decoded
      * @throws ContentTypeHeaderException if the Content-Type header can not be parsed
      */
-    public static RestRequest request(NamedXContentRegistry xContentRegistry, HttpRequest httpRequest, HttpChannel httpChannel) {
+    public static RestRequest request(NamedXContentRegistry xContentRegistry, HttpRequest httpRequest, HttpChannel httpChannel,
+                                      MediaTypeParser<?> mediaTypeParser) {
         Map<String, String> params = params(httpRequest.uri());
         String path = path(httpRequest.uri());
-        return new RestRequest(xContentRegistry, params, path, httpRequest.getHeaders(), httpRequest, httpChannel,
+        return new RestRequest(xContentRegistry, params, path, httpRequest.getHeaders(), httpRequest, httpChannel, mediaTypeParser,
             requestIdGenerator.incrementAndGet());
     }
 
@@ -171,10 +173,10 @@ public class RestRequest implements ToXContent.Params {
      * @throws ContentTypeHeaderException if the Content-Type header can not be parsed
      */
     public static RestRequest requestWithoutParameters(NamedXContentRegistry xContentRegistry, HttpRequest httpRequest,
-                                                       HttpChannel httpChannel) {
+                                                       HttpChannel httpChannel, MediaTypeParser<?> mediaTypeParser) {
         Map<String, String> params = Collections.emptyMap();
         return new RestRequest(xContentRegistry, params, httpRequest.uri(), httpRequest.getHeaders(), httpRequest, httpChannel,
-            requestIdGenerator.incrementAndGet());
+            mediaTypeParser, requestIdGenerator.incrementAndGet());
     }
 
     public enum Method {
@@ -231,7 +233,7 @@ public class RestRequest implements ToXContent.Params {
     public final BytesReference requiredContent() {
         if (hasContent() == false) {
             throw new ElasticsearchParseException("request body is required");
-        } else if (xContentType.get() == null) {
+        } else if (contentType == null) {
             throw new IllegalStateException("unknown content type");
         }
         return content();
@@ -277,7 +279,29 @@ public class RestRequest implements ToXContent.Params {
      */
     @Nullable
     public final XContentType getXContentType() {
-        return xContentType.get();
+        if (contentType != null) {
+            if (contentType.getMediaType() instanceof XContentType) {
+                return (XContentType) contentType.getMediaType();
+            } else {
+                throw new IllegalStateException("content type [" + contentType.getMediaType().typeWithSubtype() + "] is not xcontent");
+            }
+        }
+        return null;
+    }
+
+    @Nullable
+    public final ParsedMediaType getContentType() {
+        return contentType;
+    }
+
+    @Nullable
+    public final ParsedMediaType getAcceptMediaType() {
+        return acceptMediaType;
+    }
+
+    @Nullable
+    public final MediaType getFormatMediaType() {
+        return formatMediaType;
     }
 
     public HttpChannel getHttpChannel() {
@@ -426,7 +450,12 @@ public class RestRequest implements ToXContent.Params {
      */
     public final XContentParser contentParser() throws IOException {
         BytesReference content = requiredContent(); // will throw exception if body or content type missing
-        return xContentType.get().xContent().createParser(xContentRegistry, LoggingDeprecationHandler.INSTANCE, content.streamInput());
+        if (contentType.getMediaType() instanceof XContentType) {
+            return ((XContentType) contentType.getMediaType()).xContent()
+                .createParser(xContentRegistry, LoggingDeprecationHandler.INSTANCE, content.streamInput());
+        } else {
+            throw new IllegalStateException("content type [" + contentType.getMediaType().typeWithSubtype() + "] is not xcontent");
+        }
     }
 
     /**
@@ -486,7 +515,11 @@ public class RestRequest implements ToXContent.Params {
         if (hasContentOrSourceParam() == false) {
             throw new ElasticsearchParseException("request body or source parameter is required");
         } else if (hasContent()) {
-            return new Tuple<>(xContentType.get(), requiredContent());
+            if (contentType.getMediaType() instanceof XContentType) {
+                return new Tuple<>((XContentType) contentType.getMediaType(), requiredContent());
+            } else {
+                throw new IllegalStateException("content type [" + contentType.getMediaType().typeWithSubtype() + "] is not xcontent");
+            }
         }
         String source = param("source");
         String typeParam = param("source_content_type");
@@ -505,7 +538,7 @@ public class RestRequest implements ToXContent.Params {
      * Parses the given content type string for the media type. This method currently ignores parameters.
      */
     // TODO stop ignoring parameters such as charset...
-    public static XContentType parseContentType(List<String> header) {
+    public XContentType parseContentType(List<String> header) {
         if (header == null || header.isEmpty()) {
             return null;
         } else if (header.size() > 1) {
@@ -513,17 +546,16 @@ public class RestRequest implements ToXContent.Params {
         }
 
         String rawContentType = header.get(0);
-        final String[] elements = rawContentType.split("[ \t]*;");
-        if (elements.length > 0) {
-            final String[] splitMediaType = elements[0].split("/");
-            if (splitMediaType.length == 2 && TCHAR_PATTERN.matcher(splitMediaType[0]).matches()
-                && TCHAR_PATTERN.matcher(splitMediaType[1].trim()).matches()) {
-                return XContentType.fromMediaType(elements[0]);
+        ParsedMediaType parsedMediaType = mediaTypeParser.parseMediaType(rawContentType);
+        if (parsedMediaType != null) {
+            if (parsedMediaType.getMediaType() instanceof XContentType) {
+                return (XContentType) parsedMediaType.getMediaType();
             } else {
-                throw new IllegalArgumentException("invalid Content-Type header [" + rawContentType + "]");
+                throw new IllegalArgumentException("content type [" + contentType.getMediaType().typeWithSubtype() + "] is not xcontent");
             }
+        } else {
+            throw new IllegalArgumentException("unsupported Content-Type header [" + rawContentType + "]");
         }
-        throw new IllegalArgumentException("empty Content-Type header");
     }
 
     public static class ContentTypeHeaderException extends RuntimeException {

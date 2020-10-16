@@ -35,6 +35,9 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.common.util.MockBigArrays;
 import org.elasticsearch.common.util.MockPageCacheRecycler;
+import org.elasticsearch.common.xcontent.MediaTypeParser;
+import org.elasticsearch.common.xcontent.MediaTypeRegistry;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.http.HttpPipelinedRequest;
 import org.elasticsearch.http.HttpResponse;
 import org.elasticsearch.http.HttpServerTransport;
@@ -120,7 +123,8 @@ public class Netty4HttpServerPipeliningTests extends ESTestCase {
                 Netty4HttpServerPipeliningTests.this.bigArrays,
                 Netty4HttpServerPipeliningTests.this.threadPool,
                 xContentRegistry(), new NullDispatcher(), new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS),
-                new SharedGroupFactory(settings));
+                new SharedGroupFactory(settings),
+                new MediaTypeParser<>(new MediaTypeRegistry(XContentType.MEDIA_TYPE_DEFINITIONS)));
         }
 
         @Override

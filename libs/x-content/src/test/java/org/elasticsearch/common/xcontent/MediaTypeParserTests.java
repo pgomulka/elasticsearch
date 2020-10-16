@@ -29,12 +29,8 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
 public class MediaTypeParserTests extends ESTestCase {
-    MediaTypeRegistry mediaTypeRegistry = new MediaTypeRegistry();
-    MediaTypeParser<XContentType> mediaTypeParser = new MediaTypeParser.Builder()
-        .withMediaTypeAndParams("application/vnd.elasticsearch+json",
-            XContentType.JSON, Map.of("compatible-with", "\\d+",
-            "charset", "UTF-8"))
-        .build(mediaTypeRegistry);
+    MediaTypeRegistry mediaTypeRegistry = new MediaTypeRegistry(XContentType.MEDIA_TYPE_DEFINITIONS);
+    MediaTypeParser<XContentType> mediaTypeParser = new MediaTypeParser<>(mediaTypeRegistry);
 
     public void testJsonWithParameters() throws Exception {
         String mediaType = "application/vnd.elasticsearch+json";

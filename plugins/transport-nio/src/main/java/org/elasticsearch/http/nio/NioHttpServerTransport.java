@@ -30,6 +30,7 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.util.PageCacheRecycler;
+import org.elasticsearch.common.xcontent.MediaTypeParser;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.http.AbstractHttpServerTransport;
 import org.elasticsearch.http.HttpChannel;
@@ -86,8 +87,9 @@ public class NioHttpServerTransport extends AbstractHttpServerTransport {
 
     public NioHttpServerTransport(Settings settings, NetworkService networkService, BigArrays bigArrays,
                                   PageCacheRecycler pageCacheRecycler, ThreadPool threadPool, NamedXContentRegistry xContentRegistry,
-                                  Dispatcher dispatcher, NioGroupFactory nioGroupFactory, ClusterSettings clusterSettings) {
-        super(settings, networkService, bigArrays, threadPool, xContentRegistry, dispatcher, clusterSettings);
+                                  Dispatcher dispatcher, NioGroupFactory nioGroupFactory, ClusterSettings clusterSettings,
+                                  MediaTypeParser<?> mediaTypeParser) {
+        super(settings, networkService, bigArrays, threadPool, xContentRegistry, dispatcher, clusterSettings, mediaTypeParser);
         this.pageAllocator = new PageAllocator(pageCacheRecycler);
         this.nioGroupFactory = nioGroupFactory;
 

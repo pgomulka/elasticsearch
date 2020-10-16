@@ -34,6 +34,7 @@ import org.elasticsearch.common.io.stream.BytesStreamOutput;
 import org.elasticsearch.common.logging.DeprecationLogger;
 import org.elasticsearch.common.path.PathTrie;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
+import org.elasticsearch.common.xcontent.MediaTypeParser.ParsedMediaType;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.core.internal.io.Streams;
@@ -91,7 +92,7 @@ public class RestController implements HttpServerTransport.Dispatcher {
     /** Rest headers that are copied to internal requests made during a rest request. */
     private final Set<RestHeaderDefinition> headersToCopy;
     private final UsageService usageService;
-    private CompatibleVersion compatibleVersion;
+    private final CompatibleVersion compatibleVersion;
 
 
     public RestController(Set<RestHeaderDefinition> headersToCopy, UnaryOperator<RestHandler> handlerWrapper,
@@ -229,14 +230,16 @@ public class RestController implements HttpServerTransport.Dispatcher {
         throws Exception {
         final int contentLength = request.contentLength();
         if (contentLength > 0) {
-            final XContentType xContentType = request.getXContentType();
-            if (xContentType == null) {
+            final ParsedMediaType parsedMediaType = request.getContentType();
+            if (parsedMediaType == null) {
                 sendContentTypeErrorMessage(request.getAllHeaderValues("Content-Type"), channel);
                 return;
             }
-            if (handler.supportsContentStream() && xContentType != XContentType.JSON && xContentType != XContentType.SMILE) {
+            if (handler.supportsContentStream() && parsedMediaType.getMediaType() != XContentType.JSON &&
+                parsedMediaType.getMediaType() != XContentType.SMILE) {
                 channel.sendResponse(BytesRestResponse.createSimpleErrorResponse(channel, RestStatus.NOT_ACCEPTABLE,
-                    "Content-Type [" + xContentType + "] does not support stream parsing. Use JSON or SMILE instead"));
+                    "Content-Type [" + parsedMediaType.getMediaType().typeWithSubtype() + "] does not support stream parsing. " +
+                        "Use JSON or SMILE instead"));
                 return;
             }
         }
@@ -324,8 +327,8 @@ public class RestController implements HttpServerTransport.Dispatcher {
         final String rawPath = request.rawPath();
         final String uri = request.uri();
         final RestRequest.Method requestMethod;
-        //TODO: USAGE_1 now that we have a version we can implement a REST handler that accepts path, method AND version
-        Version version = compatibleVersion.get(request.header("Accept"), request.header("Content-Type"), request.hasContent());
+
+        Version version = compatibleVersion.get(request.getContentType(), request.getContentType(), request.hasContent());
 
         try {
             // Resolves the HTTP method and fails if the method is invalid
