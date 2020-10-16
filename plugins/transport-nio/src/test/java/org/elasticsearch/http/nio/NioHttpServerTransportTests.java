@@ -45,6 +45,9 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.util.MockBigArrays;
 import org.elasticsearch.common.util.MockPageCacheRecycler;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
+import org.elasticsearch.common.xcontent.MediaTypeParser;
+import org.elasticsearch.common.xcontent.MediaTypeRegistry;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.http.BindHttpException;
 import org.elasticsearch.http.CorsHandler;
 import org.elasticsearch.http.HttpServerTransport;
@@ -89,6 +92,7 @@ public class NioHttpServerTransportTests extends ESTestCase {
     private ThreadPool threadPool;
     private MockBigArrays bigArrays;
     private MockPageCacheRecycler pageRecycler;
+    private MediaTypeParser<?> mediaTypeParser;
 
     @Before
     public void setup() throws Exception {
@@ -96,6 +100,7 @@ public class NioHttpServerTransportTests extends ESTestCase {
         threadPool = new TestThreadPool("test");
         pageRecycler = new MockPageCacheRecycler(Settings.EMPTY);
         bigArrays = new MockBigArrays(pageRecycler, new NoneCircuitBreakerService());
+        mediaTypeParser = new MediaTypeParser<>(new MediaTypeRegistry(XContentType.MEDIA_TYPE_DEFINITIONS));
     }
 
     @After
@@ -162,7 +167,7 @@ public class NioHttpServerTransportTests extends ESTestCase {
         };
         try (NioHttpServerTransport transport = new NioHttpServerTransport(settings, networkService, bigArrays, pageRecycler, threadPool,
             xContentRegistry(), dispatcher, new NioGroupFactory(settings, logger),
-            new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS))) {
+            new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS), mediaTypeParser)) {
             transport.start();
             final TransportAddress remoteAddress = randomFrom(transport.boundAddress().boundAddresses());
             try (NioHttpClient client = new NioHttpClient()) {
@@ -197,7 +202,7 @@ public class NioHttpServerTransportTests extends ESTestCase {
         final Settings initialSettings = createSettings();
         try (NioHttpServerTransport transport = new NioHttpServerTransport(initialSettings, networkService, bigArrays, pageRecycler,
             threadPool, xContentRegistry(), new NullDispatcher(), new NioGroupFactory(Settings.EMPTY, logger),
-            new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS))) {
+            new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS), mediaTypeParser)) {
             transport.start();
             TransportAddress remoteAddress = randomFrom(transport.boundAddress().boundAddresses());
             Settings settings = Settings.builder()
@@ -206,7 +211,7 @@ public class NioHttpServerTransportTests extends ESTestCase {
                 .build();
             try (NioHttpServerTransport otherTransport = new NioHttpServerTransport(settings, networkService, bigArrays, pageRecycler,
                 threadPool, xContentRegistry(), new NullDispatcher(), new NioGroupFactory(Settings.EMPTY, logger),
-                new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS))) {
+                new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS), mediaTypeParser)) {
                 BindHttpException bindHttpException = expectThrows(BindHttpException.class, () -> otherTransport.start());
                 assertEquals(
                     "Failed to bind to " + NetworkAddress.format(remoteAddress.address()),
@@ -243,7 +248,7 @@ public class NioHttpServerTransportTests extends ESTestCase {
 
         try (NioHttpServerTransport transport = new NioHttpServerTransport(settings, networkService, bigArrays, pageRecycler,
             threadPool, xContentRegistry(), dispatcher, new NioGroupFactory(settings, logger),
-            new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS))) {
+            new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS), mediaTypeParser)) {
             transport.start();
             final TransportAddress remoteAddress = randomFrom(transport.boundAddress().boundAddresses());
 
@@ -305,7 +310,8 @@ public class NioHttpServerTransportTests extends ESTestCase {
 
         try (NioHttpServerTransport transport = new NioHttpServerTransport(
             Settings.EMPTY, networkService, bigArrays, pageRecycler, threadPool, xContentRegistry(), dispatcher,
-            new NioGroupFactory(Settings.EMPTY, logger), new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS))) {
+            new NioGroupFactory(Settings.EMPTY, logger), new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS),
+            mediaTypeParser)) {
             transport.start();
             final TransportAddress remoteAddress = randomFrom(transport.boundAddress().boundAddresses());
 
@@ -361,7 +367,7 @@ public class NioHttpServerTransportTests extends ESTestCase {
 
         try (NioHttpServerTransport transport = new NioHttpServerTransport(settings, networkService, bigArrays, pageRecycler,
             threadPool, xContentRegistry(), dispatcher, new NioGroupFactory(settings, logger),
-            new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS))) {
+            new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS), mediaTypeParser)) {
             transport.start();
             final TransportAddress remoteAddress = randomFrom(transport.boundAddress().boundAddresses());
 
@@ -411,7 +417,7 @@ public class NioHttpServerTransportTests extends ESTestCase {
 
         try (NioHttpServerTransport transport = new NioHttpServerTransport(settings, networkService, bigArrays, pageRecycler,
             threadPool, xContentRegistry(), dispatcher, new NioGroupFactory(settings, logger),
-            new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS))) {
+            new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS), mediaTypeParser)) {
             transport.start();
             final TransportAddress remoteAddress = randomFrom(transport.boundAddress().boundAddresses());
 

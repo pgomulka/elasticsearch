@@ -16,7 +16,10 @@ import org.elasticsearch.common.settings.ClusterSettings;
 import org.elasticsearch.common.settings.IndexScopedSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsFilter;
+import org.elasticsearch.common.xcontent.MediaTypeDefinition;
+import org.elasticsearch.common.xcontent.MediaTypeRegistry;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.env.NodeEnvironment;
 import org.elasticsearch.license.LicenseUtils;
@@ -45,7 +48,11 @@ import org.elasticsearch.xpack.sql.type.SqlDataTypeRegistry;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
+
+import static org.elasticsearch.common.xcontent.XContentType.COMPATIBLE_WITH_PARAMETER_NAME;
+import static org.elasticsearch.common.xcontent.XContentType.VERSION_PATTERN;
 
 public class SqlPlugin extends Plugin implements ActionPlugin {
 
@@ -124,4 +131,20 @@ public class SqlPlugin extends Plugin implements ActionPlugin {
                 usageAction,
                 infoAction);
     }
+
+    @Override
+    public List<MediaTypeDefinition> getAdditionalMediaTypes() {
+        return List.of(
+            new MediaTypeDefinition(TextFormat.PLAIN_TEXT, Map.of("header", "present|absent", "charset", "utf-8")),
+            new MediaTypeDefinition(TextFormat.CSV, Map.of("header", "present|absent", "charset", "utf-8", "delimiter", ".+")),
+            new MediaTypeDefinition(TextFormat.TSV, Map.of("header", "present|absent", "charset", "utf-8")),
+            new MediaTypeDefinition("text/vnd.elasticsearch+plain", TextFormat.PLAIN_TEXT,
+                Map.of("header", "present|absent", "charset", "utf-8", COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN)),
+            new MediaTypeDefinition("text/vnd.elasticsearch+csv", TextFormat.CSV,
+                Map.of("header", "present|absent", "charset", "utf-8", "delimiter", ".+", COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN)),
+            new MediaTypeDefinition("text/vnd.elasticsearch+tsv", TextFormat.TSV,
+                Map.of("header", "present|absent", "charset", "utf-8", COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN))
+        );
+    }
+
 }

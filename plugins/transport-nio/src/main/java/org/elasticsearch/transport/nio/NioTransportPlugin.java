@@ -31,8 +31,10 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.util.PageCacheRecycler;
 import org.elasticsearch.common.util.concurrent.EsExecutors;
+import org.elasticsearch.common.xcontent.MediaTypeParser;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.http.HttpServerTransport;
+import org.elasticsearch.http.HttpServerTransport.Dispatcher;
 import org.elasticsearch.http.nio.NioHttpServerTransport;
 import org.elasticsearch.indices.breaker.CircuitBreakerService;
 import org.elasticsearch.plugins.NetworkPlugin;
@@ -82,16 +84,20 @@ public class NioTransportPlugin extends Plugin implements NetworkPlugin {
     }
 
     @Override
-    public Map<String, Supplier<HttpServerTransport>> getHttpTransports(Settings settings, ThreadPool threadPool, BigArrays bigArrays,
+    public Map<String, Supplier<HttpServerTransport>> getHttpTransports(Settings settings,
+                                                                        ThreadPool threadPool,
+                                                                        BigArrays bigArrays,
                                                                         PageCacheRecycler pageCacheRecycler,
                                                                         CircuitBreakerService circuitBreakerService,
                                                                         NamedXContentRegistry xContentRegistry,
                                                                         NetworkService networkService,
-                                                                        HttpServerTransport.Dispatcher dispatcher,
-                                                                        ClusterSettings clusterSettings) {
+                                                                        Dispatcher dispatcher,
+                                                                        ClusterSettings clusterSettings,
+                                                                        MediaTypeParser<?> mediaTypeParser
+    ) {
         return Collections.singletonMap(NIO_HTTP_TRANSPORT_NAME,
             () -> new NioHttpServerTransport(settings, networkService, bigArrays, pageCacheRecycler, threadPool, xContentRegistry,
-                dispatcher, getNioGroupFactory(settings), clusterSettings));
+                dispatcher, getNioGroupFactory(settings), clusterSettings, mediaTypeParser));
     }
 
     private synchronized NioGroupFactory getNioGroupFactory(Settings settings) {

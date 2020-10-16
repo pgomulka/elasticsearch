@@ -33,7 +33,10 @@ import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.common.util.MockBigArrays;
 import org.elasticsearch.common.util.MockPageCacheRecycler;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
+import org.elasticsearch.common.xcontent.MediaTypeParser;
+import org.elasticsearch.common.xcontent.MediaTypeRegistry;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.indices.breaker.NoneCircuitBreakerService;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestRequest;
@@ -140,7 +143,8 @@ public class AbstractHttpServerTransportTests extends ESTestCase {
 
         try (AbstractHttpServerTransport transport =
                  new AbstractHttpServerTransport(Settings.EMPTY, networkService, bigArrays, threadPool, xContentRegistry(), dispatcher,
-                     new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS)) {
+                     new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS),
+                     new MediaTypeParser<>(new MediaTypeRegistry(XContentType.MEDIA_TYPE_DEFINITIONS))) {
 
                      @Override
                      protected HttpServerChannel bind(InetSocketAddress hostAddress) {
@@ -199,7 +203,7 @@ public class AbstractHttpServerTransportTests extends ESTestCase {
                          public void dispatchBadRequest(RestChannel channel, ThreadContext threadContext, Throwable cause) {
                              channel.sendResponse(emptyResponse(RestStatus.BAD_REQUEST));
                          }
-                     }, clusterSettings) {
+                     }, clusterSettings, new MediaTypeParser<>(new MediaTypeRegistry(XContentType.MEDIA_TYPE_DEFINITIONS))) {
                      @Override
                      protected HttpServerChannel bind(InetSocketAddress hostAddress) {
                          return null;

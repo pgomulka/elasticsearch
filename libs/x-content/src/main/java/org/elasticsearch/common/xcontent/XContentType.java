@@ -24,7 +24,7 @@ import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.common.xcontent.smile.SmileXContent;
 import org.elasticsearch.common.xcontent.yaml.YamlXContent;
 
-import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -114,26 +114,28 @@ public enum XContentType implements MediaType {
         }
     };
 
-    private static final String COMPATIBLE_WITH_PARAMETER_NAME = "compatible-with";
-    private static final String VERSION_PATTERN = "\\d+";
-    public static final MediaTypeParser<XContentType> mediaTypeParser = new MediaTypeParser.Builder<XContentType>()
-        .withMediaTypeAndParams("application/smile", SMILE, Collections.emptyMap())
-        .withMediaTypeAndParams("application/cbor", CBOR, Collections.emptyMap())
-        .withMediaTypeAndParams("application/json", JSON, Map.of("charset", "UTF-8"))
-        .withMediaTypeAndParams("application/yaml", YAML, Map.of("charset", "UTF-8"))
-        .withMediaTypeAndParams("application/*", JSON, Map.of("charset", "UTF-8"))
-        .withMediaTypeAndParams("application/x-ndjson", JSON, Map.of("charset", "UTF-8"))
-        .withMediaTypeAndParams("application/vnd.elasticsearch+json", JSON,
+    public static final String COMPATIBLE_WITH_PARAMETER_NAME = "compatible-with";
+    public static final String VERSION_PATTERN = "\\d+";
+
+    public static final List<MediaTypeDefinition> MEDIA_TYPE_DEFINITIONS = List.of(
+        new MediaTypeDefinition(SMILE, Map.of()),
+        new MediaTypeDefinition(CBOR, Map.of()),
+        new MediaTypeDefinition(JSON, Map.of("charset", "UTF-8")),
+        new MediaTypeDefinition(YAML, Map.of("charset", "UTF-8")),
+        new MediaTypeDefinition("application/x-ndjson", JSON, Map.of("charset", "UTF-8")),
+        new MediaTypeDefinition("application/vnd.elasticsearch+json", JSON,
+            Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8")),
+        new MediaTypeDefinition("application/vnd.elasticsearch+smile", SMILE,
+            Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8")),
+        new MediaTypeDefinition("application/vnd.elasticsearch+yaml", YAML,
+            Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8")),
+        new MediaTypeDefinition("application/vnd.elasticsearch+cbor", CBOR,
+            Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8")),
+        new MediaTypeDefinition("application/vnd.elasticsearch+x-ndjson", JSON,
             Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8"))
-        .withMediaTypeAndParams("application/vnd.elasticsearch+smile", SMILE,
-            Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8"))
-        .withMediaTypeAndParams("application/vnd.elasticsearch+yaml", YAML,
-            Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8"))
-        .withMediaTypeAndParams("application/vnd.elasticsearch+cbor", CBOR,
-            Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8"))
-        .withMediaTypeAndParams("application/vnd.elasticsearch+x-ndjson", JSON,
-            Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8"))
-        .build();
+    );
+
+    private static final MediaTypeParser<XContentType> PARSER = new MediaTypeParser<>(new MediaTypeRegistry(MEDIA_TYPE_DEFINITIONS));
 
     /**
      * Accepts a format string, which is most of the time is equivalent to {@link XContentType#subtype()}
@@ -142,7 +144,7 @@ public enum XContentType implements MediaType {
      * This method will return {@code null} if no match is found
      */
     public static XContentType fromFormat(String mediaType) {
-        return mediaTypeParser.fromFormat(mediaType);
+        return PARSER.fromFormat(mediaType);
     }
 
     /**
@@ -152,24 +154,13 @@ public enum XContentType implements MediaType {
      * This method will return {@code null} if no match is found
      */
     public static XContentType fromMediaType(String mediaTypeHeaderValue) {
-        return mediaTypeParser.fromMediaType(mediaTypeHeaderValue);
+        return PARSER.fromMediaType(mediaTypeHeaderValue);
     }
 
-    private int index;
+    private final int index;
 
     XContentType(int index) {
         this.index = index;
-    }
-
-    public static Byte parseVersion(String mediaType) {
-        MediaTypeParser<XContentType>.ParsedMediaType parsedMediaType = mediaTypeParser.parseMediaType(mediaType);
-        if (parsedMediaType != null) {
-            String version = parsedMediaType
-                .getParameters()
-                .get(COMPATIBLE_WITH_PARAMETER_NAME);
-            return version != null ? Byte.parseByte(version) : null;
-        }
-        return null;
     }
 
     public int index() {

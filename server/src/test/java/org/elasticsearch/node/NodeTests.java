@@ -28,6 +28,7 @@ import org.elasticsearch.common.breaker.CircuitBreaker;
 import org.elasticsearch.common.network.NetworkModule;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.BoundTransportAddress;
+import org.elasticsearch.common.xcontent.MediaTypeParser.ParsedMediaType;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.index.IndexService;
 import org.elasticsearch.index.engine.Engine.Searcher;
@@ -345,14 +346,14 @@ public class NodeTests extends ESTestCase {
 
     public static class TestRestCompatibility1 extends Plugin implements RestCompatibilityPlugin {
         @Override
-        public Version getCompatibleVersion(String acceptHeader, String contentTypeHeader, boolean hasContent) {
+        public Version getCompatibleVersion(ParsedMediaType acceptMediaType, ParsedMediaType contentType, boolean hasContent) {
             return Version.CURRENT.previousMajor();
         }
     }
 
     public static class TestRestCompatibility2 extends Plugin implements RestCompatibilityPlugin {
         @Override
-        public Version getCompatibleVersion(String acceptHeader, String contentTypeHeader, boolean hasContent) {
+        public Version getCompatibleVersion(ParsedMediaType acceptMediaType, ParsedMediaType contentType, boolean hasContent) {
             return null;
         }
     }
@@ -377,7 +378,7 @@ public class NodeTests extends ESTestCase {
 
         try (Node node = new MockNode(settings.build(), plugins)) {
             CompatibleVersion restCompatibleFunction = node.getRestCompatibleFunction();
-            assertThat(restCompatibleFunction.get("", "", false), equalTo(Version.CURRENT.previousMajor()));
+            assertThat(restCompatibleFunction.get(null, null, false), equalTo(Version.CURRENT.previousMajor()));
         }
     }
 
@@ -390,7 +391,7 @@ public class NodeTests extends ESTestCase {
 
         try (Node node = new MockNode(settings.build(), plugins)) {
             CompatibleVersion restCompatibleFunction = node.getRestCompatibleFunction();
-            assertThat(restCompatibleFunction.get("", "", false), equalTo(Version.CURRENT));
+            assertThat(restCompatibleFunction.get(null, null, false), equalTo(Version.CURRENT));
         }
     }
 }

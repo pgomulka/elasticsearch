@@ -19,6 +19,10 @@
 
 package org.elasticsearch.common.xcontent;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.regex.Pattern;
+
 /**
  * Abstracts a <a href="http://en.wikipedia.org/wiki/Internet_media_type">Media Type</a> and a format parameter.
  * Media types are used as values on Content-Type and Accept headers
@@ -46,7 +50,11 @@ public interface MediaType {
     /**
      * returns a string representation of a media type.
      */
-    default String typeWithSubtype(){
+    default String typeWithSubtype() {
         return type() + "/" + subtype();
+    }
+
+    default Map<String, Pattern> validatedParameters() {
+        return Collections.emptyMap();
     }
 }

@@ -8,11 +8,19 @@ package org.elasticsearch.compat;
 
 import org.elasticsearch.ElasticsearchStatusException;
 import org.elasticsearch.Version;
+import org.elasticsearch.common.xcontent.MediaType;
+import org.elasticsearch.common.xcontent.MediaTypeParser.ParsedMediaType;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.test.hamcrest.ElasticsearchMatchers;
 import org.hamcrest.Matcher;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 
 public class CompatibleVersionPluginTests extends ESTestCase {
@@ -182,30 +190,86 @@ public class CompatibleVersionPluginTests extends ESTestCase {
         return "some body";
     }
 
-    private String contentTypeHeader(int version) {
+    private ParsedMediaType contentTypeHeader(int version) {
         return mediaType(String.valueOf(version));
     }
 
-    private String acceptHeader(int version) {
+    private ParsedMediaType acceptHeader(int version) {
         return mediaType(String.valueOf(version));
     }
 
-    private String acceptHeader(String value) {
-        return value;
+    private ParsedMediaType acceptHeader(String value) {
+        return fromString(value);
     }
 
-    private String contentTypeHeader(String value) {
-        return value;
+    private ParsedMediaType contentTypeHeader(String value) {
+        return fromString(value);
     }
 
-    private String mediaType(String version) {
+    private ParsedMediaType fromString(String value) {
+        if (value == null) {
+            return null;
+        }
+        String[] splitParams = value.split(";");
+        assertThat(splitParams.length, greaterThanOrEqualTo(1));
+        String mediaType = splitParams[0];
+        String[] splitMediaType = mediaType.split("/");
+        assertThat(splitMediaType.length, is(2));
+        String type = splitMediaType[0];
+        String subtype = splitMediaType[1];
+
+        Map<String, String> params;
+        if (splitParams.length > 1) {
+            params = new HashMap<>();
+            for (int i = 1; i < splitParams.length; i++) {
+                String[] paramAndValue = splitParams[i].split("=");
+                assertThat(paramAndValue.length, is(2));
+                params.put(paramAndValue[0], paramAndValue[1]);
+            }
+        } else {
+            params = Map.of();
+        }
+        return new ParsedMediaType(new MediaType() {
+            @Override
+            public String type() {
+                return type;
+            }
+
+            @Override
+            public String subtype() {
+                return subtype;
+            }
+
+            @Override
+            public String format() {
+                return null;
+            }
+        }, params);
+    }
+
+    private ParsedMediaType mediaType(String version) {
         if (version != null) {
-            return "application/vnd.elasticsearch+json;compatible-with=" + version;
+            return new ParsedMediaType(new MediaType() {
+                @Override
+                public String type() {
+                    return "application";
+                }
+
+                @Override
+                public String subtype() {
+                    return "vnd.elasticsearch+json";
+                }
+
+                @Override
+                public String format() {
+                    return null;
+                }
+            }, Map.of(XContentType.COMPATIBLE_WITH_PARAMETER_NAME, version));
         }
         return null;
     }
 
-    private Version requestWith(String accept, String contentType, String body) {
+    private Version requestWith(ParsedMediaType accept, ParsedMediaType contentType, String body) {
         return compatibleVersionPlugin.getCompatibleVersion(accept, contentType, body.isEmpty() == false);
     }
 

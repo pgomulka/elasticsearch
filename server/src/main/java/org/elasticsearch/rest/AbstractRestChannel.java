@@ -101,11 +101,12 @@ public abstract class AbstractRestChannel implements RestChannel {
     public XContentBuilder newBuilder(@Nullable XContentType requestContentType, @Nullable XContentType responseContentType,
             boolean useFiltering) throws IOException {
         if (responseContentType == null) {
-            if (Strings.hasText(format)) {
-                responseContentType = XContentType.fromFormat(format);
+            if (request.getFormatMediaType() != null && request.getFormatMediaType() instanceof XContentType) {
+                responseContentType = (XContentType) request.getFormatMediaType();
             }
-            if (responseContentType == null) {
-                responseContentType = XContentType.fromMediaType(acceptHeader);
+            if (responseContentType == null && request.getAcceptMediaType() != null &&
+                request.getAcceptMediaType().getMediaType() instanceof XContentType) {
+                responseContentType = (XContentType) request.getAcceptMediaType().getMediaType();
             }
         }
         // try to determine the response content type from the media type or the format query string parameter, with the format parameter

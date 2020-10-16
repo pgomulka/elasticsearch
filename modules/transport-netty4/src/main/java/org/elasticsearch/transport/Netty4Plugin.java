@@ -29,8 +29,10 @@ import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.util.PageCacheRecycler;
+import org.elasticsearch.common.xcontent.MediaTypeParser;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.http.HttpServerTransport;
+import org.elasticsearch.http.HttpServerTransport.Dispatcher;
 import org.elasticsearch.http.netty4.Netty4HttpServerTransport;
 import org.elasticsearch.indices.breaker.CircuitBreakerService;
 import org.elasticsearch.plugins.NetworkPlugin;
@@ -84,16 +86,20 @@ public class Netty4Plugin extends Plugin implements NetworkPlugin {
     }
 
     @Override
-    public Map<String, Supplier<HttpServerTransport>> getHttpTransports(Settings settings, ThreadPool threadPool, BigArrays bigArrays,
+    public Map<String, Supplier<HttpServerTransport>> getHttpTransports(Settings settings,
+                                                                        ThreadPool threadPool,
+                                                                        BigArrays bigArrays,
                                                                         PageCacheRecycler pageCacheRecycler,
                                                                         CircuitBreakerService circuitBreakerService,
                                                                         NamedXContentRegistry xContentRegistry,
                                                                         NetworkService networkService,
-                                                                        HttpServerTransport.Dispatcher dispatcher,
-                                                                        ClusterSettings clusterSettings) {
+                                                                        Dispatcher dispatcher,
+                                                                        ClusterSettings clusterSettings,
+                                                                        MediaTypeParser<?> mediaTypeParser
+    ) {
         return Collections.singletonMap(NETTY_HTTP_TRANSPORT_NAME,
             () -> new Netty4HttpServerTransport(settings, networkService, bigArrays, threadPool, xContentRegistry, dispatcher,
-                clusterSettings, getSharedGroupFactory(settings)));
+                clusterSettings, getSharedGroupFactory(settings), mediaTypeParser));
     }
 
     private SharedGroupFactory getSharedGroupFactory(Settings settings) {

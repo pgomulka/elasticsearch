@@ -59,10 +59,11 @@ public class RestTable {
     }
 
     private static XContentType getXContentType(RestRequest request) {
-        if (request.hasParam("format")) {
-            return XContentType.fromFormat(request.param("format"));
+        if (request.getFormatMediaType() != null && request.getFormatMediaType() instanceof XContentType) {
+            return (XContentType) request.getFormatMediaType();
         }
-        return XContentType.fromMediaType(request.header("Accept"));
+        return request.getAcceptMediaType() != null && request.getAcceptMediaType().getMediaType() instanceof XContentType ?
+            (XContentType) request.getAcceptMediaType().getMediaType() : null;
     }
 
     public static RestResponse buildXContentBuilder(Table table, RestChannel channel) throws Exception {

@@ -23,6 +23,8 @@ import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.common.CheckedConsumer;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
+import org.elasticsearch.common.xcontent.MediaTypeParser;
+import org.elasticsearch.common.xcontent.MediaTypeRegistry;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.XContentType;
@@ -94,7 +96,8 @@ public class RestRequestTests extends ESTestCase {
         when (httpRequest.getHeaders()).thenReturn(
             Collections.singletonMap("Content-Type", Collections.singletonList(randomFrom("application/json", "application/x-ndjson"))));
         final RestRequest request =
-                RestRequest.request(mock(NamedXContentRegistry.class), httpRequest, mock(HttpChannel.class));
+                RestRequest.request(mock(NamedXContentRegistry.class), httpRequest, mock(HttpChannel.class),
+                    new MediaTypeParser<>(new MediaTypeRegistry(XContentType.MEDIA_TYPE_DEFINITIONS)));
         assertFalse(request.isContentConsumed());
         try {
             consumer.accept(request);
@@ -265,7 +268,8 @@ public class RestRequestTests extends ESTestCase {
 
         private ContentRestRequest(RestRequest restRequest) {
             super(restRequest.getXContentRegistry(), restRequest.params(), restRequest.path(), restRequest.getHeaders(),
-                restRequest.getHttpRequest(), restRequest.getHttpChannel());
+                restRequest.getHttpRequest(), restRequest.getHttpChannel(),
+                new MediaTypeParser<>(new MediaTypeRegistry(XContentType.MEDIA_TYPE_DEFINITIONS)));
             this.restRequest = restRequest;
         }
 

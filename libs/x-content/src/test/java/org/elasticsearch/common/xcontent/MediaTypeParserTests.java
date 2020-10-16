@@ -29,12 +29,8 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
 public class MediaTypeParserTests extends ESTestCase {
-
-    MediaTypeParser<XContentType> mediaTypeParser = new MediaTypeParser.Builder<XContentType>()
-        .withMediaTypeAndParams("application/vnd.elasticsearch+json",
-            XContentType.JSON, Map.of("compatible-with", "\\d+",
-            "charset", "UTF-8"))
-        .build();
+    MediaTypeRegistry mediaTypeRegistry = new MediaTypeRegistry(XContentType.MEDIA_TYPE_DEFINITIONS);
+    MediaTypeParser<XContentType> mediaTypeParser = new MediaTypeParser<>(mediaTypeRegistry);
 
     public void testJsonWithParameters() throws Exception {
         String mediaType = "application/vnd.elasticsearch+json";
@@ -74,4 +70,26 @@ public class MediaTypeParserTests extends ESTestCase {
         assertThat(mediaTypeParser.parseMediaType(mediaType + "; key=") ,
             is(nullValue()));
     }
+
+    public void testVersionParsing() {
+        byte version = (byte) Math.abs(randomByte());
+        assertThat(mediaTypeParser.parseVersion("application/vnd.elasticsearch+json;compatible-with=" + version),
+            equalTo(version));
+        assertThat(mediaTypeParser.parseVersion("application/json"),
+            nullValue());
+
+
+        assertThat(mediaTypeParser.parseVersion("APPLICATION/VND.ELASTICSEARCH+JSON;COMPATIBLE-WITH=" + version),
+            equalTo(version));
+        assertThat(mediaTypeParser.parseVersion("APPLICATION/JSON"),
+            nullValue());
+
+        assertThat(mediaTypeParser.parseVersion("application/json;compatible-with=" + version + ".0"),
+            is(nullValue()));
+    }
+
+    public void testUnrecognizedParameter() {
+        assertThat(mediaTypeParser.parseVersion("application/json; sth=123"),
+            is(nullValue()));    }
+
 }
