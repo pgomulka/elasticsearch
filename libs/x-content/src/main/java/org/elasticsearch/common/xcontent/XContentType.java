@@ -135,6 +135,8 @@ public enum XContentType implements MediaType {
             Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8"))
     );
 
+    private static final MediaTypeParser<XContentType> PARSER = new MediaTypeParser<>(new MediaTypeRegistry(MEDIA_TYPE_DEFINITIONS));
+
     /**
      * Accepts a format string, which is most of the time is equivalent to {@link XContentType#subtype()}
      * and attempts to match the value to an {@link XContentType}.
@@ -142,7 +144,7 @@ public enum XContentType implements MediaType {
      * This method will return {@code null} if no match is found
      */
     public static XContentType fromFormat(String mediaType) {
-        return null; // TODO
+        return PARSER.fromFormat(mediaType);
     }
 
     /**
@@ -152,24 +154,13 @@ public enum XContentType implements MediaType {
      * This method will return {@code null} if no match is found
      */
     public static XContentType fromMediaType(String mediaTypeHeaderValue) {
-        return null; // TODO
+        return PARSER.fromMediaType(mediaTypeHeaderValue);
     }
 
     private final int index;
 
     XContentType(int index) {
         this.index = index;
-    }
-
-    public static Byte parseVersion(String mediaType) {
-        /*MediaTypeParser<XContentType>.ParsedMediaType parsedMediaType = mediaTypeParser.parseMediaType(mediaType);
-        if (parsedMediaType != null) {
-            String version = parsedMediaType
-                .getParameters()
-                .get(COMPATIBLE_WITH_PARAMETER_NAME);
-            return version != null ? Byte.parseByte(version) : null;
-        }*/
-        return null;
     }
 
     public int index() {

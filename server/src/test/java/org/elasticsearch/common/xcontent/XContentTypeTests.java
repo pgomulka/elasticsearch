@@ -23,7 +23,6 @@ import org.elasticsearch.test.ESTestCase;
 import java.util.Locale;
 
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
 public class XContentTypeTests extends ESTestCase {
@@ -117,33 +116,6 @@ public class XContentTypeTests extends ESTestCase {
         assertThat(XContentType.fromMediaType("APPLICATION/JSON"),
             equalTo(XContentType.JSON));
     }
-
-    public void testVersionParsing() {
-        byte version = (byte) Math.abs(randomByte());
-        assertThat(XContentType.parseVersion("application/vnd.elasticsearch+json;compatible-with=" + version),
-            equalTo(version));
-        assertThat(XContentType.parseVersion("application/vnd.elasticsearch+cbor;compatible-with=" + version),
-            equalTo(version));
-        assertThat(XContentType.parseVersion("application/vnd.elasticsearch+smile;compatible-with=" + version),
-            equalTo(version));
-        assertThat(XContentType.parseVersion("application/vnd.elasticsearch+x-ndjson;compatible-with=" + version),
-            equalTo(version));
-        assertThat(XContentType.parseVersion("application/json"),
-            nullValue());
-
-
-        assertThat(XContentType.parseVersion("APPLICATION/VND.ELASTICSEARCH+JSON;COMPATIBLE-WITH=" + version),
-            equalTo(version));
-        assertThat(XContentType.parseVersion("APPLICATION/JSON"),
-            nullValue());
-
-        assertThat(XContentType.parseVersion("application/json;compatible-with=" + version + ".0"),
-            is(nullValue()));
-    }
-
-    public void testUnrecognizedParameter() {
-        assertThat(XContentType.parseVersion("application/json; sth=123"),
-            is(nullValue()));    }
 
     public void testMediaTypeWithoutESSubtype() {
         String version = String.valueOf(Math.abs(randomByte()));
