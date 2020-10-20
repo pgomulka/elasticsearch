@@ -21,6 +21,7 @@ package org.elasticsearch.rest;
 
 import org.apache.lucene.util.SetOnce;
 import org.elasticsearch.ElasticsearchParseException;
+import org.elasticsearch.Version;
 import org.elasticsearch.common.Booleans;
 import org.elasticsearch.common.CheckedConsumer;
 import org.elasticsearch.common.Nullable;
@@ -31,6 +32,7 @@ import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.LoggingDeprecationHandler;
+import org.elasticsearch.common.xcontent.MediaType;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.ParsedMediaType;
 import org.elasticsearch.common.xcontent.ToXContent;
@@ -49,7 +51,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.elasticsearch.common.unit.ByteSizeValue.parseBytesSizeValue;
@@ -66,8 +67,8 @@ public class RestRequest implements ToXContent.Params {
     private final Set<String> consumedParams = new HashSet<>();
     private final SetOnce<XContentType> xContentType = new SetOnce<>();
     private final HttpChannel httpChannel;
-    private final ParsedMediaType parsedContentType;
-    private final ParsedMediaType parsedAccept;
+    private final MediaType parsedContentType;
+    private final MediaType parsedAccept;
 
     private HttpRequest httpRequest;
 
@@ -81,17 +82,17 @@ public class RestRequest implements ToXContent.Params {
 
     protected RestRequest(NamedXContentRegistry xContentRegistry, Map<String, String> params, String path,
                           Map<String, List<String>> headers, HttpRequest httpRequest, HttpChannel httpChannel,
-                          ParsedMediaType parsedContentType, ParsedMediaType parsedAccept) {
+                          MediaType parsedContentType, MediaType parsedAccept) {
         this(xContentRegistry, params, path, headers, httpRequest, httpChannel, requestIdGenerator.incrementAndGet(), parsedContentType, parsedAccept);
     }
 
     private RestRequest(NamedXContentRegistry xContentRegistry, Map<String, String> params, String path,
                         Map<String, List<String>> headers, HttpRequest httpRequest, HttpChannel httpChannel, long requestId,
-                        ParsedMediaType parsedContentType, ParsedMediaType parsedAccept) {
+                        MediaType parsedContentType, MediaType parsedAccept) {
         XContentType xContentType = null;
 
         if (parsedContentType != null) {
-            xContentType = XContentType.fromMediaType(parsedContentType.mimeTypeWithoutParams());
+            xContentType = XContentType.fromMediaType(parsedContentType.canonical());
         }
 
         if (xContentType != null) {
@@ -133,7 +134,7 @@ public class RestRequest implements ToXContent.Params {
      * @throws ContentTypeHeaderException if the Content-Type header can not be parsed
      */
     public static RestRequest request(NamedXContentRegistry xContentRegistry, HttpRequest httpRequest, HttpChannel httpChannel,
-                                      ParsedMediaType parsedContentType, ParsedMediaType parsedAccept) {
+                                      MediaType parsedContentType, MediaType parsedAccept, Version compatibleVersion) {
         Map<String, String> params = params(httpRequest.uri());
         String path = path(httpRequest.uri());
         return new RestRequest(xContentRegistry, params, path, httpRequest.getHeaders(), httpRequest, httpChannel,
@@ -172,7 +173,7 @@ public class RestRequest implements ToXContent.Params {
      * @throws ContentTypeHeaderException if the Content-Type header can not be parsed
      */
     public static RestRequest requestWithoutParameters(NamedXContentRegistry xContentRegistry, HttpRequest httpRequest,
-                                                       HttpChannel httpChannel, ParsedMediaType parsedContentType, ParsedMediaType parsedAccept) {
+                                                       HttpChannel httpChannel, MediaType parsedContentType, MediaType parsedAccept) {
         Map<String, String> params = Collections.emptyMap();
         return new RestRequest(xContentRegistry, params, httpRequest.uri(), httpRequest.getHeaders(), httpRequest, httpChannel,
             requestIdGenerator.incrementAndGet(), parsedContentType, parsedAccept);
@@ -337,11 +338,11 @@ public class RestRequest implements ToXContent.Params {
             .collect(Collectors.toList());
     }
 
-    public ParsedMediaType getParsedContentType() {
+    public MediaType getParsedContentType() {
         return parsedContentType;
     }
 
-    public ParsedMediaType getParsedAccept() {
+    public MediaType getParsedAccept() {
         return parsedAccept;
     }
 

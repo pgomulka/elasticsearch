@@ -19,8 +19,10 @@
 
 package org.elasticsearch.rest;
 
+import org.elasticsearch.Version;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.xcontent.MediaType;
+import org.elasticsearch.common.xcontent.MediaTypeRegistry;
 import org.elasticsearch.common.xcontent.ParsedMediaType;
 import org.elasticsearch.common.xcontent.XContent;
 import org.elasticsearch.common.xcontent.XContentType;
@@ -110,6 +112,15 @@ public interface RestHandler {
      */
     default boolean allowSystemIndexAccessByDefault() {
         return false;
+    }
+
+    default Version getCompatibleVersion(ParsedMediaType parsedContentType, ParsedMediaType parsedAccept, boolean hasContent){
+        return Version.CURRENT;
+    }
+    //    Set<MediaType> defaultAcceptTypes = Set.of(XContentType.values());
+MediaTypeRegistry defaultRegistry = MediaTypeRegistry.from(XContentType.values());
+    default MediaTypeRegistry getSupportedAcceptMediaTypes() {
+        return null;
     }
 
     class Route {

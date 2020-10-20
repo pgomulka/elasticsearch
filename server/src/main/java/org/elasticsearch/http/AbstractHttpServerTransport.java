@@ -25,9 +25,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.elasticsearch.ExceptionsHelper;
+import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.Strings;
+import org.elasticsearch.common.TriFunction;
 import org.elasticsearch.common.component.AbstractLifecycleComponent;
 import org.elasticsearch.common.network.CloseableChannel;
 import org.elasticsearch.common.network.NetworkAddress;
@@ -42,9 +44,9 @@ import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
 import org.elasticsearch.common.xcontent.MediaType;
+import org.elasticsearch.common.xcontent.MediaTypeRegistry;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.ParsedMediaType;
-import org.elasticsearch.common.xcontent.XContent;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestHandler;
@@ -96,7 +98,7 @@ public abstract class AbstractHttpServerTransport extends AbstractLifecycleCompo
     private final AtomicLong totalChannelsAccepted = new AtomicLong();
     private final Set<HttpChannel> httpChannels = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Set<HttpServerChannel> httpServerChannels = Collections.newSetFromMap(new ConcurrentHashMap<>());
-
+    private TriFunction<ParsedMediaType,ParsedMediaType,Boolean,Version> getCompatibleVersion = (a,b,c)->Version.CURRENT;
     private final HttpTracer tracer;
 
     protected AbstractHttpServerTransport(Settings settings, NetworkService networkService, BigArrays bigArrays, ThreadPool threadPool,
@@ -344,54 +346,69 @@ public abstract class AbstractHttpServerTransport extends AbstractLifecycleCompo
 
         // find the rest handler and validate that accept and content-type are valid per the rest handler
         // if no rest handler can be found
-        ParsedMediaType parsedContentType = null;
-        ParsedMediaType parsedAccept = null;
+        MediaType contentType = null;
+        MediaType accept = null;
+        Version compatibleVersion = null;
         try {
-            parsedContentType = parsedMediaType(httpRequest.getHeaders(), "Content-Type");
-            parsedAccept = parsedMediaType(httpRequest.getHeaders(), "Accept");
-            RestHandler restHandler = dispatcher.getRestHandler(httpRequest);
+            ParsedMediaType parsedContentType = parsedMediaType(httpRequest.getHeaders(), "Content-Type");
+            ParsedMediaType parsedAccept = parsedMediaType(httpRequest.getHeaders(), "Accept");
+
+            //here we are risking working on some incorrect media types..
+            compatibleVersion = getCompatibleVersion.apply(parsedContentType, parsedAccept, httpRequest.content().length()>0 );
+
+            RestHandler restHandler = dispatcher.getRestHandler(httpRequest/*,compatibleVersion*/);
 
             if (restHandler != null) { //if the handler is null, it may because of a request for options
                 // null accept and content type headers are acceptable, it means that one was not sent, in general we will default to JSON
-                boolean isHeaderAcceptValid = parsedAccept == null;
-                boolean isHeaderContentTypeValid = parsedContentType == null;
-                if(isHeaderAcceptValid == false) {
-                    // try to see if it is valid via rest handler's definition of what is valid
-                    Set<MediaType> validAccepts = restHandler.validAcceptMediaTypes();
-                    for (MediaType validAccept : validAccepts) {
-                        if (validAccept.mimeTypes().contains(parsedAccept.mimeTypeWithoutParams())) {
-                            //TODO: also validate the set of parameters
-                            isHeaderAcceptValid = true;
-                            break;
-                        }
+                Set<MediaType> acceptMediaTypes = restHandler.validAcceptMediaTypes();
+                accept = parsedAccept.toMediaType(acceptMediaTypes);
 
-                    }
-                }
+                Set<MediaType> contentTypeMediaTypes = supportedContentTypes;
+                contentType = parsedContentType.toMediaType(contentTypeMediaTypes);
 
-                if(isHeaderContentTypeValid == false) {
-                    Set<MediaType> validContentTypes = supportedContentTypes;
-                    for (MediaType validContentType : validContentTypes) {
-                        if (validContentType.mimeTypes().contains(parsedContentType.mimeTypeWithoutParams())) {
-                            isHeaderContentTypeValid = true;
-                            break;
-                        }
-                    }
-                }
+//                boolean isHeaderAcceptValid = parsedAccept == null;
+//                boolean isHeaderContentTypeValid = parsedContentType == null;
+//                isHeaderAcceptValid =  mediaTypeRegistry.validate(parsedAccept);
+//
+////                if(isHeaderAcceptValid == false) {
+////                    MediaTypeRegistry mediaTypeRegistry = restHandler.getSupportedAcceptMediaTypes();
+////                    mediaTypeRegistry.isValid(parsedAccept);
+//////                    // try to see if it is valid via rest handler's definition of what is valid
+//////                    Set<MediaType> validAccepts = restHandler.validAcceptMediaTypes();
+//////                    for (MediaType validAccept : validAccepts) {
+//////                        if (validAccept.mimeTypes().contains(parsedAccept.mimeTypeWithoutParams())) {
+//////                            //TODO: also validate the set of parameters
+//////                            isHeaderAcceptValid = true;
+//////                            break;
+//////                        }
+//////
+//////                    }
+////                }
+//
+//                if(isHeaderContentTypeValid == false) {
+//                    Set<MediaType> validContentTypes = supportedContentTypes;
+//                    for (MediaType validContentType : validContentTypes) {
+//                        if (validContentType.mimeTypes().contains(parsedContentType.mimeTypeWithoutParams())) {
+//                            isHeaderContentTypeValid = true;
+//                            break;
+//                        }
+//                    }
+//                }
+//
+//                //TODO: make combined exception so can give back an error if either or both are supported
+//                if(isHeaderAcceptValid  == false){
+//                    throw new RuntimeException("Kaboom - accept header " + parsedAccept.mimeTypeWithoutParams());
+//                }
+//                if(isHeaderContentTypeValid == false){
+//                    throw new RuntimeException("Kaboom - content type header " + parsedContentType.mimeTypeWithoutParams());
+//                }
 
-                //TODO: make combined exception so can give back an error if either or both are supported
-                if(isHeaderAcceptValid  == false){
-                    throw new RuntimeException("Kaboom - accept header " + parsedAccept.mimeTypeWithoutParams());
-                }
-                if(isHeaderContentTypeValid == false){
-                    throw new RuntimeException("Kaboom - content type header " + parsedContentType.mimeTypeWithoutParams());
-                }
-
-               try {
-                    restHandler.validateMediaTypes(parsedAccept, parsedContentType);
-                } catch (RestRequest.InvalidRequestedMediaType e) {
-                    //TODO: clean this up so that it throws the correct response exception
-                    throw e;
-                }
+//               try {
+//                    restHandler.validateMediaTypes(parsedAccept, parsedContentType);
+//                } catch (RestRequest.InvalidRequestedMediaType e) {
+//                    //TODO: clean this up so that it throws the correct response exception
+//                    throw e;
+//                }
 
             }
         } catch (Exception e) {
@@ -423,13 +440,13 @@ public abstract class AbstractHttpServerTransport extends AbstractLifecycleCompo
         {
             RestRequest innerRestRequest;
             try {
-                innerRestRequest = RestRequest.request(xContentRegistry, httpRequest, httpChannel, parsedContentType, parsedAccept);
+                innerRestRequest = RestRequest.request(xContentRegistry, httpRequest, httpChannel, contentType, accept,compatibleVersion );
             } catch (final RestRequest.ContentTypeHeaderException e) {
                 badRequestCause = ExceptionsHelper.useOrSuppress(badRequestCause, e);
-                innerRestRequest = requestWithoutContentTypeHeader(httpRequest, httpChannel, badRequestCause,  parsedContentType, parsedAccept);
+                innerRestRequest = requestWithoutContentTypeHeader(httpRequest, httpChannel, badRequestCause,  contentType, accept);
             } catch (final RestRequest.BadParameterException e) {
                 badRequestCause = ExceptionsHelper.useOrSuppress(badRequestCause, e);
-                innerRestRequest = RestRequest.requestWithoutParameters(xContentRegistry, httpRequest, httpChannel, parsedContentType, parsedAccept);
+                innerRestRequest = RestRequest.requestWithoutParameters(xContentRegistry, httpRequest, httpChannel, contentType, accept);
             }
             restRequest = innerRestRequest;
         }
@@ -452,7 +469,7 @@ public abstract class AbstractHttpServerTransport extends AbstractLifecycleCompo
                         trace);
             } catch (final IllegalArgumentException e) {
                 badRequestCause = ExceptionsHelper.useOrSuppress(badRequestCause, e);
-                final RestRequest innerRequest = RestRequest.requestWithoutParameters(xContentRegistry, httpRequest, httpChannel, parsedContentType, parsedAccept);
+                final RestRequest innerRequest = RestRequest.requestWithoutParameters(xContentRegistry, httpRequest, httpChannel, contentType, accept);
                 innerChannel =
                     new DefaultRestChannel(httpChannel, httpRequest, innerRequest, bigArrays, handlingSettings, threadContext, corsHandler,
                         trace);
@@ -480,10 +497,10 @@ public abstract class AbstractHttpServerTransport extends AbstractLifecycleCompo
         }
     }
 
-    private RestRequest requestWithoutContentTypeHeader(HttpRequest httpRequest, HttpChannel httpChannel, Exception badRequestCause, ParsedMediaType parsedContentType, ParsedMediaType parsedAccept) {
+    private RestRequest requestWithoutContentTypeHeader(HttpRequest httpRequest, HttpChannel httpChannel, Exception badRequestCause, MediaType parsedContentType, MediaType parsedAccept) {
         HttpRequest httpRequestWithoutContentType = httpRequest.removeHeader("Content-Type");
         try {
-            return RestRequest.request(xContentRegistry, httpRequestWithoutContentType, httpChannel, parsedContentType, parsedAccept);
+            return RestRequest.request(xContentRegistry, httpRequestWithoutContentType, httpChannel, parsedContentType, parsedAccept, Version.CURRENT);
         } catch (final RestRequest.BadParameterException e) {
             badRequestCause.addSuppressed(e);
             return RestRequest.requestWithoutParameters(xContentRegistry, httpRequestWithoutContentType, httpChannel, parsedContentType, parsedAccept);

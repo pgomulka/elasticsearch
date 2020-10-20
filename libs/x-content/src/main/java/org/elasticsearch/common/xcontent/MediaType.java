@@ -45,7 +45,7 @@ public interface MediaType {
     /**
      * The representation for the canonical string representation of this MediaType, i.e. 'application/json'
      */
-    default String canonical(){
+    default String canonical() {
         return mimeTypes().iterator().next();
     }
 
