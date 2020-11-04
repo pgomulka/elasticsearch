@@ -76,7 +76,7 @@ public final class XContentBuilder implements Closeable, Flushable {
      * @throws IOException if an {@link IOException} occurs while building the content
      */
     public static XContentBuilder builder(XContent xContent, Set<String> includes, Set<String> excludes) throws IOException {
-        return new XContentBuilder(xContent, new ByteArrayOutputStream(), includes, excludes);
+        return new XContentBuilder(xContent, new ByteArrayOutputStream(), includes, excludes, null);
     }
 
     private static final Map<Class<?>, Writer> WRITERS;
@@ -159,6 +159,7 @@ public final class XContentBuilder implements Closeable, Flushable {
      * Output stream to which the built object is written
      */
     private final OutputStream bos;
+    private String responseContentTypeString;
 
     /**
      * When this flag is set to true, some types of values are written in a format easier to read for a human.
@@ -170,7 +171,7 @@ public final class XContentBuilder implements Closeable, Flushable {
      * to call {@link #close()} when the builder is done with.
      */
     public XContentBuilder(XContent xContent, OutputStream bos) throws IOException {
-        this(xContent, bos, Collections.emptySet(), Collections.emptySet());
+        this(xContent, bos, Collections.emptySet(), Collections.emptySet(), null);
     }
 
     /**
@@ -180,7 +181,7 @@ public final class XContentBuilder implements Closeable, Flushable {
      * {@link #close()} when the builder is done with.
      */
     public XContentBuilder(XContent xContent, OutputStream bos, Set<String> includes) throws IOException {
-        this(xContent, bos, includes, Collections.emptySet());
+        this(xContent, bos, includes, Collections.emptySet(), null);
     }
 
     /**
@@ -189,18 +190,23 @@ public final class XContentBuilder implements Closeable, Flushable {
      * remaining fields against the inclusive filters.
      * <p>
      * Make sure to call {@link #close()} when the builder is done with.
-     *
-     * @param os       the output stream
+     *  @param os       the output stream
      * @param includes the inclusive filters: only fields and objects that match the inclusive filters will be written to the output.
      * @param excludes the exclusive filters: only fields and objects that don't match the exclusive filters will be written to the output.
+     * @param responseContentTypeString f
      */
-    public XContentBuilder(XContent xContent, OutputStream os, Set<String> includes, Set<String> excludes) throws IOException {
+    public XContentBuilder(XContent xContent, OutputStream os, Set<String> includes, Set<String> excludes, String responseContentTypeString) throws IOException {
         this.bos = os;
+        this.responseContentTypeString = responseContentTypeString;
         this.generator = xContent.createGenerator(bos, includes, excludes);
     }
 
     public XContentType contentType() {
         return generator.contentType();
+    }
+
+    public String getResponseContentTypeString() {
+        return responseContentTypeString;
     }
 
     /**

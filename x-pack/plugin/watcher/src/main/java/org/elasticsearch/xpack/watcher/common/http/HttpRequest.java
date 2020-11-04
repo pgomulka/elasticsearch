@@ -509,7 +509,7 @@ public class HttpRequest implements ToXContentObject {
                                                String excludeField) throws IOException {
         try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
              XContentBuilder filteredBuilder = new XContentBuilder(xContent, bos,
-                     Collections.emptySet(), Collections.singleton(excludeField))) {
+                     Collections.emptySet(), Collections.singleton(excludeField), null)) {
             request.toXContent(filteredBuilder, params);
             filteredBuilder.flush();
             return new ByteArrayInputStream(bos.toByteArray());

@@ -24,6 +24,7 @@ import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.io.Streams;
 import org.elasticsearch.common.io.stream.BytesStreamOutput;
+import org.elasticsearch.common.xcontent.ParsedMediaType;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
@@ -69,6 +70,10 @@ public abstract class AbstractRestChannel implements RestChannel {
         this.human = request.paramAsBoolean("human", false);
     }
 
+    public ParsedMediaType getParsedAccept(){
+        return request.getParsedAccept();
+    }
+
     @Override
     public XContentBuilder newBuilder() throws IOException {
         return newBuilder(request.getXContentType(), true);
@@ -100,12 +105,16 @@ public abstract class AbstractRestChannel implements RestChannel {
     @Override
     public XContentBuilder newBuilder(@Nullable XContentType requestContentType, @Nullable XContentType responseContentType,
             boolean useFiltering) throws IOException {
+
+        String responseContentTypeString = null;
         if (responseContentType == null) {
             if (Strings.hasText(format)) {
                 responseContentType = XContentType.fromFormat(format);
+                responseContentTypeString = responseContentType.mediaType();
             }
             if (responseContentType == null && Strings.hasText(acceptHeader)) {
                 responseContentType = XContentType.fromMediaType(acceptHeader);
+                responseContentTypeString = acceptHeader;
             }
         }
         // try to determine the response content type from the media type or the format query string parameter, with the format parameter
@@ -115,9 +124,13 @@ public abstract class AbstractRestChannel implements RestChannel {
                 // if there was a parsed content-type for the incoming request use that since no format was specified using the query
                 // string parameter or the HTTP Accept header
                 responseContentType = requestContentType;
+                responseContentTypeString = responseContentType.mediaType();
+
             } else {
                 // default to JSON output when all else fails
                 responseContentType = XContentType.JSON;
+                responseContentTypeString = responseContentType.mediaType();
+
             }
         }
 
@@ -131,7 +144,7 @@ public abstract class AbstractRestChannel implements RestChannel {
 
         OutputStream unclosableOutputStream = Streams.flushOnCloseStream(bytesOutput());
         XContentBuilder builder =
-            new XContentBuilder(XContentFactory.xContent(responseContentType), unclosableOutputStream, includes, excludes);
+            new XContentBuilder(XContentFactory.xContent(responseContentType), unclosableOutputStream, includes, excludes, responseContentTypeString);
         if (pretty) {
             builder.prettyPrint().lfAtEnd();
         }

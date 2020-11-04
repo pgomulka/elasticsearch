@@ -63,13 +63,11 @@ public enum XContentType implements MediaType {
             return Set.of(
                 Tuple.tuple("application/json", Map.of("charset", "UTF-8")),
                 Tuple.tuple("application/x-ndjson", Map.of("charset", "UTF-8")),
-                Tuple.tuple("application/*", Collections.emptyMap()),
-                Tuple.tuple("application/vnd.elasticsearch+json",
-                    Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8")),
-                Tuple.tuple("application/vnd.elasticsearch+x-ndjson",
-                    Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8")));
+                Tuple.tuple("application/*", Collections.emptyMap()));
         }
     },
+
+
     /**
      * The jackson based smile binary format. Fast and compact binary format.
      */
@@ -92,9 +90,7 @@ public enum XContentType implements MediaType {
         @Override
         public Set<Tuple<String, Map<String, String>>> mediaTypeMappings() {
             return Set.of(
-                Tuple.tuple("application/smile", Map.of("charset", "UTF-8")),
-                Tuple.tuple("application/vnd.elasticsearch+smile",
-                    Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8")));
+                Tuple.tuple("application/smile", Map.of("charset", "UTF-8")));
         }
     },
     /**
@@ -119,9 +115,7 @@ public enum XContentType implements MediaType {
         @Override
         public Set<Tuple<String, Map<String, String>>> mediaTypeMappings() {
             return Set.of(
-                Tuple.tuple("application/yaml", Map.of("charset", "UTF-8")),
-                Tuple.tuple("application/vnd.elasticsearch+yaml",
-                    Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8")));
+                Tuple.tuple("application/yaml", Map.of("charset", "UTF-8")));
         }
     },
     /**
@@ -146,11 +140,59 @@ public enum XContentType implements MediaType {
         @Override
         public Set<Tuple<String, Map<String, String>>> mediaTypeMappings() {
             return Set.of(
-                Tuple.tuple("application/cbor", Map.of("charset", "UTF-8")),
-                Tuple.tuple("application/vnd.elasticsearch+cbor",
-                    Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN,"charset", "UTF-8")));
+                Tuple.tuple("application/cbor", Map.of("charset", "UTF-8")));
+        }
+    },
+    VND_JSON(4) {
+        @Override
+        public String mediaTypeWithoutParameters() {
+            return "application/vnd.elasticsearch+json";
+        }
+
+        @Override
+        public String formatPathParameter() {
+            return "json";
+        }
+
+        @Override
+        public XContent xContent() {
+            return JsonXContent.jsonXContent;
+        }
+
+        @Override
+        public Set<Tuple<String, Map<String, String>>> mediaTypeMappings() {
+            return Set.of(
+                Tuple.tuple("application/vnd.elasticsearch+json",
+                    Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8")),
+                Tuple.tuple("application/vnd.elasticsearch+x-ndjson",
+                    Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8")));
+        }
+    },
+    VND_YAML(5) {
+        @Override
+        public String mediaTypeWithoutParameters() {
+            return "application/yaml";
+        }
+
+        @Override
+        public String formatPathParameter() {
+            return "yaml";
+        }
+
+        @Override
+        public XContent xContent() {
+            return YamlXContent.yamlXContent;
+        }
+
+        @Override
+        public Set<Tuple<String, Map<String, String>>> mediaTypeMappings() {
+            return Set.of(
+                Tuple.tuple("application/vnd.elasticsearch+yaml",
+                    Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN, "charset", "UTF-8")));
         }
     };
+
+
 
     public static final MediaTypeRegistry<XContentType> MEDIA_TYPE_REGISTRY = new MediaTypeRegistry<XContentType>()
         .register(XContentType.values());
