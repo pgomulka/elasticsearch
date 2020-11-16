@@ -144,7 +144,6 @@ import org.elasticsearch.plugins.PersistentTaskPlugin;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.plugins.PluginsService;
 import org.elasticsearch.plugins.RepositoryPlugin;
-import org.elasticsearch.plugins.RestCompatibilityPlugin;
 import org.elasticsearch.plugins.ScriptPlugin;
 import org.elasticsearch.plugins.SearchPlugin;
 import org.elasticsearch.plugins.SystemIndexPlugin;
@@ -541,7 +540,6 @@ public class Node implements Closeable {
                                                  repositoriesServiceReference::get).stream())
                 .collect(Collectors.toList());
 
-
             ActionModule actionModule = new ActionModule(settings, clusterModule.getIndexNameExpressionResolver(),
                 settingsModule.getIndexScopedSettings(), settingsModule.getClusterSettings(), settingsModule.getSettingsFilter(),
                 threadPool, pluginsService.filterPlugins(ActionPlugin.class), client, circuitBreakerService, usageService, systemIndices,
@@ -725,16 +723,8 @@ public class Node implements Closeable {
      * package scope for testing
      */
     CompatibleVersion getRestCompatibleFunction() {
-        List<RestCompatibilityPlugin> restCompatibilityPlugins = pluginsService.filterPlugins(RestCompatibilityPlugin.class);
-        final CompatibleVersion compatibleVersion;
-        if (restCompatibilityPlugins.size() > 1) {
-            throw new IllegalStateException("Only one RestCompatibilityPlugin is allowed");
-        } else if (restCompatibilityPlugins.size() == 1) {
-            compatibleVersion = restCompatibilityPlugins.get(0)::getCompatibleVersion;
-        } else {
-            compatibleVersion = CompatibleVersion.CURRENT_VERSION;
-        }
-        return compatibleVersion;
+        // TODO PG Until compatible version plugin is implemented, return current version.
+        return CompatibleVersion.CURRENT_VERSION;
     }
 
     protected TransportService newTransportService(Settings settings, Transport transport, ThreadPool threadPool,

@@ -54,17 +54,13 @@ public class ParsedMediaTypeTests extends ESTestCase {
             equalTo(Map.of("charset", "utf-8", "compatible-with", "123")));
         assertThat(ParsedMediaType.parseMediaType(mediaType + "; compatible-with=123;\n charset=UTF-8").getParameters(),
             equalTo(Map.of("charset", "utf-8", "compatible-with", "123")));
-
-
     }
 
     public void testInvalidParameters() {
         String mediaType = "application/vnd.elasticsearch+json";
         expectThrows(IllegalArgumentException.class, () -> ParsedMediaType.parseMediaType(mediaType + "; keyvalueNoEqualsSign")
             .toMediaType(mediaTypeRegistry));
-        // allowing spaces between =
-        // expectThrows(IllegalArgumentException.class, () -> ParsedMediaType.parseMediaType(mediaType + "; key = value")
-        //            .toMediaType(mediaTypeRegistry));
+
         expectThrows(IllegalArgumentException.class, () -> ParsedMediaType.parseMediaType(mediaType + "; key=")
             .toMediaType(mediaTypeRegistry));
     }
@@ -72,7 +68,7 @@ public class ParsedMediaTypeTests extends ESTestCase {
     public void testXContentTypes() {
         for (XContentType xContentType : XContentType.values()) {
             ParsedMediaType parsedMediaType = ParsedMediaType.parseMediaType(xContentType.mediaTypeWithoutParameters());
-            assertEquals(xContentType.mediaTypeWithoutParameters(), parsedMediaType.mimeTypeWithoutParams());
+            assertEquals(xContentType.mediaTypeWithoutParameters(), parsedMediaType.mediaTypeWithoutParameters());
         }
     }
 
@@ -85,18 +81,10 @@ public class ParsedMediaTypeTests extends ESTestCase {
             ParsedMediaType.parseMediaType(mediaType + "; compatible-with=123;charset=UTF-8").getParameters());
     }
 
-    public void testWhiteSpaces() {
-        //be lenient with white space since it can be really hard to troubleshoot
-        String mediaType = "  application/foo  ";
-        ParsedMediaType parsedMediaType = ParsedMediaType.parseMediaType(mediaType + "    ;  compatible-with =  123  ;  charset=UTF-8");
-        assertEquals("application/foo", parsedMediaType.mimeTypeWithoutParams());
-        assertEquals((Map.of("charset", "utf-8", "compatible-with", "123")), parsedMediaType.getParameters());
-    }
-
     public void testEmptyParams() {
         String mediaType = "application/foo";
         ParsedMediaType parsedMediaType = ParsedMediaType.parseMediaType(mediaType + randomFrom("", " ", ";", ";;", ";;;"));
-        assertEquals("application/foo", parsedMediaType.mimeTypeWithoutParams());
+        assertEquals("application/foo", parsedMediaType.mediaTypeWithoutParameters());
         assertEquals(Collections.emptyMap(), parsedMediaType.getParameters());
     }
 
@@ -109,19 +97,35 @@ public class ParsedMediaTypeTests extends ESTestCase {
         exception = expectThrows(IllegalArgumentException.class,
             () -> ParsedMediaType.parseMediaType(mediaType + "; char=set=unknown"));
         assertThat(exception.getMessage(), equalTo("invalid parameters for header [application/foo; char=set=unknown]"));
+
+        // do not allow white space in parameters between `=`
+        exception = expectThrows(IllegalArgumentException.class,
+            () -> ParsedMediaType.parseMediaType(mediaType + "    ;  compatible-with =  123  ;  charset=UTF-8"));
+        assertThat(exception.getMessage(),
+            equalTo("invalid parameters for header [application/foo    ;  compatible-with =  123  ;  charset=UTF-8]"));
+
+        expectThrows(IllegalArgumentException.class, () -> ParsedMediaType.parseMediaType(mediaType + ";k =y"));
+        expectThrows(IllegalArgumentException.class, () -> ParsedMediaType.parseMediaType(mediaType + ";k= y"));
+        expectThrows(IllegalArgumentException.class, () -> ParsedMediaType.parseMediaType(mediaType + ";k = y"));
+        expectThrows(IllegalArgumentException.class, () -> ParsedMediaType.parseMediaType(mediaType + ";= y"));
+        expectThrows(IllegalArgumentException.class, () -> ParsedMediaType.parseMediaType(mediaType + ";k="));
     }
 
-    public void testDefaultAcceptHeader() {
+    public void testIgnoredMediaTypes() {
+        // When using curl */* is used a default Accept header when not specified by a user
+        assertThat(ParsedMediaType.parseMediaType("*/*"), is(nullValue()));
+
+
         // This media type is defined in sun.net.www.protocol.http.HttpURLConnection as a default Accept header
         // and used when a header was not set on a request
         // It should be treated as if a user did not specify a header value
         String mediaType = "text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2";
         assertThat(ParsedMediaType.parseMediaType(mediaType), is(nullValue()));
 
-        // When using curl */* is used a default Accept header when not specified by a user
-        assertThat(ParsedMediaType.parseMediaType("*/*"), is(nullValue()));
+        //example accept header used by a browser
+        mediaType = "text/html,application/xhtml+xml,application/xml;q=0.9," +
+            "image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9";
+        ParsedMediaType parsedMediaType = ParsedMediaType.parseMediaType(mediaType);
+        assertThat(parsedMediaType, equalTo(null));
     }
-
-
-
 }
