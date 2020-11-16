@@ -61,11 +61,7 @@ public enum XContentType implements MediaType {
             return Set.of(
                 new HeaderValue("application/json"),
                 new HeaderValue("application/x-ndjson"),
-                new HeaderValue("application/*"),
-                new HeaderValue(VENDOR_APPLICATION_PREFIX + "json",
-                    Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN)),
-                new HeaderValue(VENDOR_APPLICATION_PREFIX + "x-ndjson",
-                    Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN)));
+                new HeaderValue("application/*"));
         }
     },
     /**
@@ -90,9 +86,7 @@ public enum XContentType implements MediaType {
         @Override
         public Set<HeaderValue> headerValues() {
             return Set.of(
-                new HeaderValue("application/smile"),
-                new HeaderValue(VENDOR_APPLICATION_PREFIX + "smile",
-                    Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN)));
+                new HeaderValue("application/smile"));
         }
     },
     /**
@@ -117,9 +111,7 @@ public enum XContentType implements MediaType {
         @Override
         public Set<HeaderValue> headerValues() {
             return Set.of(
-                new HeaderValue("application/yaml"),
-                new HeaderValue(VENDOR_APPLICATION_PREFIX + "yaml",
-                    Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN)));
+                new HeaderValue("application/yaml"));
         }
     },
     /**
@@ -144,11 +136,123 @@ public enum XContentType implements MediaType {
         @Override
         public Set<HeaderValue> headerValues() {
             return Set.of(
-                new HeaderValue("application/cbor"),
+                new HeaderValue("application/cbor"));
+        }
+    },
+    VND_JSON(4) {
+        @Override
+        public String mediaTypeWithoutParameters() {
+            return "application/vnd.elasticsearch+json";
+        }
+
+        @Override
+        public String mediaType() {
+            return "application/vnd.elasticsearch+json; charset=UTF-8;compatible-with=7";//we don't have info about compatible version
+        }
+
+        @Override
+        public String queryParameter() {
+            return null;
+        }
+
+        @Override
+        public XContent xContent() {
+            return JsonXContent.jsonXContent;
+        }
+
+        @Override
+        public Set<HeaderValue> headerValues() {
+            return Set.of(
+                new HeaderValue(VENDOR_APPLICATION_PREFIX + "json",
+                    Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN)),
+                new HeaderValue(VENDOR_APPLICATION_PREFIX + "x-ndjson",
+                    Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN)));
+        }
+    },
+    /**
+     * The jackson based smile binary format. Fast and compact binary format.
+     */
+    VND_SMILE(5) {
+        @Override
+        public String mediaTypeWithoutParameters() {
+            return VENDOR_APPLICATION_PREFIX + "smile";
+        }
+
+        @Override
+        public String queryParameter() {
+            return null;
+        }
+
+        @Override
+        public XContent xContent() {
+            return SmileXContent.smileXContent;
+        }
+
+        @Override
+        public Set<HeaderValue> headerValues() {
+            return Set.of(
+                new HeaderValue(VENDOR_APPLICATION_PREFIX + "smile",
+                    Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN)));
+        }
+    },
+    /**
+     * A YAML based content type.
+     */
+    VND_YAML(6) {
+        @Override
+        public String mediaTypeWithoutParameters() {
+            return VENDOR_APPLICATION_PREFIX + "yaml";
+        }
+
+        @Override
+        public String queryParameter() {
+            return null;
+        }
+
+        @Override
+        public XContent xContent() {
+            return YamlXContent.yamlXContent;
+        }
+
+        @Override
+        public Set<HeaderValue> headerValues() {
+            return Set.of(
+                new HeaderValue(VENDOR_APPLICATION_PREFIX + "yaml",
+                    Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN)));
+        }
+    },
+    /**
+     * A CBOR based content type.
+     */
+    VND_CBOR(7) {
+        @Override
+        public String mediaTypeWithoutParameters() {
+            return VENDOR_APPLICATION_PREFIX + "cbor";
+        }
+
+        @Override
+        public String mediaType() {
+            return mediaTypeWithoutParameters();
+        }
+
+        @Override
+        public String queryParameter() {
+            return null;
+        }
+
+        @Override
+        public XContent xContent() {
+            return CborXContent.cborXContent;
+        }
+
+        @Override
+        public Set<HeaderValue> headerValues() {
+            return Set.of(
                 new HeaderValue(VENDOR_APPLICATION_PREFIX + "cbor",
                     Map.of(COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN)));
         }
-    };
+    }
+    ;
 
     public static final MediaTypeRegistry<XContentType> MEDIA_TYPE_REGISTRY = new MediaTypeRegistry<XContentType>()
         .register(XContentType.values());
