@@ -179,6 +179,10 @@ public class JavaDateMathParserTests extends ESTestCase {
 
         assertDateMathEquals("2014-11-18T14:27:32||+60s", "2014-11-18T14:28:32");
         assertDateMathEquals("2014-11-18T14:27:32||-3600s", "2014-11-18T13:27:32");
+
+        assertDateMathEquals("2014-11-18T14:27:32||+1S", "2014-11-18T14:27:32.001");//+1.5 millis
+        assertDateMathEquals("2014-11-18T14:27:32||+1500S", "2014-11-18T14:27:33.500");//+1.5 millis
+        assertDateMathEquals("2014-11-18T14:27:32||-1S", "2014-11-18T14:27:31.999");//-1 millis
     }
 
     public void testLenientEmptyMath() {
@@ -208,6 +212,13 @@ public class JavaDateMathParserTests extends ESTestCase {
 
         // timezone does not affect now
         assertDateMathEquals("now/m", "2014-11-18T14:27", now, false, ZoneId.of("+02:00"));
+    }
+
+    public void testMillisRounding() {
+        parser.parse("2014-11-18T14:27:32.123456789", () -> 0, false, (ZoneId) null);
+
+//        assertDateMathEquals("now", "2014-11-18T14:27:32.123456789", now, false, null);
+        assertDateMathEquals("now/s", "2014-11-18T14:27:32.12399999", now, false, null);
     }
 
     public void testRoundingPreservesEpochAsBaseDate() {

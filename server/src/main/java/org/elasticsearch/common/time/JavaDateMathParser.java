@@ -199,12 +199,22 @@ public class JavaDateMathParser implements DateMathParser {
                         dateTime = dateTime.plusSeconds(sign * num);
                     }
                     break;
+                case 'S':
+                    if (round) {
+                        dateTime = dateTime.withNano(0);
+                        if (roundUpProperty) {
+                            dateTime = dateTime.plusNanos(1);
+                        }
+                    } else {
+                        dateTime = dateTime.plus(sign * num, ChronoField.MILLI_OF_SECOND.getBaseUnit());
+                    }
+                    break;
                 default:
                     throw new ElasticsearchParseException("unit [{}] not supported for date math [{}]", unit, mathString);
             }
             if (round && roundUpProperty) {
                 // subtract 1 millisecond to get the largest inclusive value
-                dateTime = dateTime.minus(1, ChronoField.MILLI_OF_SECOND.getBaseUnit());
+                dateTime = dateTime.minus(1, ChronoField.NANO_OF_SECOND.getBaseUnit());
             }
         }
         return dateTime.toInstant();
