@@ -19,7 +19,6 @@
 
 package org.elasticsearch.common.time;
 
-import org.joda.time.DateTimeZone;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -41,11 +40,6 @@ public interface DateMathParser {
     // if it has been used. For instance, the request cache does not cache requests that make
     // use of `now`.
 
-    // exists for backcompat, do not use!
-    @Deprecated
-    default Instant parse(String text, LongSupplier now, boolean roundUpProperty, DateTimeZone tz) {
-        return parse(text, now, roundUpProperty, tz == null ? null : ZoneId.of(tz.getID()));
-    }
 
     /**
      * Parse text, that potentially contains date math into the milliseconds since the epoch

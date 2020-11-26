@@ -7,7 +7,7 @@
  * not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -144,7 +144,7 @@ public class JavaJodaTimeDuellingTests extends ESTestCase {
         //7 (ok joda) vs 1 (java by default) but 7 with customized org.elasticsearch.common.time.IsoLocale.ISO8601
         ZonedDateTime now = LocalDateTime.of(2009,11,15,1,32,8,328402)
                                          .atZone(ZoneOffset.UTC); //Sunday
-        DateFormatter jodaFormatter = Joda.forPattern("e").withLocale(Locale.ROOT).withZone(ZoneOffset.UTC);
+        JodaDateFormatter jodaFormatter = Joda.forPattern("e").withLocale(Locale.ROOT).withZone(ZoneOffset.UTC);
         DateFormatter javaFormatter = DateFormatter.forPattern("8e").withZone(ZoneOffset.UTC);
         assertThat(jodaFormatter.format(now), equalTo(javaFormatter.format(now)));
     }
@@ -153,7 +153,7 @@ public class JavaJodaTimeDuellingTests extends ESTestCase {
         //2019-21 (ok joda) vs 2019-22 (java by default) but 2019-21 with customized org.elasticsearch.common.time.IsoLocale.ISO8601
         ZonedDateTime now = LocalDateTime.of(2019,5,26,1,32,8,328402)
                                          .atZone(ZoneOffset.UTC);
-        DateFormatter jodaFormatter = Joda.forPattern("xxxx-ww").withLocale(Locale.ROOT).withZone(ZoneOffset.UTC);
+        JodaDateFormatter jodaFormatter = Joda.forPattern("xxxx-ww").withLocale(Locale.ROOT).withZone(ZoneOffset.UTC);
         DateFormatter javaFormatter = DateFormatter.forPattern("8YYYY-ww").withZone(ZoneOffset.UTC);
         assertThat(jodaFormatter.format(now), equalTo(javaFormatter.format(now)));
     }
@@ -167,7 +167,7 @@ public class JavaJodaTimeDuellingTests extends ESTestCase {
         assertSameDate("2001-01-01T00:00:00,123Z", "date_optional_time");
 
         // only java.time has nanos parsing, but the results for 3digits should be the same
-        DateFormatter jodaFormatter = Joda.forPattern("strict_date_optional_time");
+        JodaDateFormatter jodaFormatter = Joda.forPattern("strict_date_optional_time");
         DateFormatter javaFormatter = DateFormatter.forPattern("strict_date_optional_time_nanos");
         assertSameDate("2001-01-01T00:00:00.123Z", "strict_date_optional_time_nanos", jodaFormatter, javaFormatter);
         assertSameDate("2001-01-01T00:00:00,123Z", "strict_date_optional_time_nanos", jodaFormatter, javaFormatter);
@@ -756,7 +756,7 @@ public class JavaJodaTimeDuellingTests extends ESTestCase {
         DateFormatter javaFormatter = DateFormatter.forPattern(format);
         TemporalAccessor javaDate = javaFormatter.parse(dateInput);
 
-        DateFormatter jodaFormatter = Joda.forPattern(format);
+        JodaDateFormatter jodaFormatter = Joda.forPattern(format);
         DateTime dateTime = jodaFormatter.parseJoda(dateInput);
 
         String javaDateString = javaFormatter.withZone(ZoneOffset.ofHours(-1)).format(javaDate);
@@ -777,14 +777,14 @@ public class JavaJodaTimeDuellingTests extends ESTestCase {
     public void testSeveralTimeFormats() {
         {
             String format = "year_month_day||ordinal_date";
-            DateFormatter jodaFormatter = Joda.forPattern(format);
+            JodaDateFormatter jodaFormatter = Joda.forPattern(format);
             DateFormatter javaFormatter = DateFormatter.forPattern(format);
             assertSameDate("2018-12-12", format, jodaFormatter, javaFormatter);
             assertSameDate("2018-128", format, jodaFormatter, javaFormatter);
         }
         {
             String format = "strict_date_optional_time||dd-MM-yyyy";
-            DateFormatter jodaFormatter = Joda.forPattern(format);
+            JodaDateFormatter jodaFormatter = Joda.forPattern(format);
             DateFormatter javaFormatter = DateFormatter.forPattern(format);
             assertSameDate("31-01-2014", format, jodaFormatter, javaFormatter);
         }
@@ -833,7 +833,7 @@ public class JavaJodaTimeDuellingTests extends ESTestCase {
 
     private void assertSamePrinterOutput(String format, ZonedDateTime javaDate, DateTime jodaDate, Locale locale) {
         DateFormatter dateFormatter = DateFormatter.forPattern(format).withLocale(locale);
-        DateFormatter jodaDateFormatter = Joda.forPattern(format).withLocale(locale);
+        JodaDateFormatter jodaDateFormatter = Joda.forPattern(format).withLocale(locale);
 
         assertSamePrinterOutput(format, javaDate, jodaDate, dateFormatter, jodaDateFormatter);
     }
@@ -842,7 +842,7 @@ public class JavaJodaTimeDuellingTests extends ESTestCase {
                                          ZonedDateTime javaDate,
                                          DateTime jodaDate,
                                          DateFormatter dateFormatter,
-                                         DateFormatter jodaDateFormatter) {
+                                         JodaDateFormatter jodaDateFormatter) {
         String javaTimeOut = dateFormatter.format(javaDate);
         String jodaTimeOut = jodaDateFormatter.formatJoda(jodaDate);
 
@@ -860,18 +860,18 @@ public class JavaJodaTimeDuellingTests extends ESTestCase {
     }
 
     private void assertSameDate(String input, String format) {
-        DateFormatter jodaFormatter = Joda.forPattern(format);
+        JodaDateFormatter jodaFormatter = Joda.forPattern(format);
         DateFormatter javaFormatter = DateFormatter.forPattern(format);
         assertSameDate(input, format, jodaFormatter, javaFormatter);
     }
 
     private void assertSameDate(String input, String format, Locale locale) {
-        DateFormatter jodaFormatter = Joda.forPattern(format).withLocale(locale);
+        JodaDateFormatter jodaFormatter = Joda.forPattern(format).withLocale(locale);
         DateFormatter javaFormatter = DateFormatter.forPattern(format).withLocale(locale);
         assertSameDate(input, format, jodaFormatter, javaFormatter);
     }
 
-    private void assertSameDate(String input, String format, DateFormatter jodaFormatter, DateFormatter javaFormatter) {
+    private void assertSameDate(String input, String format, JodaDateFormatter jodaFormatter, DateFormatter javaFormatter) {
         DateTime jodaDateTime = jodaFormatter.parseJoda(input);
 
         TemporalAccessor javaTimeAccessor = javaFormatter.parse(input);
@@ -889,7 +889,7 @@ public class JavaJodaTimeDuellingTests extends ESTestCase {
     }
 
     private void assertJodaParseException(String input, String format, String expectedMessage) {
-        DateFormatter jodaFormatter = Joda.forPattern(format);
+        JodaDateFormatter jodaFormatter = Joda.forPattern(format);
         IllegalArgumentException e = expectThrows(IllegalArgumentException.class, () -> jodaFormatter.parseJoda(input));
         assertThat(e.getMessage(), containsString(expectedMessage));
     }
@@ -910,7 +910,7 @@ public class JavaJodaTimeDuellingTests extends ESTestCase {
 
     private void assertSameDateAs(String input, String javaPattern, String jodaPattern) {
         DateFormatter javaFormatter = DateFormatter.forPattern(javaPattern);
-        DateFormatter jodaFormatter = Joda.forPattern(jodaPattern);
+        JodaDateFormatter jodaFormatter = Joda.forPattern(jodaPattern);
         assertSameDate(input, javaPattern, jodaFormatter, javaFormatter);
     }
 }

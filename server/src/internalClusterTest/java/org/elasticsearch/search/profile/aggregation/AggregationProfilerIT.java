@@ -31,9 +31,9 @@ import org.elasticsearch.search.aggregations.bucket.terms.GlobalOrdinalsStringTe
 import org.elasticsearch.search.profile.ProfileResult;
 import org.elasticsearch.search.profile.ProfileShardResult;
 import org.elasticsearch.test.ESIntegTestCase;
-import org.joda.time.Instant;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;

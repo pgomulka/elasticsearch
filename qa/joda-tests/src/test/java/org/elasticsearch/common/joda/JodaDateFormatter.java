@@ -7,7 +7,7 @@
  * not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -19,6 +19,7 @@
 
 package org.elasticsearch.common.joda;
 
+import org.JodaUtils;
 import org.elasticsearch.common.time.DateFormatter;
 import org.elasticsearch.common.time.DateMathParser;
 import org.elasticsearch.common.time.DateUtils;
@@ -35,6 +36,8 @@ import java.util.Objects;
 
 public class JodaDateFormatter implements DateFormatter {
 
+
+
     final String pattern;
     final DateTimeFormatter parser;
     final DateTimeFormatter printer;
@@ -48,7 +51,7 @@ public class JodaDateFormatter implements DateFormatter {
     @Override
     public TemporalAccessor parse(String input) {
         final DateTime dt = parser.parseDateTime(input);
-        return ZonedDateTime.ofInstant(Instant.ofEpochMilli(dt.getMillis()), DateUtils.dateTimeZoneToZoneId(dt.getZone()));
+        return ZonedDateTime.ofInstant(Instant.ofEpochMilli(dt.getMillis()), JodaUtils.dateTimeZoneToZoneId(dt.getZone()));
     }
 
     public long parseMillis(String input) {
@@ -60,8 +63,8 @@ public class JodaDateFormatter implements DateFormatter {
     }
 
     @Override
-    public DateFormatter withZone(ZoneId zoneId) {
-        DateTimeZone timeZone = DateUtils.zoneIdToDateTimeZone(zoneId);
+    public JodaDateFormatter withZone(ZoneId zoneId) {
+        DateTimeZone timeZone = JodaUtils.zoneIdToDateTimeZone(zoneId);
         if (parser.getZone().equals(timeZone)) {
             return this;
         }
@@ -71,7 +74,7 @@ public class JodaDateFormatter implements DateFormatter {
     }
 
     @Override
-    public DateFormatter withLocale(Locale locale) {
+    public JodaDateFormatter withLocale(Locale locale) {
         if (parser.getLocale().equals(locale)) {
             return this;
         }
@@ -82,7 +85,7 @@ public class JodaDateFormatter implements DateFormatter {
 
     @Override
     public String format(TemporalAccessor accessor) {
-        DateTimeZone timeZone = DateUtils.zoneIdToDateTimeZone(ZoneId.from(accessor));
+        DateTimeZone timeZone = JodaUtils.zoneIdToDateTimeZone(ZoneId.from(accessor));
         DateTime dateTime = new DateTime(Instant.from(accessor).toEpochMilli(), timeZone);
         return printer.print(dateTime);
     }
@@ -114,7 +117,7 @@ public class JodaDateFormatter implements DateFormatter {
 
     @Override
     public ZoneId zone() {
-        return DateUtils.dateTimeZoneToZoneId(printer.getZone());
+        return JodaUtils.dateTimeZoneToZoneId(printer.getZone());
     }
 
     @Override

@@ -7,7 +7,7 @@
  * not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -33,11 +33,11 @@ import static org.hamcrest.Matchers.not;
 public class JodaTests extends ESTestCase {
 
     public void testBasicTTimePattern() {
-        DateFormatter formatter1 = Joda.forPattern("basic_t_time");
+        JodaDateFormatter formatter1 = Joda.forPattern("basic_t_time");
         assertEquals(formatter1.pattern(), "basic_t_time");
         assertEquals(formatter1.zone(), ZoneOffset.UTC);
 
-        DateFormatter formatter2 = Joda.forPattern("basic_t_time");
+        JodaDateFormatter formatter2 = Joda.forPattern("basic_t_time");
         assertEquals(formatter2.pattern(), "basic_t_time");
         assertEquals(formatter2.zone(), ZoneOffset.UTC);
 

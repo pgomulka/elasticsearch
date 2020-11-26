@@ -40,20 +40,11 @@ import static org.elasticsearch.common.time.DateUtilsRounding.getYear;
 import static org.elasticsearch.common.time.DateUtilsRounding.utcMillisAtStartOfYear;
 
 public class DateUtils {
-    public static DateTimeZone zoneIdToDateTimeZone(ZoneId zoneId) {
-        if (zoneId == null) {
-            return null;
-        }
-        if (zoneId instanceof ZoneOffset) {
-            // the id for zoneoffset is not ISO compatible, so cannot be read by ZoneId.of
-            return DateTimeZone.forOffsetMillis(((ZoneOffset)zoneId).getTotalSeconds() * 1000);
-        }
-        return DateTimeZone.forID(zoneId.getId());
-    }
+
 
     private static final DeprecationLogger deprecationLogger = DeprecationLogger.getLogger(DateUtils.class);
     // pkg private for tests
-    static final Map<String, String> DEPRECATED_SHORT_TIMEZONES;
+    public static final Map<String, String> DEPRECATED_SHORT_TIMEZONES;
     public static final Set<String> DEPRECATED_SHORT_TZ_IDS;
     static {
         Map<String, String> tzs = new HashMap<>();

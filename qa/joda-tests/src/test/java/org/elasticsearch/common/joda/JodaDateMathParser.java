@@ -7,7 +7,7 @@
  * not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -19,6 +19,7 @@
 
 package org.elasticsearch.common.joda;
 
+import org.JodaUtils;
 import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.common.time.DateMathParser;
 import org.elasticsearch.common.time.DateUtils;
@@ -52,7 +53,7 @@ public class JodaDateMathParser implements DateMathParser {
     // use of `now`.
     @Override
     public Instant parse(String text, LongSupplier now, boolean roundUp, ZoneId tz) {
-        final DateTimeZone timeZone = tz == null ? null : DateUtils.zoneIdToDateTimeZone(tz);
+        final DateTimeZone timeZone = tz == null ? null : JodaUtils.zoneIdToDateTimeZone(tz);
         long time;
         String mathString;
         if (text.startsWith("now")) {

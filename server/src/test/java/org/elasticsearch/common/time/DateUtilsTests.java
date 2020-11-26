@@ -20,7 +20,6 @@
 package org.elasticsearch.common.time;
 
 import org.elasticsearch.test.ESTestCase;
-import org.joda.time.DateTimeZone;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -45,28 +44,6 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 
 public class DateUtilsTests extends ESTestCase {
-    private static final Set<String> IGNORE = new HashSet<>(Arrays.asList(
-        "Eire", "Europe/Dublin", // dublin timezone in joda does not account for DST
-        "Asia/Qostanay" // this has been added in joda 2.10.2 but is not part of the JDK 12.0.1 tzdata yet
-    ));
-
-    public void testTimezoneIds() {
-        assertNull(DateUtils.dateTimeZoneToZoneId(null));
-        assertNull(DateUtils.zoneIdToDateTimeZone(null));
-        for (String jodaId : DateTimeZone.getAvailableIDs()) {
-            if (IGNORE.contains(jodaId)) continue;
-            DateTimeZone jodaTz = DateTimeZone.forID(jodaId);
-            ZoneId zoneId = DateUtils.dateTimeZoneToZoneId(jodaTz); // does not throw
-            long now = 0;
-            assertThat(jodaId, zoneId.getRules().getOffset(Instant.ofEpochMilli(now)).getTotalSeconds() * 1000,
-                equalTo(jodaTz.getOffset(now)));
-            if (DateUtils.DEPRECATED_SHORT_TIMEZONES.containsKey(jodaTz.getID())) {
-                assertWarnings("Use of short timezone id " + jodaId + " is deprecated. Use " + zoneId.getId() + " instead");
-            }
-            // roundtrip does not throw either
-            assertNotNull(DateUtils.zoneIdToDateTimeZone(zoneId));
-        }
-    }
 
     public void testInstantToLong() {
         assertThat(toLong(Instant.EPOCH), is(0L));

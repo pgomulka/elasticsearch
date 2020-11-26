@@ -22,18 +22,10 @@ package org.elasticsearch.common.xcontent;
 import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.time.DateFormatter;
+import org.elasticsearch.common.time.DateFormatters;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.script.JodaCompatibleZonedDateTime;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-import org.joda.time.Instant;
-import org.joda.time.MutableDateTime;
-import org.joda.time.ReadableInstant;
-import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.ISODateTimeFormat;
-import org.joda.time.tz.CachedDateTimeZone;
-import org.joda.time.tz.FixedDateTimeZone;
 
 import java.time.DayOfWeek;
 import java.time.Duration;
@@ -63,7 +55,7 @@ import java.util.function.Function;
  */
 public class XContentElasticsearchExtension implements XContentBuilderExtension {
 
-    public static final DateTimeFormatter DEFAULT_DATE_PRINTER = ISODateTimeFormat.dateTime().withZone(DateTimeZone.UTC);
+    public static final DateFormatter DEFAULT_DATE_PRINTER = DateFormatter.forPattern("ISO8601").withZone(ZoneOffset.UTC);
     public static final DateFormatter DEFAULT_FORMATTER = DateFormatter.forPattern("strict_date_optional_time_nanos");
     public static final DateFormatter LOCAL_TIME_FORMATTER = DateFormatter.forPattern("HH:mm:ss.SSS");
     public static final DateFormatter OFFSET_TIME_FORMATTER = DateFormatter.forPattern("HH:mm:ss.SSSZZZZZ");
@@ -74,11 +66,6 @@ public class XContentElasticsearchExtension implements XContentBuilderExtension 
 
         // Fully-qualified here to reduce ambiguity around our (ES') Version class
         writers.put(org.apache.lucene.util.Version.class, (b, v) -> b.value(Objects.toString(v)));
-        writers.put(DateTimeZone.class, (b, v) -> b.value(Objects.toString(v)));
-        writers.put(CachedDateTimeZone.class, (b, v) -> b.value(Objects.toString(v)));
-        writers.put(FixedDateTimeZone.class, (b, v) -> b.value(Objects.toString(v)));
-        writers.put(MutableDateTime.class, XContentBuilder::timeValue);
-        writers.put(DateTime.class, XContentBuilder::timeValue);
         writers.put(TimeValue.class, (b, v) -> b.value(v.toString()));
         writers.put(ZonedDateTime.class, XContentBuilder::timeValue);
         writers.put(OffsetDateTime.class, XContentBuilder::timeValue);
@@ -126,14 +113,10 @@ public class XContentElasticsearchExtension implements XContentBuilderExtension 
     @Override
     public Map<Class<?>, Function<Object, Object>> getDateTransformers() {
         Map<Class<?>, Function<Object, Object>> transformers = new HashMap<>();
-        transformers.put(Date.class, d -> DEFAULT_DATE_PRINTER.print(((Date) d).getTime()));
-        transformers.put(DateTime.class, d -> DEFAULT_DATE_PRINTER.print((DateTime) d));
-        transformers.put(MutableDateTime.class, d -> DEFAULT_DATE_PRINTER.print((MutableDateTime) d));
-        transformers.put(ReadableInstant.class, d -> DEFAULT_DATE_PRINTER.print((ReadableInstant) d));
-        transformers.put(Long.class, d -> DEFAULT_DATE_PRINTER.print((long) d));
-        transformers.put(Calendar.class, d -> DEFAULT_DATE_PRINTER.print(((Calendar) d).getTimeInMillis()));
-        transformers.put(GregorianCalendar.class, d -> DEFAULT_DATE_PRINTER.print(((Calendar) d).getTimeInMillis()));
-        transformers.put(Instant.class, d -> DEFAULT_DATE_PRINTER.print((Instant) d));
+        transformers.put(Date.class, d -> DEFAULT_DATE_PRINTER.formatMillis(((Date) d).getTime()));
+        transformers.put(Long.class, d -> DEFAULT_DATE_PRINTER.formatMillis((long) d));
+        transformers.put(Calendar.class, d -> DEFAULT_DATE_PRINTER.formatMillis(((Calendar) d).getTimeInMillis()));
+        transformers.put(GregorianCalendar.class, d -> DEFAULT_DATE_PRINTER.formatMillis(((Calendar) d).getTimeInMillis()));
         transformers.put(ZonedDateTime.class, d -> DEFAULT_FORMATTER.format((ZonedDateTime) d));
         transformers.put(OffsetDateTime.class, d -> DEFAULT_FORMATTER.format((OffsetDateTime) d));
         transformers.put(OffsetTime.class, d -> OFFSET_TIME_FORMATTER.format((OffsetTime) d));

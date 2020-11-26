@@ -840,12 +840,7 @@ public abstract class ESTestCase extends LuceneTestCase {
         return randomTimeValue(1, 1000);
     }
 
-    /**
-     * generate a random DateTimeZone from the ones available in joda library
-     */
-    public static DateTimeZone randomDateTimeZone() {
-        return DateTimeZone.forID(randomFrom(JODA_TIMEZONE_IDS));
-    }
+
 
     /**
      * generate a random TimeZone from the ones available in java.util

@@ -20,12 +20,10 @@
 package org.elasticsearch.common.time;
 
 import org.elasticsearch.common.Strings;
-import org.joda.time.DateTime;
 
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
@@ -50,13 +48,7 @@ public interface DateFormatter {
         return DateFormatters.from(parse(input)).toInstant().toEpochMilli();
     }
 
-    /**
-     * Parse the given input into a Joda {@link DateTime}.
-     */
-    default DateTime parseJoda(String input) {
-        ZonedDateTime dateTime = ZonedDateTime.from(parse(input));
-        return new DateTime(dateTime.toInstant().toEpochMilli(), DateUtils.zoneIdToDateTimeZone(dateTime.getZone()));
-    }
+
 
     /**
      * Create a copy of this formatter that is configured to parse dates in the specified time zone
@@ -88,14 +80,6 @@ public interface DateFormatter {
     default String formatMillis(long millis) {
         ZoneId zone = zone() != null ? zone() : ZoneOffset.UTC;
         return format(Instant.ofEpochMilli(millis).atZone(zone));
-    }
-
-    /**
-     * Return the given Joda {@link DateTime} formatted with this format.
-     */
-    default String formatJoda(DateTime dateTime) {
-        return format(ZonedDateTime.ofInstant(Instant.ofEpochMilli(dateTime.getMillis()),
-            DateUtils.dateTimeZoneToZoneId(dateTime.getZone())));
     }
 
     /**

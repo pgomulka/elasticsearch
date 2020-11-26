@@ -502,14 +502,16 @@ public class JodaCompatibleZonedDateTime
     public String toString(String format) {
         logDeprecatedMethod("toString(String)", "a DateTimeFormatter");
         // TODO: replace with bwc formatter
-        return new DateTime(dt.toInstant().toEpochMilli(), DateUtils.zoneIdToDateTimeZone(dt.getZone())).toString(format);
+        return DateFormatter.forPattern(format).format(dt);
+//        return new DateTime(dt.toInstant().toEpochMilli(), DateUtils.zoneIdToDateTimeZone(dt.getZone())).toString(format);
     }
 
     @Deprecated
     public String toString(String format, Locale locale) {
         logDeprecatedMethod("toString(String,Locale)", "a DateTimeFormatter");
         // TODO: replace with bwc formatter
-        return new DateTime(dt.toInstant().toEpochMilli(), DateUtils.zoneIdToDateTimeZone(dt.getZone())).toString(format, locale);
+        return DateFormatter.forPattern(format).withLocale(locale).format(dt);
+//        return new DateTime(dt.toInstant().toEpochMilli(), DateUtils.zoneIdToDateTimeZone(dt.getZone())).toString(format, locale);
     }
 
     public DayOfWeek getDayOfWeekEnum() {
