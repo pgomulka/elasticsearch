@@ -345,7 +345,7 @@ public class DateFormatters {
     );
 
     private static final DateTimeFormatter BASIC_YEAR_MONTH_DAY_FORMATTER = new DateTimeFormatterBuilder()
-        .appendValue(ChronoField.YEAR, 4, 10, SignStyle.NORMAL)
+        .appendValue(ChronoField.YEAR, 4, 4, SignStyle.NORMAL)
         .appendValue(MONTH_OF_YEAR, 2, 2, SignStyle.NOT_NEGATIVE)
         .appendValue(DAY_OF_MONTH, 2, 2, SignStyle.NOT_NEGATIVE)
         .toFormatter(Locale.ROOT)
@@ -357,8 +357,15 @@ public class DateFormatters {
         .toFormatter(Locale.ROOT)
         .withResolverStyle(ResolverStyle.STRICT);
 
+    private static final DateTimeFormatter BASIC_YEAR_MONTH_DAY_PRINTER = new DateTimeFormatterBuilder()
+        .appendValue(ChronoField.YEAR, 4, 10, SignStyle.NORMAL)
+        .appendValue(MONTH_OF_YEAR, 2, 2, SignStyle.NOT_NEGATIVE)
+        .appendValue(DAY_OF_MONTH, 2, 2, SignStyle.NOT_NEGATIVE)
+        .toFormatter(Locale.ROOT)
+        .withResolverStyle(ResolverStyle.STRICT);
+
     private static final DateTimeFormatter BASIC_DATE_TIME_PRINTER = new DateTimeFormatterBuilder()
-        .append(BASIC_YEAR_MONTH_DAY_FORMATTER)
+        .append(BASIC_YEAR_MONTH_DAY_PRINTER)
         .append(BASIC_T_TIME_PRINTER)
         .toFormatter(Locale.ROOT)
         .withResolverStyle(ResolverStyle.STRICT);
@@ -376,7 +383,11 @@ public class DateFormatters {
                                       .withResolverStyle(ResolverStyle.STRICT)
     );
 
-    private static final DateTimeFormatter BASIC_DATE_T =
+    private static final DateTimeFormatter BASIC_DATE_T_PRINTER =
+        new DateTimeFormatterBuilder().append(BASIC_YEAR_MONTH_DAY_PRINTER).appendLiteral("T").toFormatter(Locale.ROOT)
+            .withResolverStyle(ResolverStyle.STRICT);
+
+    private static final DateTimeFormatter BASIC_DATE_T_FORMATTER =
         new DateTimeFormatterBuilder().append(BASIC_YEAR_MONTH_DAY_FORMATTER).appendLiteral("T").toFormatter(Locale.ROOT)
                                       .withResolverStyle(ResolverStyle.STRICT);
 
@@ -385,13 +396,13 @@ public class DateFormatters {
      * separated by a 'T' (uuuuMMdd'T'HHmmssZ).
      */
     private static final DateFormatter BASIC_DATE_TIME_NO_MILLIS = new JavaDateFormatter("basic_date_time_no_millis",
-        new DateTimeFormatterBuilder().append(BASIC_DATE_T).append(BASIC_TIME_NO_MILLIS_BASE)
+        new DateTimeFormatterBuilder().append(BASIC_DATE_T_PRINTER).append(BASIC_TIME_NO_MILLIS_BASE)
                                       .appendOffset("+HH:MM", "Z").toFormatter(Locale.ROOT)
                                       .withResolverStyle(ResolverStyle.STRICT),
-        new DateTimeFormatterBuilder().append(BASIC_DATE_T).append(BASIC_TIME_NO_MILLIS_BASE)
+        new DateTimeFormatterBuilder().append(BASIC_DATE_T_FORMATTER).append(BASIC_TIME_NO_MILLIS_BASE)
                                       .appendZoneOrOffsetId().toFormatter(Locale.ROOT)
                                       .withResolverStyle(ResolverStyle.STRICT),
-        new DateTimeFormatterBuilder().append(BASIC_DATE_T).append(BASIC_TIME_NO_MILLIS_BASE)
+        new DateTimeFormatterBuilder().append(BASIC_DATE_T_FORMATTER).append(BASIC_TIME_NO_MILLIS_BASE)
                                       .append(TIME_ZONE_FORMATTER_NO_COLON).toFormatter(Locale.ROOT)
                                       .withResolverStyle(ResolverStyle.STRICT)
     );
@@ -466,7 +477,7 @@ public class DateFormatters {
 
     private static final DateTimeFormatter STRICT_BASIC_WEEK_DATE_PRINTER = new DateTimeFormatterBuilder()
         .parseStrict()
-        .appendValue(IsoFields.WEEK_BASED_YEAR, 4, 10, SignStyle.NEVER)
+        .appendValue(IsoFields.WEEK_BASED_YEAR, 4, 10, SignStyle.NORMAL)
         .appendLiteral("W")
         .appendValue(IsoFields.WEEK_OF_WEEK_BASED_YEAR, 2, 2, SignStyle.NEVER)
         .appendValue(ChronoField.DAY_OF_WEEK)
