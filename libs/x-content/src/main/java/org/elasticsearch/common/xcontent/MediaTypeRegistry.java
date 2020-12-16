@@ -60,8 +60,9 @@ public class MediaTypeRegistry<T extends MediaType> {
     public Map<String, Pattern> parametersFor(String typeWithSubtype) {
         return parametersMap.get(typeWithSubtype);
     }
-
-    public MediaTypeRegistry<T> register(T[] mediaTypes ) {
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public final MediaTypeRegistry<T> register(T... mediaTypes ) {
         for (T mediaType : mediaTypes) {
             Set<MediaType.HeaderValue> tuples = mediaType.headerValues();
             for (MediaType.HeaderValue headerValue : tuples) {

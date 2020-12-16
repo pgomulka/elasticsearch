@@ -8,7 +8,11 @@ package org.elasticsearch.xpack.sql.plugin;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.xcontent.MediaType;
+import org.elasticsearch.rest.BytesRestResponse;
+import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestRequest;
+import org.elasticsearch.rest.RestResponse;
+import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.xpack.ql.util.StringUtils;
 import org.elasticsearch.xpack.sql.SqlIllegalArgumentException;
 import org.elasticsearch.xpack.sql.action.BasicFormatter;
@@ -18,15 +22,14 @@ import org.elasticsearch.xpack.sql.session.Cursor;
 import org.elasticsearch.xpack.sql.session.Cursors;
 import org.elasticsearch.xpack.sql.util.DateUtils;
 
+import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Function;
 
 import static org.elasticsearch.xpack.sql.action.BasicFormatter.FormatOption.TEXT;
@@ -35,7 +38,7 @@ import static org.elasticsearch.xpack.sql.proto.Protocol.URL_PARAM_DELIMITER;
 /**
  * Templating class for displaying SQL responses in text formats.
  */
-enum TextFormat implements MediaType {
+enum TextFormat implements SqlResponseFormatter {
 
     /**
      * Default text writer.
@@ -85,16 +88,6 @@ enum TextFormat implements MediaType {
         }
 
         @Override
-        public String queryParameter() {
-            return FORMAT_TEXT;
-        }
-
-        @Override
-        String contentType() {
-            return CONTENT_TYPE_TXT;
-        }
-
-        @Override
         protected Character delimiter() {
             throw new UnsupportedOperationException();
         }
@@ -103,16 +96,6 @@ enum TextFormat implements MediaType {
         protected String eol() {
             throw new UnsupportedOperationException();
         }
-
-        @Override
-        public Set<HeaderValue> headerValues() {
-            return Set.of(
-                new HeaderValue(CONTENT_TYPE_TXT,
-                    Map.of("header", "present|absent")),
-                new HeaderValue(VENDOR_CONTENT_TYPE_TXT,
-                    Map.of("header", "present|absent", COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN)));
-        }
-
     },
 
     /**
@@ -134,22 +117,6 @@ enum TextFormat implements MediaType {
         protected String eol() {
             //CRLF
             return "\r\n";
-        }
-
-        @Override
-        public String queryParameter() {
-            return FORMAT_CSV;
-        }
-
-        @Override
-        String contentType() {
-            return CONTENT_TYPE_CSV;
-        }
-
-        @Override
-        String contentType(RestRequest request) {
-            return contentType() + "; charset=utf-8; " +
-                URL_PARAM_HEADER + "=" + (hasHeader(request) ? PARAM_HEADER_PRESENT : PARAM_HEADER_ABSENT);
         }
 
         @Override
@@ -228,14 +195,6 @@ enum TextFormat implements MediaType {
             }
         }
 
-        @Override
-        public Set<HeaderValue> headerValues() {
-            return Set.of(
-                new HeaderValue(CONTENT_TYPE_CSV,
-                    Map.of("header", "present|absent","delimiter", ".+")),// more detailed parsing is in TextFormat.CSV#delimiter
-                new HeaderValue(VENDOR_CONTENT_TYPE_CSV,
-                    Map.of("header", "present|absent","delimiter", ".+", COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN)));
-        }
     },
 
 
@@ -249,21 +208,6 @@ enum TextFormat implements MediaType {
         protected String eol() {
             // only LF
             return "\n";
-        }
-
-        @Override
-        public String queryParameter() {
-            return FORMAT_TSV;
-        }
-
-        @Override
-        String contentType() {
-            return CONTENT_TYPE_TSV;
-        }
-
-        @Override
-        String contentType(RestRequest request) {
-            return contentType() + "; charset=utf-8";
         }
 
         @Override
@@ -286,19 +230,8 @@ enum TextFormat implements MediaType {
 
             return sb.toString();
         }
-
-        @Override
-        public Set<HeaderValue> headerValues() {
-            return Set.of(
-                new HeaderValue(CONTENT_TYPE_TSV, Map.of("header", "present|absent")),
-                new HeaderValue(VENDOR_CONTENT_TYPE_TSV,
-                    Map.of("header", "present|absent", COMPATIBLE_WITH_PARAMETER_NAME, VERSION_PATTERN)));
-        }
     };
 
-    private static final String FORMAT_TEXT = "txt";
-    private static final String FORMAT_CSV = "csv";
-    private static final String FORMAT_TSV = "tsv";
     private static final String CONTENT_TYPE_TXT = "text/plain";
     private static final String VENDOR_CONTENT_TYPE_TXT = "text/vnd.elasticsearch+plain";
     private static final String CONTENT_TYPE_CSV = "text/csv";
@@ -329,19 +262,6 @@ enum TextFormat implements MediaType {
         return true;
     }
 
-    /**
-     * Formal IANA mime type.
-     */
-    abstract String contentType();
-
-    /**
-     * Content type depending on the request.
-     * Might be used by some formatters (like CSV) to specify certain metadata like
-     * whether the header is returned or not.
-     */
-    String contentType(RestRequest request) {
-        return contentType();
-    }
 
     // utility method for consuming a row.
     <F> void row(StringBuilder sb, List<F> row, Function<F, String> toString, Character delimiter) {
@@ -373,5 +293,23 @@ enum TextFormat implements MediaType {
      */
     String maybeEscape(String value, Character delimiter) {
         return value;
+    }
+
+
+    @Override
+    public RestResponse getRestResponse(SqlQueryResponse response, RestRequest request, RestChannel channel, MediaType responseMediaType)
+        throws IOException {
+        TextMediaTypes type = (TextMediaTypes)responseMediaType;
+        final String data = this.format(request, response);
+
+        String responseMediaType1 = type.responseContentType(request);
+
+        RestResponse restResponse = new BytesRestResponse(RestStatus.OK, responseMediaType1,
+            data.getBytes(StandardCharsets.UTF_8));
+
+        if (response.hasCursor()) {
+            restResponse.addHeader("Cursor", response.cursor());
+        }
+        return restResponse;
     }
 }

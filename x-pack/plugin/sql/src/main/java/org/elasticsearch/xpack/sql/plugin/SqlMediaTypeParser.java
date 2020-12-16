@@ -19,7 +19,10 @@ import static org.elasticsearch.xpack.sql.proto.Protocol.URL_PARAM_FORMAT;
 public class SqlMediaTypeParser {
     public static final MediaTypeRegistry<? extends MediaType> MEDIA_TYPE_REGISTRY = new MediaTypeRegistry<>()
         .register(XContentType.values())
-        .register(TextFormat.values());
+        .register(TextMediaTypes.PLAIN_TEXT, TextMediaTypes.VND_PLAIN_TEXT)
+        .register(TextMediaTypes.TSV, TextMediaTypes.VND_TSV)
+        .register(TextMediaTypes.CSV, TextMediaTypes.VND_CSV);
+//        .register(TextFormat.values());
 
     /*
      * Since we support {@link TextFormat} <strong>and</strong>
@@ -50,7 +53,7 @@ public class SqlMediaTypeParser {
     }
 
     private static MediaType validateColumnarRequest(boolean requestIsColumnar, MediaType fromMediaType) {
-        if(requestIsColumnar && fromMediaType instanceof TextFormat){
+        if(requestIsColumnar && fromMediaType instanceof TextMediaTypes){
             throw new IllegalArgumentException("Invalid use of [columnar] argument: cannot be used in combination with "
                 + "txt, csv or tsv formats");
         }

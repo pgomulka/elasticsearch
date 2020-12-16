@@ -29,17 +29,6 @@ import static org.elasticsearch.xpack.sql.plugin.TextFormat.TSV;
 
 public class TextFormatTests extends ESTestCase {
 
-    public void testCsvContentType() {
-        assertEquals("text/csv; charset=utf-8; header=present", CSV.contentType(req()));
-    }
-
-    public void testCsvContentTypeWithoutHeader() {
-        assertEquals("text/csv; charset=utf-8; header=absent", CSV.contentType(reqWithParam("header", "absent")));
-    }
-
-    public void testTsvContentType() {
-        assertEquals("text/tab-separated-values; charset=utf-8", TSV.contentType(req()));
-    }
 
     public void testCsvEscaping() {
         assertEquals("string", CSV.maybeEscape("string", CSV.delimiter()));

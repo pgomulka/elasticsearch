@@ -37,6 +37,7 @@ import static org.elasticsearch.xpack.sql.proto.Protocol.URL_PARAM_DELIMITER;
 public class RestSqlQueryAction extends BaseRestHandler {
 
     private final SqlMediaTypeParser sqlMediaTypeParser = new SqlMediaTypeParser();
+    private final SqlFormatters sqlFormatters = new SqlFormatters();
     MediaType responseMediaType;
 
     @Override
@@ -68,25 +69,9 @@ public class RestSqlQueryAction extends BaseRestHandler {
         return channel -> client.execute(SqlQueryAction.INSTANCE, sqlRequest, new RestResponseListener<SqlQueryResponse>(channel) {
             @Override
             public RestResponse buildResponse(SqlQueryResponse response) throws Exception {
-                RestResponse restResponse;
+                SqlResponseFormatter formatter = sqlFormatters.getFormatter(responseMediaType);
 
-                // XContent branch
-                if (responseMediaType instanceof XContentType) {
-                    XContentType type = (XContentType) responseMediaType;
-                    XContentBuilder builder = channel.newBuilder(request.getXContentType(), type, true);
-                    response.toXContent(builder, request);
-                    restResponse = new BytesRestResponse(RestStatus.OK, builder);
-                } else { // TextFormat
-                    TextFormat type = (TextFormat)responseMediaType;
-                    final String data = type.format(request, response);
-
-                    restResponse = new BytesRestResponse(RestStatus.OK, type.contentType(request),
-                        data.getBytes(StandardCharsets.UTF_8));
-
-                    if (response.hasCursor()) {
-                        restResponse.addHeader("Cursor", response.cursor());
-                    }
-                }
+                RestResponse restResponse = formatter.getRestResponse(response, request, channel, responseMediaType);
 
                 restResponse.addHeader("Took-nanos", Long.toString(System.nanoTime() - startNanos));
                 return restResponse;
@@ -96,7 +81,7 @@ public class RestSqlQueryAction extends BaseRestHandler {
 
     @Override
     protected Set<String> responseParams() {
-        return responseMediaType == TextFormat.CSV ? Collections.singleton(URL_PARAM_DELIMITER) : Collections.emptySet();
+        return responseMediaType == TextMediaTypes.CSV ? Collections.singleton(URL_PARAM_DELIMITER) : Collections.emptySet();
     }
 
     @Override
