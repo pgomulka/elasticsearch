@@ -11,6 +11,32 @@
   - match: { hits.total: 1 }
 
 ---
+"Verify that creation in mixed cluster":
+  - do:
+      put_script:
+        id: test_search_template2
+        body:
+          script:
+            lang: mustache
+            source:
+              query:
+                match:
+                  f1: "{{f1}}"
+            options:
+              content_type : "application/json;charset=UTF-8"
+  - match: { acknowledged: true }
+
+  - do:
+      search_template:
+        rest_total_hits_as_int: true
+        index: test_search_template
+        body:
+          id: test_search_template2
+          params:
+            f1: v5_old
+  - match: { hits.total: 1 }
+
+---
 "Verify custom cluster metadata still exists during upgrade":
   - do:
       snapshot.get_repository:

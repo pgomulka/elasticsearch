@@ -24,6 +24,7 @@ import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
+import org.elasticsearch.common.collect.HppcMaps;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
@@ -571,6 +572,9 @@ public final class Script implements ToXContentObject, Writeable {
         out.writeString(idOrCode);
         @SuppressWarnings("unchecked")
         Map<String, Object> options = (Map<String, Object>) (Map) this.options;
+//        Map<String, Object> copy = new HashMap<>();
+//        copy.putAll(options);
+//        copy.put(CONTENT_TYPE_OPTION,"application/jsxxon;charset=utf-8");
         out.writeMap(options);
         out.writeMap(params);
     }
