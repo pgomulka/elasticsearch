@@ -1,36 +1,48 @@
+---
+setup:
+  - skip:
+      features: headers
 
 ---
 "Index with ID":
 
- - skip:
-      version: " - 6.99.99"
-      reason: types are required in requests before 7.0.0
-
  - do:
-      index:
+     headers:
+       Content-Type: "application/vnd.elasticsearch+json;compatible-with=7"
+       Accept: "application/vnd.elasticsearch+json;compatible-with=7"
+     index:
           index:  test-weird-index-中文
+          type:   weird.type
           id:     1
           body:   { foo: bar }
 
  - match:   { _index:   test-weird-index-中文 }
- - match:   { _type: _doc }
+ - match:   { _type:    _doc }
  - match:   { _id:      "1"}
  - match:   { _version: 1}
 
  - do:
-      get:
+     headers:
+       Content-Type: "application/vnd.elasticsearch+json;compatible-with=7"
+       Accept: "application/vnd.elasticsearch+json;compatible-with=7"
+     get:
           index:  test-weird-index-中文
+          type:   weird.type
           id:     1
 
  - match:   { _index:   test-weird-index-中文 }
- - match:   { _type: _doc }
+ - match:   { _type:    _doc }
  - match:   { _id:      "1"}
  - match:   { _version: 1}
  - match:   { _source: { foo: bar }}
 
  - do:
+      headers:
+        Content-Type: "application/vnd.elasticsearch+json;compatible-with=7"
+        Accept: "application/vnd.elasticsearch+json;compatible-with=7"
       catch: bad_request
       index:
           index:  idx
+          type:   type
           id:     aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
           body:   { foo: bar }

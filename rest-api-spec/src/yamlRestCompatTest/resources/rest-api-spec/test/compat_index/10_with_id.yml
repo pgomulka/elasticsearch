@@ -1,38 +1,28 @@
-# ./gradlew ':rest-api-spec:yamlRestCompatTest' --tests "org.elasticsearch.test.rest.ClientYamlTestSuiteIT" -Dtests.method="test {p0=index/11_with_id_with_types_compat/*}"
----
-setup:
-  - skip:
-      features: headers
-
 ---
 "Index with ID":
 
+ - skip:
+      version: " - 6.99.99"
+      reason: types are required in requests before 7.0.0
+
  - do:
-     headers:
-          Content-Type: "application/vnd.elasticsearch+json;compatible-with=7"
-          Accept: "application/vnd.elasticsearch+json;compatible-with=7"
-     index:
+      index:
           index:  test-weird-index-中文
-          type:   weird.type
           id:     1
           body:   { foo: bar }
 
  - match:   { _index:   test-weird-index-中文 }
- - match:   { _type:    _doc }
+ - match:   { _type: _doc }
  - match:   { _id:      "1"}
  - match:   { _version: 1}
 
  - do:
-     headers:
-         Content-Type: "application/vnd.elasticsearch+json;compatible-with=7"
-         Accept: "application/vnd.elasticsearch+json;compatible-with=7"
-     get:
+      get:
           index:  test-weird-index-中文
-          type:   weird.type
           id:     1
 
  - match:   { _index:   test-weird-index-中文 }
- - match:   { _type:    _doc }
+ - match:   { _type: _doc }
  - match:   { _id:      "1"}
  - match:   { _version: 1}
  - match:   { _source: { foo: bar }}
@@ -41,6 +31,5 @@ setup:
       catch: bad_request
       index:
           index:  idx
-          type:   type
           id:     aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
           body:   { foo: bar }
