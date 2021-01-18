@@ -46,6 +46,8 @@ public interface MediaType {
      */
     List<HeaderValue> headerValues();
 
+    ParsedMediaType toParsedMediaType();
+
     /**
      * A class to represent supported mediaType values i.e. application/json and parameters to be validated.
      * Parameters for validation is a map where a key is a parameter name, value is a parameter regex which is used for validation.

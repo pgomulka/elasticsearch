@@ -8,6 +8,7 @@ package org.elasticsearch.xpack.sql.plugin;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.xcontent.MediaType;
+import org.elasticsearch.common.xcontent.ParsedMediaType;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.xpack.ql.util.StringUtils;
 import org.elasticsearch.xpack.sql.SqlIllegalArgumentException;
@@ -372,5 +373,11 @@ enum TextFormat implements MediaType {
      */
     String maybeEscape(String value, Character delimiter) {
         return value;
+    }
+
+
+    @Override
+    public ParsedMediaType toParsedMediaType() {
+        return null;
     }
 }

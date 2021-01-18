@@ -21,25 +21,13 @@ package org.elasticsearch.script;
 
 import org.elasticsearch.common.xcontent.MediaType;
 import org.elasticsearch.common.xcontent.MediaTypeRegistry;
+import org.elasticsearch.common.xcontent.ParsedMediaType;
 import org.elasticsearch.common.xcontent.XContentType;
 
 import java.util.List;
 
 public enum MustacheMediaType implements MediaType {
 
-    //    JSON {
-//        @Override
-//        public String queryParameter() {
-//            return null;
-//        }
-//
-//        @Override
-//        public List<HeaderValue> headerValues() {
-//            return List.of(
-//                new HeaderValue("application/json",
-//                    Map.of("charset", "utf-8")));
-//        }
-//    },
     PLAIN_TEXT {
         @Override
         public String queryParameter() {
@@ -62,6 +50,12 @@ public enum MustacheMediaType implements MediaType {
             return List.of(new HeaderValue("application/x-www-form-urlencoded"));
         }
     };
+
+    private final ParsedMediaType parsedMediaType =  ParsedMediaType.parseMediaType(headerValues().get(0).v1());
+    @Override
+    public ParsedMediaType toParsedMediaType() {
+        return parsedMediaType;
+    }
 
     public static final MediaTypeRegistry<MediaType> REGISTRY = new MediaTypeRegistry<>()
         .register(MustacheMediaType.values())
