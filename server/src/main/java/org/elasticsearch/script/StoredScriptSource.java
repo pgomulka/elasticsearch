@@ -19,6 +19,7 @@
 
 package org.elasticsearch.script;
 
+import org.elasticsearch.Version;
 import org.elasticsearch.cluster.AbstractDiffable;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.Diff;
@@ -361,7 +362,13 @@ public class StoredScriptSource extends AbstractDiffable<StoredScriptSource> imp
         out.writeString(source);
         @SuppressWarnings("unchecked")
         Map<String, Object> options = (Map<String, Object>)(Map)this.options;
-        out.writeMap(options);
+        Map<String, Object> copy = new HashMap<>();
+        copy.putAll(options);
+        if ("application/json;charset=utf-8".equals(options.get(Script.CONTENT_TYPE_OPTION))
+            && out.getVersion().before(Version.CURRENT)) {
+            copy.put(Script.CONTENT_TYPE_OPTION, "application/json; charset=UTF-8");
+        }
+        out.writeMap(copy);
     }
 
     /**

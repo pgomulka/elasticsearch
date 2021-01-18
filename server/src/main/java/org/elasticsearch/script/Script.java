@@ -20,6 +20,7 @@
 package org.elasticsearch.script;
 
 import org.elasticsearch.ElasticsearchParseException;
+import org.elasticsearch.Version;
 import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.bytes.BytesArray;
@@ -572,10 +573,13 @@ public final class Script implements ToXContentObject, Writeable {
         out.writeString(idOrCode);
         @SuppressWarnings("unchecked")
         Map<String, Object> options = (Map<String, Object>) (Map) this.options;
-//        Map<String, Object> copy = new HashMap<>();
-//        copy.putAll(options);
-//        copy.put(CONTENT_TYPE_OPTION,"application/jsxxon;charset=utf-8");
-        out.writeMap(options);
+        Map<String, Object> copy = new HashMap<>();
+        copy.putAll(options);
+        if ("application/json;charset=utf-8".equals(options.get(Script.CONTENT_TYPE_OPTION))
+            && out.getVersion().before(Version.CURRENT)) {
+            copy.put(Script.CONTENT_TYPE_OPTION, "application/json; charset=UTF-8");
+        }
+        out.writeMap(copy);
         out.writeMap(params);
     }
 
