@@ -52,6 +52,7 @@ import static org.elasticsearch.index.seqno.SequenceNumbers.UNASSIGNED_SEQ_NO;
  * A base class for the response of a write operation that involves a single doc
  */
 public abstract class DocWriteResponse extends ReplicationResponse implements WriteResponse, StatusToXContentObject {
+    static final String TYPE_FIELD_NAME = "_type";
 
     private static final String _SHARDS = "_shards";
     private static final String _INDEX = "_index";
@@ -304,6 +305,9 @@ public abstract class DocWriteResponse extends ReplicationResponse implements Wr
     @Override
     public final XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject();
+        if (builder.getCompatibleMajorVersion() == Version.V_7_0_0.major) {
+            builder.field(TYPE_FIELD_NAME, MapperService.SINGLE_MAPPING_NAME);
+        }
         innerToXContent(builder, params);
         builder.endObject();
         return builder;

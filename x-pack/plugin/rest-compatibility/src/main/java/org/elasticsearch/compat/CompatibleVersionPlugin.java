@@ -7,14 +7,29 @@ package org.elasticsearch.compat;
 
 import org.elasticsearch.ElasticsearchStatusException;
 import org.elasticsearch.Version;
+import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
+import org.elasticsearch.cluster.node.DiscoveryNodes;
 import org.elasticsearch.common.Nullable;
+import org.elasticsearch.common.settings.ClusterSettings;
+import org.elasticsearch.common.settings.IndexScopedSettings;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.settings.SettingsFilter;
 import org.elasticsearch.common.xcontent.MediaType;
 import org.elasticsearch.common.xcontent.ParsedMediaType;
+import org.elasticsearch.plugins.ActionPlugin;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.plugins.RestCompatibilityPlugin;
+import org.elasticsearch.rest.RestController;
+import org.elasticsearch.rest.RestHandler;
 import org.elasticsearch.rest.RestStatus;
+import org.elasticsearch.rest.action.document.RestGetActionV7;
+import org.elasticsearch.rest.action.document.RestIndexActionV7;
 
-public class CompatibleVersionPlugin extends Plugin implements RestCompatibilityPlugin {
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Supplier;
+
+public class CompatibleVersionPlugin extends Plugin implements RestCompatibilityPlugin, ActionPlugin {
 
     @Override
     public Version getCompatibleVersion(
@@ -92,5 +107,24 @@ public class CompatibleVersionPlugin extends Plugin implements RestCompatibility
             return version != null ? Byte.parseByte(version) : null;
         }
         return null;
+    }
+
+    @Override
+    public List<RestHandler> getRestHandlers(Settings settings,
+                                             RestController restController,
+                                             ClusterSettings clusterSettings,
+                                             IndexScopedSettings indexScopedSettings,
+                                             SettingsFilter settingsFilter,
+                                             IndexNameExpressionResolver indexNameExpressionResolver,
+                                             Supplier<DiscoveryNodes> nodesInCluster) {
+        if (Version.CURRENT.major == 8) {
+            return List.of(
+                new RestGetActionV7(),
+                new RestIndexActionV7.CompatibleRestIndexAction(),
+                new RestIndexActionV7.CompatibleCreateHandler(),
+                new RestIndexActionV7.CompatibleAutoIdHandler(nodesInCluster)
+            );
+        }
+        return Collections.emptyList();
     }
 }
