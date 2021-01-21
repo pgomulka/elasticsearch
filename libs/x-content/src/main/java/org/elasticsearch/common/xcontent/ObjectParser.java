@@ -20,6 +20,7 @@ package org.elasticsearch.common.xcontent;
 
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.ParseField;
+import org.elasticsearch.common.collect.Tuple;
 
 import java.io.IOException;
 import java.lang.reflect.Array;
@@ -37,6 +38,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
 import static org.elasticsearch.common.xcontent.XContentParser.Token.START_ARRAY;
@@ -99,7 +101,7 @@ public final class ObjectParser<Value, Context> extends AbstractObjectParser<Val
 
     private static <Value, Context> UnknownFieldParser<Value, Context> errorOnUnknown() {
         return (op, f, l, p, v, c) -> {
-            throw new XContentParseException(l, ErrorOnUnknown.IMPLEMENTATION.errorMessage(op.name, f, op.fieldParserMap.keySet()));
+            throw new XContentParseException(l, ErrorOnUnknown.IMPLEMENTATION.errorMessage(op.name, f, op.fieldParserMap.keySet().stream().map(Tuple::v1).collect(Collectors.toSet())));
         };
     }
 
@@ -148,7 +150,7 @@ public final class ObjectParser<Value, Context> extends AbstractObjectParser<Val
             try {
                 o = parser.namedObject(categoryClass, field, context);
             } catch (NamedObjectNotFoundException e) {
-                Set<String> candidates = new HashSet<>(objectParser.fieldParserMap.keySet());
+                Set<String> candidates = new HashSet<>(objectParser.fieldParserMap.keySet().stream().map(Tuple::v1).collect(Collectors.toSet()));
                 e.getCandidates().forEach(candidates::add);
                 String message = ErrorOnUnknown.IMPLEMENTATION.errorMessage(objectParser.name, field, candidates);
                 throw new XContentParseException(location, message, e);
@@ -157,7 +159,7 @@ public final class ObjectParser<Value, Context> extends AbstractObjectParser<Val
         };
     }
 
-    private final Map<String, FieldParser> fieldParserMap = new HashMap<>();
+    private final Map<Tuple<String,Byte>, FieldParser> fieldParserMap = new HashMap<>();
     private final String name;
     private final Function<Context, Value> valueBuilder;
     private final UnknownFieldParser<Value, Context> unknownFieldParser;
@@ -265,6 +267,10 @@ public final class ObjectParser<Value, Context> extends AbstractObjectParser<Val
      * @throws IOException if an IOException occurs.
      */
     public Value parse(XContentParser parser, Value value, Context context) throws IOException {
+        return parse(parser,value,context, (byte)8);
+    }
+
+    public Value parse(XContentParser parser, Value value, Context context, byte version) throws IOException {
         XContentParser.Token token;
         if (parser.currentToken() == XContentParser.Token.START_OBJECT) {
             token = parser.currentToken();
@@ -283,12 +289,12 @@ public final class ObjectParser<Value, Context> extends AbstractObjectParser<Val
         for (int i = 0; i < this.exclusiveFieldSets.size(); i++) {
             exclusiveFields.add(new ArrayList<>());
         }
-
+//        byte version = parser.restCompatibleMajorVersion();
         while ((token = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
             if (token == XContentParser.Token.FIELD_NAME) {
                 currentFieldName = parser.currentName();
                 currentPosition = parser.getTokenLocation();
-                fieldParser = fieldParserMap.get(currentFieldName);
+                fieldParser = fieldParserMap.get(Tuple.tuple(currentFieldName,version));
             } else {
                 if (currentFieldName == null) {
                     throw new XContentParseException(parser.getTokenLocation(), "[" + name  + "] no field found");
@@ -361,6 +367,7 @@ public final class ObjectParser<Value, Context> extends AbstractObjectParser<Val
     public interface Parser<Value, Context> {
         void parse(XContentParser parser, Value value, Context context) throws IOException;
     }
+
     public void declareField(Parser<Value, Context> p, ParseField parseField, ValueType type) {
         if (parseField == null) {
             throw new IllegalArgumentException("[parseField] is required");
@@ -370,10 +377,23 @@ public final class ObjectParser<Value, Context> extends AbstractObjectParser<Val
         }
         FieldParser fieldParser = new FieldParser(p, type.supportedTokens(), parseField, type);
         for (String fieldValue : parseField.getAllNamesIncludedDeprecated()) {
-            fieldParserMap.putIfAbsent(fieldValue, fieldParser);
+            fieldParserMap.putIfAbsent(Tuple.tuple(fieldValue,(byte)8), fieldParser);
+            fieldParserMap.putIfAbsent(Tuple.tuple(fieldValue,(byte)7), fieldParser);
         }
     }
 
+    public void declareField(Parser<Value, Context> p, ParseField parseField, ValueType type, byte version) {
+        if (parseField == null) {
+            throw new IllegalArgumentException("[parseField] is required");
+        }
+        if (type == null) {
+            throw new IllegalArgumentException("[type] is required");
+        }
+        FieldParser fieldParser = new FieldParser(p, type.supportedTokens(), parseField, type);
+        for (String fieldValue : parseField.getAllNamesIncludedDeprecated()) {
+            fieldParserMap.putIfAbsent(Tuple.tuple(fieldValue,version), fieldParser);
+        }
+    }
     @Override
     public <T> void declareField(BiConsumer<Value, T> consumer, ContextParser<Context, T> parser, ParseField parseField,
             ValueType type) {

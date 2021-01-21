@@ -19,6 +19,7 @@
 
 package org.elasticsearch.index.reindex;
 
+import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.action.CompositeIndicesRequest;
 import org.elasticsearch.action.index.IndexRequest;
@@ -87,6 +88,8 @@ public class ReindexRequest extends AbstractBulkIndexByScrollRequest<ReindexRequ
         destination = new IndexRequest(in);
         remoteInfo = in.readOptionalWriteable(RemoteInfo::new);
     }
+
+
 
     @Override
     protected ReindexRequest self() {
@@ -358,8 +361,12 @@ public class ReindexRequest extends AbstractBulkIndexByScrollRequest<ReindexRequ
         PARSER.declareField(sourceParser::parse, new ParseField("source"), ObjectParser.ValueType.OBJECT);
         PARSER.declareField((p, v, c) -> destParser.parse(p, v.getDestination(), c), new ParseField("dest"), ObjectParser.ValueType.OBJECT);
         PARSER.declareInt(ReindexRequest::setMaxDocsValidateIdentical, new ParseField("max_docs"));
+
         // avoid silently accepting an ignored size.
-        PARSER.declareInt((r,s) -> failOnSizeSpecified(), new ParseField("size"));
+        PARSER.declareField((p, v, c) -> failOnSizeSpecified(), new ParseField("size"), ObjectParser.ValueType.INT, Version.CURRENT.major);
+        PARSER.declareField((p, v, c) -> ReindexRequest.setMaxDocsValidateIdentical(v,p.intValue()) , new ParseField("size"),
+            ObjectParser.ValueType.INT, Version.CURRENT.minimumRestCompatibilityVersion().major);
+
         PARSER.declareField((p, v, c) -> v.setScript(Script.parse(p)), new ParseField("script"),
             ObjectParser.ValueType.OBJECT);
         PARSER.declareString(ReindexRequest::setConflicts, new ParseField("conflicts"));
@@ -368,6 +375,12 @@ public class ReindexRequest extends AbstractBulkIndexByScrollRequest<ReindexRequ
     public static ReindexRequest fromXContent(XContentParser parser) throws IOException {
         ReindexRequest reindexRequest = new ReindexRequest();
         PARSER.parse(parser, reindexRequest, null);
+        return reindexRequest;
+    }
+
+    public static ReindexRequest fromXContentV7(XContentParser parser) throws IOException {
+        ReindexRequest reindexRequest = new ReindexRequest();
+        PARSER.parse(parser, reindexRequest, null, Version.CURRENT.minimumRestCompatibilityVersion().major);
         return reindexRequest;
     }
 

@@ -19,6 +19,7 @@
 
 package org.elasticsearch.index.reindex;
 
+import org.elasticsearch.Version;
 import org.elasticsearch.action.DocWriteRequest;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.io.stream.NamedWriteableRegistry;
@@ -36,9 +37,9 @@ import static org.elasticsearch.rest.RestRequest.Method.POST;
 /**
  * Expose reindex over rest.
  */
-public class RestReindexAction extends AbstractBaseReindexRestHandler<ReindexRequest, ReindexAction> implements RestRequestFilter {
+public class RestReindexActionV7 extends AbstractBaseReindexRestHandler<ReindexRequest, ReindexAction> implements RestRequestFilter {
 
-    public RestReindexAction() {
+    public RestReindexActionV7() {
         super(ReindexAction.INSTANCE);
     }
 
@@ -49,7 +50,7 @@ public class RestReindexAction extends AbstractBaseReindexRestHandler<ReindexReq
 
     @Override
     public String getName() {
-        return "reindex_action";
+        return "reindex_action_v7";
     }
 
     @Override
@@ -66,7 +67,7 @@ public class RestReindexAction extends AbstractBaseReindexRestHandler<ReindexReq
 
         ReindexRequest internal;
         try (XContentParser parser = request.contentParser()) {
-            internal = ReindexRequest.fromXContent(parser);
+            internal = ReindexRequest.fromXContentV7(parser);
         }
 //        if(request.hasParam("size")){
 //            ReindexRequest.setMaxDocsValidateIdentical(internal, Integer.parseInt(request.param("size")));
@@ -87,5 +88,10 @@ public class RestReindexAction extends AbstractBaseReindexRestHandler<ReindexReq
     @Override
     public Set<String> getFilteredFields() {
         return FILTERED_FIELDS;
+    }
+
+    @Override
+    public Version compatibleWithVersion() {
+        return Version.CURRENT.minimumRestCompatibilityVersion();
     }
 }
