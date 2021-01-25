@@ -70,7 +70,7 @@ import static org.elasticsearch.common.xcontent.XContentParser.Token.VALUE_STRIN
  *   }
  * }</pre>
  * It's highly recommended to use the high level declare methods like {@link #declareString(BiConsumer, ParseField)} instead of
- * {@link #declareField} which can be used to implement exceptional parsing operations not covered by the high level methods.
+ * {@link #declareFieldForVersion} which can be used to implement exceptional parsing operations not covered by the high level methods.
  */
 public final class ObjectParser<Value, Context> extends AbstractObjectParser<Value, Context>
     implements BiFunction<XContentParser, Context, Value>, ContextParser<Context, Value>{
@@ -289,12 +289,11 @@ public final class ObjectParser<Value, Context> extends AbstractObjectParser<Val
         for (int i = 0; i < this.exclusiveFieldSets.size(); i++) {
             exclusiveFields.add(new ArrayList<>());
         }
-//        byte version = parser.restCompatibleMajorVersion();
         while ((token = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
             if (token == XContentParser.Token.FIELD_NAME) {
                 currentFieldName = parser.currentName();
                 currentPosition = parser.getTokenLocation();
-                fieldParser = fieldParserMap.get(Tuple.tuple(currentFieldName,version));
+                fieldParser = fieldParserMap.get(Tuple.tuple(currentFieldName, version));
             } else {
                 if (currentFieldName == null) {
                     throw new XContentParseException(parser.getTokenLocation(), "[" + name  + "] no field found");
@@ -382,7 +381,7 @@ public final class ObjectParser<Value, Context> extends AbstractObjectParser<Val
         }
     }
 
-    public void declareField(Parser<Value, Context> p, ParseField parseField, ValueType type, byte version) {
+    public void declareFieldForVersion(Parser<Value, Context> p, ParseField parseField, ValueType type, byte version) {
         if (parseField == null) {
             throw new IllegalArgumentException("[parseField] is required");
         }
@@ -391,7 +390,7 @@ public final class ObjectParser<Value, Context> extends AbstractObjectParser<Val
         }
         FieldParser fieldParser = new FieldParser(p, type.supportedTokens(), parseField, type);
         for (String fieldValue : parseField.getAllNamesIncludedDeprecated()) {
-            fieldParserMap.putIfAbsent(Tuple.tuple(fieldValue,version), fieldParser);
+            fieldParserMap.putIfAbsent(Tuple.tuple(fieldValue, version), fieldParser);
         }
     }
     @Override

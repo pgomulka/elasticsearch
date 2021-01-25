@@ -68,9 +68,6 @@ public class RestReindexAction extends AbstractBaseReindexRestHandler<ReindexReq
         try (XContentParser parser = request.contentParser()) {
             internal = ReindexRequest.fromXContent(parser);
         }
-//        if(request.hasParam("size")){
-//            ReindexRequest.setMaxDocsValidateIdentical(internal, Integer.parseInt(request.param("size")));
-//        }
 
         if (request.hasParam("scroll")) {
             internal.setScroll(parseTimeValue(request.param("scroll"), "scroll"));
