@@ -26,7 +26,7 @@ import java.util.Objects;
 public class DeleteAction implements LifecycleAction {
     public static final String NAME = "delete";
 
-    public static final ParseField DELETE_SEARCHABLE_SNAPSHOT_FIELD = new ParseField("delete_searchable_snapshot");
+    public static final ParseField DELETE_SEARCHABLE_SNAPSHOT_FIELD = new ParseField("remove_ss");
 
     private static final ConstructingObjectParser<DeleteAction, Void> PARSER = new ConstructingObjectParser<>(NAME,
         a -> new DeleteAction(a[0] == null ? true : (boolean) a[0]));
