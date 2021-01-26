@@ -41,6 +41,10 @@ import java.util.function.Supplier;
  */
 public interface XContentParser extends Closeable {
 
+    XContentParser withCompatible(boolean isCompatible);
+
+    boolean isCompatible();
+
     enum Token {
         START_OBJECT {
             @Override

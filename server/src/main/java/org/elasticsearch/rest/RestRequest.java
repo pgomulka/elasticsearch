@@ -448,6 +448,11 @@ public class RestRequest implements ToXContent.Params {
         return xContentType.get().xContent().createParser(xContentRegistry, LoggingDeprecationHandler.INSTANCE, content.streamInput());
     }
 
+    public final XContentParser contentParser(boolean compatible) throws IOException {
+        BytesReference content = requiredContent(); // will throw exception if body or content type missing
+        return xContentType.get().xContent().createParser(xContentRegistry, LoggingDeprecationHandler.INSTANCE, content.streamInput());
+    }
+
     /**
      * If there is any content then call {@code applyParser} with the parser, otherwise do nothing.
      */

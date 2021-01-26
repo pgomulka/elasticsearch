@@ -274,6 +274,17 @@ public class XContentSubParser implements XContentParser {
         return parser.getDeprecationHandler();
     }
 
+
+    @Override
+    public XContentParser withCompatible(boolean isCompatible) {
+        return parser.withCompatible(isCompatible);
+    }
+
+    @Override
+    public boolean isCompatible() {
+        return parser.isCompatible();
+    }
+
     @Override
     public void close() throws IOException {
         if (closed == false) {

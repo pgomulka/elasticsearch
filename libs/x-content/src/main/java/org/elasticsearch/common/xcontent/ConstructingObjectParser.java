@@ -224,6 +224,44 @@ public final class ConstructingObjectParser<Value, Context> extends AbstractObje
         }
     }
 
+    public <T> void declareFieldsForCompatibility(BiConsumer<Value, T> consumer, ContextParser<Context, T> parser, ParseField parseField, ValueType type, boolean compatible) {
+        if (consumer == null) {
+            throw new IllegalArgumentException("[consumer] is required");
+        }
+        if (parser == null) {
+            throw new IllegalArgumentException("[parser] is required");
+        }
+        if (parseField == null) {
+            throw new IllegalArgumentException("[parseField] is required");
+        }
+        if (type == null) {
+            throw new IllegalArgumentException("[type] is required");
+        }
+
+        if (isConstructorArg(consumer)) {
+            /*
+             * Build a new consumer directly against the object parser that
+             * triggers the "constructor arg just arrived behavior" of the
+             * parser. Conveniently, we can close over the position of the
+             * constructor in the argument list so we don't need to do any fancy
+             * or expensive lookups whenever the constructor args come in.
+             */
+            int position = addConstructorArg(consumer, parseField);
+            if(compatible){
+                objectParser.declareField((target, v) -> target.constructorArg(position, v), parser, parseField, type, 7);
+
+            }else{
+                objectParser.declareField((target, v) -> target.constructorArg(position, v), parser, parseField, type);
+
+            }
+        } else {
+            numberOfFields += 1;
+            BiConsumer<Target, T> consumer1 = queueingConsumer(consumer, parseField);
+            objectParser.declareFieldForVersion((p, v, c) -> consumer1.accept(v, parser.parse(p, c)), parseField, type, 7);
+        }
+    }
+
+
     @Override
     public <T> void declareNamedObject(BiConsumer<Value, T> consumer, NamedObjectParser<T, Context> namedObjectParser,
                                                 ParseField parseField) {

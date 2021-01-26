@@ -7,13 +7,16 @@ package org.elasticsearch.xpack.core.ilm;
 
 import org.elasticsearch.Version;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.common.CheckedFunction;
 import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.xcontent.ConstructingObjectParser;
+import org.elasticsearch.common.xcontent.ObjectParser;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.index.reindex.ReindexRequest;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -26,13 +29,18 @@ import java.util.Objects;
 public class DeleteAction implements LifecycleAction {
     public static final String NAME = "delete";
 
-    public static final ParseField DELETE_SEARCHABLE_SNAPSHOT_FIELD = new ParseField("delete_searchable_snapshot");
+    public static final ParseField DELETE_SEARCHABLE_SNAPSHOT_FIELD = new ParseField("remove_ss");
+    public static final ParseField DELETE_SEARCHABLE_SNAPSHOT_FIELD_V7 = new ParseField("delete_searchable_snapshot");
 
     private static final ConstructingObjectParser<DeleteAction, Void> PARSER = new ConstructingObjectParser<>(NAME,
         a -> new DeleteAction(a[0] == null ? true : (boolean) a[0]));
 
     static {
-        PARSER.declareBoolean(ConstructingObjectParser.optionalConstructorArg(), DELETE_SEARCHABLE_SNAPSHOT_FIELD);
+        CheckedFunction<XContentParser, Boolean, IOException> parser = XContentParser::booleanValue;
+        PARSER.declareFieldsForCompatibility(ConstructingObjectParser.optionalConstructorArg(), (p1, c1) -> parser.apply(p1), DELETE_SEARCHABLE_SNAPSHOT_FIELD, ObjectParser.ValueType.BOOLEAN,
+            true);
+        PARSER.declareFieldsForCompatibility(ConstructingObjectParser.optionalConstructorArg(), (p1, c1) -> parser.apply(p1), DELETE_SEARCHABLE_SNAPSHOT_FIELD, ObjectParser.ValueType.BOOLEAN,
+            false);
     }
 
     public static DeleteAction parse(XContentParser parser) {

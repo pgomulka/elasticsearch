@@ -81,6 +81,16 @@ public class WatcherXContentParser implements XContentParser {
     public ZonedDateTime getParseDateTime() { return parseTime; }
 
     @Override
+    public XContentParser withCompatible(boolean isCompatible) {
+        return this;
+    }
+
+    @Override
+    public boolean isCompatible() {
+        return false;
+    }
+
+    @Override
     public XContentType contentType() {
         return parser.contentType();
     }

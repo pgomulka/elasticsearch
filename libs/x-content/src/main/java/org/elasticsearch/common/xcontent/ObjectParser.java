@@ -405,6 +405,17 @@ public final class ObjectParser<Value, Context> extends AbstractObjectParser<Val
         declareField((p, v, c) -> consumer.accept(v, parser.parse(p, c)), parseField, type);
     }
 
+    public <T> void declareField(BiConsumer<Value, T> consumer, ContextParser<Context, T> parser, ParseField parseField,
+                                 ValueType type, byte version) {
+        if (consumer == null) {
+            throw new IllegalArgumentException("[consumer] is required");
+        }
+        if (parser == null) {
+            throw new IllegalArgumentException("[parser] is required");
+        }
+        declareField((p, v, c) -> consumer.accept(v, parser.parse(p, c)), parseField, type);
+    }
+
     public <T> void declareObjectOrDefault(BiConsumer<Value, T> consumer, BiFunction<XContentParser, Context, T> objectParser,
             Supplier<T> defaultValue, ParseField field) {
         declareField((p, v, c) -> {

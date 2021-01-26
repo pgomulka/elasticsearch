@@ -46,6 +46,7 @@ public abstract class AbstractXContentParser implements XContentParser {
     // references to this policy decision throughout the codebase and find
     // and change any code that needs to apply an alternative policy.
     public static final boolean DEFAULT_NUMBER_COERCE_POLICY = true;
+    private boolean isCompatible;
 
     private static void checkCoerceString(boolean coerce, Class<? extends Number> clazz) {
         if (!coerce) {
@@ -61,6 +62,17 @@ public abstract class AbstractXContentParser implements XContentParser {
     public AbstractXContentParser(NamedXContentRegistry xContentRegistry, DeprecationHandler deprecationHandler) {
         this.xContentRegistry = xContentRegistry;
         this.deprecationHandler = deprecationHandler;
+    }
+
+    @Override
+    public XContentParser withCompatible(boolean isCompatible) {
+        this.isCompatible = isCompatible;
+        return this;
+    }
+
+    @Override
+    public boolean isCompatible() {
+        return isCompatible;
     }
 
     // The 3rd party parsers we rely on are known to silently truncate fractions: see
