@@ -76,6 +76,36 @@ public class CborXContent implements XContent {
     public XContentGenerator createGenerator(OutputStream os, Set<String> includes, Set<String> excludes) throws IOException {
         return new CborXContentGenerator(cborFactory.createGenerator(os, JsonEncoding.UTF8), os, includes, excludes);
     }
+    @Override
+    public XContentParser createParser(NamedXContentRegistry xContentRegistry,
+                                       DeprecationHandler deprecationHandler, String content, boolean useCompatibility) throws IOException {
+        return new CborXContentParser(xContentRegistry, deprecationHandler, cborFactory.createParser(content));
+    }
+
+    @Override
+    public XContentParser createParser(NamedXContentRegistry xContentRegistry,
+                                       DeprecationHandler deprecationHandler, InputStream is, boolean useCompatibility) throws IOException {
+        return new CborXContentParser(xContentRegistry, deprecationHandler, cborFactory.createParser(is));
+    }
+
+    @Override
+    public XContentParser createParser(NamedXContentRegistry xContentRegistry,
+                                       DeprecationHandler deprecationHandler, byte[] data, boolean useCompatibility) throws IOException {
+        return new CborXContentParser(xContentRegistry, deprecationHandler, cborFactory.createParser(data));
+    }
+
+    @Override
+    public XContentParser createParser(NamedXContentRegistry xContentRegistry,
+                                       DeprecationHandler deprecationHandler, byte[] data, int offset, int length, boolean useCompatibility) throws IOException {
+        return new CborXContentParser(xContentRegistry, deprecationHandler, cborFactory.createParser(data, offset, length));
+    }
+
+    //TODO: deprecate and CborXContentParser needs to support useCompatibility
+    @Override
+    public XContentParser createParser(NamedXContentRegistry xContentRegistry,
+                                       DeprecationHandler deprecationHandler, Reader reader, boolean useCompatibility) throws IOException {
+        return new CborXContentParser(xContentRegistry, deprecationHandler, cborFactory.createParser(reader));
+    }
 
     @Override
     public XContentParser createParser(NamedXContentRegistry xContentRegistry,

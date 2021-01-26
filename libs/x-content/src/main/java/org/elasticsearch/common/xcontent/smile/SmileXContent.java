@@ -81,6 +81,38 @@ public class SmileXContent implements XContent {
 
     @Override
     public XContentParser createParser(NamedXContentRegistry xContentRegistry,
+                                       DeprecationHandler deprecationHandler, String content, boolean useCompatibility) throws IOException {
+        return new SmileXContentParser(xContentRegistry, deprecationHandler, smileFactory.createParser(content));
+    }
+
+    @Override
+    public XContentParser createParser(NamedXContentRegistry xContentRegistry,
+                                       DeprecationHandler deprecationHandler, InputStream is, boolean useCompatibility) throws IOException {
+        return new SmileXContentParser(xContentRegistry, deprecationHandler, smileFactory.createParser(is));
+    }
+
+    @Override
+    public XContentParser createParser(NamedXContentRegistry xContentRegistry,
+                                       DeprecationHandler deprecationHandler, byte[] data, boolean useCompatibility) throws IOException {
+        return new SmileXContentParser(xContentRegistry, deprecationHandler, smileFactory.createParser(data));
+    }
+
+    @Override
+    public XContentParser createParser(NamedXContentRegistry xContentRegistry,
+                                       DeprecationHandler deprecationHandler, byte[] data, int offset, int length, boolean useCompatibility) throws IOException {
+        return new SmileXContentParser(xContentRegistry, deprecationHandler, smileFactory.createParser(data, offset, length));
+    }
+
+    @Override
+    public XContentParser createParser(NamedXContentRegistry xContentRegistry,
+                                       DeprecationHandler deprecationHandler, Reader reader, boolean useCompatibility) throws IOException {
+        return new SmileXContentParser(xContentRegistry, deprecationHandler, smileFactory.createParser(reader));
+    }
+
+    //TODO: depcrate the non useCompatiblity variant and SmileXContentParser to support the flag
+
+    @Override
+    public XContentParser createParser(NamedXContentRegistry xContentRegistry,
             DeprecationHandler deprecationHandler, String content) throws IOException {
         return new SmileXContentParser(xContentRegistry, deprecationHandler, smileFactory.createParser(content));
     }

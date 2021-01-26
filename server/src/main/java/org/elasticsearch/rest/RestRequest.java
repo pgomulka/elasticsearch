@@ -71,6 +71,7 @@ public class RestRequest implements ToXContent.Params {
     private final HttpChannel httpChannel;
     private final ParsedMediaType parsedAccept;
     private final ParsedMediaType parsedContentType;
+    private final boolean useCompatibility;
     private HttpRequest httpRequest;
 
     private boolean contentConsumed = false;
@@ -108,6 +109,14 @@ public class RestRequest implements ToXContent.Params {
         this.rawPath = path;
         this.headers = Collections.unmodifiableMap(headers);
         this.requestId = requestId;
+        //TODO: need to beef up this check ALOT!
+        // if this is true, then we should run this through the
+        // validation that currently lives in CompatibleVersionPlugin
+        // I think we can simply get rid of that and move the code here and
+        // make this flag the primary flag to use compatibilty or not
+        // so you can't even create a RestRequest unless you can pass those rules .. but a quick check of the param should help to
+        // prevent running that check for every request
+        this.useCompatibility = parsedContentType.getParameters().containsKey("compatible-with");
     }
 
     private static @Nullable ParsedMediaType parseHeaderWithMediaType(Map<String, List<String>> headers, String headerName) {
@@ -445,7 +454,7 @@ public class RestRequest implements ToXContent.Params {
      */
     public final XContentParser contentParser() throws IOException {
         BytesReference content = requiredContent(); // will throw exception if body or content type missing
-        return xContentType.get().xContent().createParser(xContentRegistry, LoggingDeprecationHandler.INSTANCE, content.streamInput());
+        return xContentType.get().xContent().createParser(xContentRegistry, LoggingDeprecationHandler.INSTANCE, content.streamInput(), useCompatibility );
     }
 
     /**

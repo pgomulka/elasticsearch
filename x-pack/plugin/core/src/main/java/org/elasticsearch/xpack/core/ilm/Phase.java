@@ -66,6 +66,7 @@ public class Phase implements ToXContentObject, Writeable {
     }
 
     public static Phase parse(XContentParser parser, String name) {
+
         return PARSER.apply(parser, name);
     }
 

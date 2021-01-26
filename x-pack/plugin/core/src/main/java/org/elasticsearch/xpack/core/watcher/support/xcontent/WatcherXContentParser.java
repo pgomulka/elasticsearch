@@ -282,6 +282,11 @@ public class WatcherXContentParser implements XContentParser {
     }
 
     @Override
+    public boolean useCompatibility() {
+        return false;
+    }
+
+    @Override
     public void close() throws IOException {
         parser.close();
     }

@@ -99,6 +99,7 @@ import org.elasticsearch.xpack.ilm.action.TransportStartILMAction;
 import org.elasticsearch.xpack.ilm.action.TransportStopILMAction;
 import org.elasticsearch.xpack.ilm.history.ILMHistoryStore;
 import org.elasticsearch.xpack.ilm.history.ILMHistoryTemplateRegistry;
+import org.elasticsearch.xpack.ilm.rest.compat.v7.xcontent.from.DeleteActionV7;
 import org.elasticsearch.xpack.slm.SLMInfoTransportAction;
 import org.elasticsearch.xpack.slm.SLMUsageTransportAction;
 import org.elasticsearch.xpack.slm.SnapshotLifecycleService;
@@ -235,6 +236,13 @@ public class IndexLifecycle extends Plugin implements ActionPlugin {
                 SearchableSnapshotAction::parse),
             new NamedXContentRegistry.Entry(LifecycleAction.class, new ParseField(MigrateAction.NAME),
                 MigrateAction::parse)
+        );
+    }
+
+    @Override
+    public List<NamedXContentRegistry.Entry> getNamedXContentForCompatibility() {
+        return Arrays.asList(
+            new NamedXContentRegistry.Entry(LifecycleAction.class, new ParseField(DeleteAction.NAME), DeleteActionV7::parse)
         );
     }
 
