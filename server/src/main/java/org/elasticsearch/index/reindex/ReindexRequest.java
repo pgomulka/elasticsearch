@@ -47,6 +47,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.Collections.emptyMap;
 import static java.util.Objects.requireNonNull;
@@ -357,12 +358,27 @@ public class ReindexRequest extends AbstractBulkIndexByScrollRequest<ReindexRequ
 
         PARSER.declareField(sourceParser::parse, new ParseField("source"), ObjectParser.ValueType.OBJECT);
         PARSER.declareField((p, v, c) -> destParser.parse(p, v.getDestination(), c), new ParseField("dest"), ObjectParser.ValueType.OBJECT);
-        PARSER.declareInt(ReindexRequest::setMaxDocsValidateIdentical, new ParseField("max_docs"));
+//        PARSER.declareInt(ReindexRequest::setMaxDocsValidateIdentical, new ParseField("max_docs"));
+//        PARSER.declareInt(ReindexRequest::setMaxDocsValidateIdentical, new ParseField("size"));
         // avoid silently accepting an ignored size.
-        PARSER.declareInt((r,s) -> failOnSizeSpecified(), new ParseField("size"));
+        PARSER.declareNamedObject(ReindexRequest::setMaxDocsValidateIdentical,
+            (p, c, n) -> p.namedObject(Integer.class, n, null), new ParseField("size"));
+//        PARSER.declareInt((r,s) -> failOnSizeSpecified(), new ParseField("size"));
         PARSER.declareField((p, v, c) -> v.setScript(Script.parse(p)), new ParseField("script"),
             ObjectParser.ValueType.OBJECT);
         PARSER.declareString(ReindexRequest::setConflicts, new ParseField("conflicts"));
+    }
+
+    public static Integer parseSizeV7(XContentParser parser){
+        ObjectParser<AtomicReference<Integer>, Void> PARSER = new ObjectParser<>("reindexv7");
+        PARSER.declareInt((a,b)-> a.set(b), new ParseField("size"));
+        return PARSER.apply(parser,null).get();
+    }
+
+    public static Integer parseMaxDocs(XContentParser parser) throws IOException {
+//        ObjectParser<AtomicReference<Integer>, Void> PARSER = new ObjectParser<>("reindex", ()->new AtomicReference<>());
+//        PARSER.declareInt((a,b)-> a.set(b), new ParseField("max_docs"));
+        return parser.intValue();
     }
 
     public static ReindexRequest fromXContent(XContentParser parser) throws IOException {

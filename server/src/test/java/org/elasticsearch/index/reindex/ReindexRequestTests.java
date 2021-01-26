@@ -20,6 +20,7 @@
 package org.elasticsearch.index.reindex;
 
 import org.elasticsearch.action.ActionRequestValidationException;
+import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.io.stream.NamedWriteableRegistry;
@@ -34,6 +35,7 @@ import org.elasticsearch.search.SearchModule;
 import org.elasticsearch.search.slice.SliceBuilder;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -289,6 +291,7 @@ public class ReindexRequestTests extends AbstractBulkByScrollRequestTestCase<Rei
         BytesReference request;
         try (XContentBuilder b = JsonXContent.contentBuilder()) {
             b.startObject(); {
+                b.field("max_doc",1);
                 b.startObject("source"); {
                     b.startObject("remote"); {
                         b.field("host", "http://localhost:9200");
@@ -305,12 +308,22 @@ public class ReindexRequestTests extends AbstractBulkByScrollRequestTestCase<Rei
             b.endObject();
             request = BytesReference.bytes(b);
         }
-        try (XContentParser p = createParser(JsonXContent.jsonXContent, request)) {
+        try (XContentParser p = createParser(new NamedXContentRegistry(getNamedXContent()),JsonXContent.jsonXContent, request)) {
             ReindexRequest r = ReindexRequest.fromXContent(p);
             assertEquals("localhost", r.getRemoteInfo().getHost());
             assertArrayEquals(new String[] {"source"}, r.getSearchRequest().indices());
         }
     }
+
+    public List<NamedXContentRegistry.Entry> getNamedXContent() {
+        return Arrays.asList(
+            new NamedXContentRegistry.Entry(Integer.class, new ParseField("max_doc"), ReindexRequest::parseMaxDocs)
+        );    }
+
+    public List<NamedXContentRegistry.Entry> getNamedXContentForCompatibility() {
+        return Arrays.asList(
+            new NamedXContentRegistry.Entry(Integer.class, new ParseField("size"), ReindexRequest::parseMaxDocs)
+        );    }
 
     private RemoteInfo buildRemoteInfoHostTestCase(String hostInRest) throws IOException {
         Map<String, Object> remote = new HashMap<>();

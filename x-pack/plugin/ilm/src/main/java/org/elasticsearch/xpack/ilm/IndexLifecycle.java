@@ -83,6 +83,7 @@ import org.elasticsearch.xpack.ilm.action.RestGetLifecycleAction;
 import org.elasticsearch.xpack.ilm.action.RestGetStatusAction;
 import org.elasticsearch.xpack.ilm.action.RestMoveToStepAction;
 import org.elasticsearch.xpack.ilm.action.RestPutLifecycleAction;
+import org.elasticsearch.xpack.ilm.action.RestPutLifecycleActionV7;
 import org.elasticsearch.xpack.ilm.action.RestRemoveIndexLifecyclePolicyAction;
 import org.elasticsearch.xpack.ilm.action.RestRetryAction;
 import org.elasticsearch.xpack.ilm.action.RestStartILMAction;
@@ -255,6 +256,8 @@ public class IndexLifecycle extends Plugin implements ActionPlugin {
 
             // add ILM rest handlers
             new RestPutLifecycleAction(),
+            new RestPutLifecycleActionV7(),
+
             new RestGetLifecycleAction(),
             new RestDeleteLifecycleAction(),
             new RestExplainLifecycleAction(),

@@ -25,6 +25,7 @@ import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.node.DiscoveryNodes;
 import org.elasticsearch.cluster.service.ClusterService;
+import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.io.stream.NamedWriteableRegistry;
 import org.elasticsearch.common.settings.ClusterSettings;
 import org.elasticsearch.common.settings.IndexScopedSettings;
@@ -71,11 +72,24 @@ public class ReindexPlugin extends Plugin implements ActionPlugin {
     }
 
     @Override
+    public List<NamedXContentRegistry.Entry> getNamedXContent() {
+        return Arrays.asList(
+            new NamedXContentRegistry.Entry(Integer.class, new ParseField("max_doc"), ReindexRequest::parseMaxDocs)
+        );    }
+
+    @Override
+    public List<NamedXContentRegistry.Entry> getNamedXContentForCompatibility() {
+        return Arrays.asList(
+            new NamedXContentRegistry.Entry(Integer.class, new ParseField("size"), ReindexRequest::parseMaxDocs)
+        );    }
+
+    @Override
     public List<RestHandler> getRestHandlers(Settings settings, RestController restController, ClusterSettings clusterSettings,
             IndexScopedSettings indexScopedSettings, SettingsFilter settingsFilter, IndexNameExpressionResolver indexNameExpressionResolver,
             Supplier<DiscoveryNodes> nodesInCluster) {
         return Arrays.asList(
                 new RestReindexAction(),
+                new RestReindexActionV7(),
                 new RestUpdateByQueryAction(),
                 new RestDeleteByQueryAction(),
                 new RestRethrottleAction(nodesInCluster));
