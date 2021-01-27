@@ -288,7 +288,7 @@ public final class ObjectParser<Value, Context> extends AbstractObjectParser<Val
             if (token == XContentParser.Token.FIELD_NAME) {
                 currentFieldName = parser.currentName();
                 currentPosition = parser.getTokenLocation();
-                fieldParser = fieldParserMap.get(currentFieldName);
+                fieldParser = fieldParserMap.get(Tuple.ofcurrentFieldName, parser.useCompatibility());
             } else {
                 if (currentFieldName == null) {
                     throw new XContentParseException(parser.getTokenLocation(), "[" + name  + "] no field found");
@@ -370,6 +370,9 @@ public final class ObjectParser<Value, Context> extends AbstractObjectParser<Val
         }
         FieldParser fieldParser = new FieldParser(p, type.supportedTokens(), parseField, type);
         for (String fieldValue : parseField.getAllNamesIncludedDeprecated()) {
+            if(parseField.isCompatible()){
+
+            }
             fieldParserMap.putIfAbsent(fieldValue, fieldParser);
         }
     }

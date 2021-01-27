@@ -364,6 +364,7 @@ public abstract class AbstractObjectParser<Value, Context> {
      */
     public abstract void declareExclusiveFieldSet(String... exclusiveSet);
 
+
     private interface IOSupplier<T> {
         T get() throws IOException;
     }

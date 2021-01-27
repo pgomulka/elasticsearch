@@ -19,12 +19,7 @@ import java.util.List;
 
 import static org.elasticsearch.rest.RestRequest.Method.PUT;
 
-public class RestPutLifecycleActionV7 extends BaseRestHandler {
-
-    @Override
-    public List<Route> routes() {
-        return List.of(new Route(PUT, "/_ilm/policy/{name}"));
-    }
+public class RestPutLifecycleActionV7 extends RestPutLifecycleAction {
 
     @Override
     public String getName() {
@@ -33,18 +28,12 @@ public class RestPutLifecycleActionV7 extends BaseRestHandler {
 
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest restRequest, NodeClient client) throws IOException {
-        String lifecycleName = restRequest.param("name");
-        try (XContentParser parser = restRequest.contentParser(true)) {
-            PutLifecycleAction.Request putLifecycleRequest = PutLifecycleAction.Request.parseRequest(lifecycleName, parser);
-            putLifecycleRequest.timeout(restRequest.paramAsTime("timeout", putLifecycleRequest.timeout()));
-            putLifecycleRequest.masterNodeTimeout(restRequest.paramAsTime("master_timeout", putLifecycleRequest.masterNodeTimeout()));
-
-            return channel -> client.execute(PutLifecycleAction.INSTANCE, putLifecycleRequest, new RestToXContentListener<>(channel));
-        }
+      //  logger.inf();
+      return super.prepareRequest(restRequest,client);
     }
 
     @Override
     public Version compatibleWithVersion() {
-        return Version.CURRENT.minimumRestCompatibilityVersion();
+        return Version.V_7_0_0;
     }
 }

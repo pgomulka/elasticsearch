@@ -180,6 +180,10 @@ public class ParseField {
         return deprecatedNames;
     }
 
+    public boolean isCompatible() {
+        return false;
+    }
+
     public static class CommonFields {
         public static final ParseField FIELD = new ParseField("field");
         public static final ParseField FIELDS = new ParseField("fields");
