@@ -1,20 +1,9 @@
 /*
- * Licensed to Elasticsearch under one or more contributor
- * license agreements. See the NOTICE file distributed with
- * this work for additional information regarding copyright
- * ownership. Elasticsearch licenses this file to you under
- * the Apache License, Version 2.0 (the "License"); you may
- * not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0 and the Server Side Public License, v 1; you may not use this file except
+ * in compliance with, at your election, the Elastic License 2.0 or the Server
+ * Side Public License, v 1.
  */
 
 package org.elasticsearch.search.aggregations.bucket.terms;
@@ -33,8 +22,7 @@ public abstract class LongKeyedBucketOrds implements Releasable {
      * Build a {@link LongKeyedBucketOrds}.
      */
     public static LongKeyedBucketOrds build(BigArrays bigArrays, CardinalityUpperBound cardinality) {
-        // TODO nothing NONE?
-        return cardinality != CardinalityUpperBound.MANY ? new FromSingle(bigArrays) : new FromMany(bigArrays);
+        return cardinality.map(estimate -> estimate < 2 ? new FromSingle(bigArrays) : new FromMany(bigArrays));
     }
 
     private LongKeyedBucketOrds() {}
@@ -59,6 +47,11 @@ public abstract class LongKeyedBucketOrds implements Releasable {
      * their bucket if they have been added or {@code -1} if they haven't.
      */
    public abstract long find(long owningBucketOrd, long value);
+
+    /**
+     * Returns the value currently associated with the bucket ordinal
+     */
+    public abstract long get(long ordinal);
 
     /**
      * The number of collected buckets.
@@ -98,7 +91,7 @@ public abstract class LongKeyedBucketOrds implements Releasable {
         long value();
 
         /**
-         * An {@linkplain BucketOrdsEnum} that is empty. 
+         * An {@linkplain BucketOrdsEnum} that is empty.
          */
         BucketOrdsEnum EMPTY = new BucketOrdsEnum() {
             @Override
@@ -131,6 +124,12 @@ public abstract class LongKeyedBucketOrds implements Releasable {
         public long find(long owningBucketOrd, long value) {
             assert owningBucketOrd == 0;
             return ords.find(value);
+        }
+
+
+        @Override
+        public long get(long ordinal) {
+            return ords.get(ordinal);
         }
 
         @Override
@@ -203,6 +202,11 @@ public abstract class LongKeyedBucketOrds implements Releasable {
         @Override
         public long find(long owningBucketOrd, long value) {
             return ords.find(owningBucketOrd, value);
+        }
+
+        @Override
+        public long get(long ordinal) {
+            return ords.getKey2(ordinal);
         }
 
         @Override

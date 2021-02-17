@@ -1,7 +1,8 @@
 /*
  * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
- * or more contributor license agreements. Licensed under the Elastic License;
- * you may not use this file except in compliance with the Elastic License.
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0; you may not use this file except in compliance with the Elastic License
+ * 2.0.
  */
 package org.elasticsearch.upgrades;
 
@@ -99,7 +100,6 @@ public abstract class AbstractUpgradeTestCase extends ESRestTestCase {
         if (expectedTemplates.isEmpty()) {
             return;
         }
-
         assertBusy(() -> {
             final Request catRequest = new Request("GET", "_cat/templates?h=n&s=n");
             final Response catResponse = adminClient().performRequest(catRequest);

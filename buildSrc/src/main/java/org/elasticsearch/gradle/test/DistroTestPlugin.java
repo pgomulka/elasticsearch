@@ -1,20 +1,9 @@
 /*
- * Licensed to Elasticsearch under one or more contributor
- * license agreements. See the NOTICE file distributed with
- * this work for additional information regarding copyright
- * ownership. Elasticsearch licenses this file to you under
- * the Apache License, Version 2.0 (the "License"); you may
- * not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0 and the Server Side Public License, v 1; you may not use this file except
+ * in compliance with, at your election, the Elastic License 2.0 or the Server
+ * Side Public License, v 1.
  */
 
 package org.elasticsearch.gradle.test;
@@ -35,6 +24,7 @@ import org.elasticsearch.gradle.docker.DockerSupportService;
 import org.elasticsearch.gradle.info.BuildParams;
 import org.elasticsearch.gradle.internal.InternalDistributionDownloadPlugin;
 import org.elasticsearch.gradle.util.GradleUtils;
+import org.elasticsearch.gradle.util.Util;
 import org.elasticsearch.gradle.vagrant.VagrantBasePlugin;
 import org.elasticsearch.gradle.vagrant.VagrantExtension;
 import org.gradle.api.Action;
@@ -47,9 +37,11 @@ import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.plugins.JavaBasePlugin;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.specs.Specs;
+import org.gradle.api.tasks.Copy;
 import org.gradle.api.tasks.TaskProvider;
 import org.gradle.api.tasks.testing.Test;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -75,10 +67,14 @@ public class DistroTestPlugin implements Plugin<Project> {
     private static final String BWC_DISTRIBUTION_SYSPROP = "tests.bwc-distribution";
     private static final String EXAMPLE_PLUGIN_SYSPROP = "tests.example-plugin";
 
+    private static final String QUOTA_AWARE_FS_PLUGIN_CONFIGURATION = "quotaAwareFsPlugin";
+    private static final String QUOTA_AWARE_FS_PLUGIN_SYSPROP = "tests.quota-aware-fs-plugin";
+
     @Override
     public void apply(Project project) {
         project.getRootProject().getPluginManager().apply(DockerSupportPlugin.class);
         project.getPlugins().apply(InternalDistributionDownloadPlugin.class);
+        project.getPlugins().apply(JdkDownloadPlugin.class);
         project.getPluginManager().apply("elasticsearch.build");
 
         Provider<DockerSupportService> dockerSupport = GradleUtils.getBuildService(
@@ -96,20 +92,24 @@ public class DistroTestPlugin implements Plugin<Project> {
         TaskProvider<Task> destructiveDistroTest = project.getTasks().register("destructiveDistroTest");
 
         Configuration examplePlugin = configureExamplePlugin(project);
+        Configuration quotaAwareFsPlugin = configureQuotaAwareFsPlugin(project);
 
         List<TaskProvider<Test>> windowsTestTasks = new ArrayList<>();
         Map<Type, List<TaskProvider<Test>>> linuxTestTasks = new HashMap<>();
         Map<String, List<TaskProvider<Test>>> upgradeTestTasks = new HashMap<>();
         Map<String, TaskProvider<?>> depsTasks = new HashMap<>();
+
         for (ElasticsearchDistribution distribution : testDistributions) {
             String taskname = destructiveDistroTestTaskName(distribution);
             TaskProvider<?> depsTask = project.getTasks().register(taskname + "#deps");
-            depsTask.configure(t -> t.dependsOn(distribution, examplePlugin));
+            // explicitly depend on the archive not on the implicit extracted distribution
+            depsTask.configure(t -> t.dependsOn(distribution.getArchiveDependencies(), examplePlugin, quotaAwareFsPlugin));
             depsTasks.put(taskname, depsTask);
             TaskProvider<Test> destructiveTask = configureTestTask(project, taskname, distribution, t -> {
                 t.onlyIf(t2 -> distribution.isDocker() == false || dockerSupport.get().getDockerAvailability().isAvailable);
-                addDistributionSysprop(t, DISTRIBUTION_SYSPROP, distribution::toString);
+                addDistributionSysprop(t, DISTRIBUTION_SYSPROP, distribution::getFilepath);
                 addDistributionSysprop(t, EXAMPLE_PLUGIN_SYSPROP, () -> examplePlugin.getSingleFile().toString());
+                addDistributionSysprop(t, QUOTA_AWARE_FS_PLUGIN_SYSPROP, () -> quotaAwareFsPlugin.getSingleFile().toString());
                 t.exclude("**/PackageUpgradeTests.class");
             }, depsTask);
 
@@ -147,8 +147,8 @@ public class DistroTestPlugin implements Plugin<Project> {
                     upgradeDepsTask.configure(t -> t.dependsOn(distribution, bwcDistro));
                     depsTasks.put(upgradeTaskname, upgradeDepsTask);
                     TaskProvider<Test> upgradeTest = configureTestTask(project, upgradeTaskname, distribution, t -> {
-                        addDistributionSysprop(t, DISTRIBUTION_SYSPROP, distribution::toString);
-                        addDistributionSysprop(t, BWC_DISTRIBUTION_SYSPROP, bwcDistro::toString);
+                        addDistributionSysprop(t, DISTRIBUTION_SYSPROP, distribution::getFilepath);
+                        addDistributionSysprop(t, BWC_DISTRIBUTION_SYSPROP, bwcDistro::getFilepath);
                         t.include("**/PackageUpgradeTests.class");
                     }, upgradeDepsTask);
                     versionTasks.get(version.toString()).configure(t -> t.dependsOn(upgradeTest));
@@ -157,11 +157,22 @@ public class DistroTestPlugin implements Plugin<Project> {
             }
         }
 
+        // setup jdks used by no-jdk tests, and by gradle executing
+        TaskProvider<Copy> linuxGradleJdk = createJdk(project, "gradle", GRADLE_JDK_VENDOR, GRADLE_JDK_VERSION, "linux", "x64");
+        TaskProvider<Copy> linuxSystemJdk = createJdk(project, "system", SYSTEM_JDK_VENDOR, SYSTEM_JDK_VERSION, "linux", "x64");
+        TaskProvider<Copy> windowsGradleJdk = createJdk(project, "gradle", GRADLE_JDK_VENDOR, GRADLE_JDK_VERSION, "windows", "x64");
+        TaskProvider<Copy> windowsSystemJdk = createJdk(project, "system", SYSTEM_JDK_VENDOR, SYSTEM_JDK_VERSION, "windows", "x64");
+
         project.subprojects(vmProject -> {
             vmProject.getPluginManager().apply(VagrantBasePlugin.class);
-            vmProject.getPluginManager().apply(JdkDownloadPlugin.class);
-            List<Object> vmDependencies = new ArrayList<>(configureVM(vmProject));
-            vmDependencies.add(project.getConfigurations().getByName("testRuntimeClasspath"));
+            TaskProvider<Copy> gradleJdk = isWindows(vmProject) ? windowsGradleJdk : linuxGradleJdk;
+            TaskProvider<Copy> systemJdk = isWindows(vmProject) ? windowsSystemJdk : linuxSystemJdk;
+            configureVM(vmProject, gradleJdk, systemJdk);
+            List<Object> vmDependencies = Arrays.asList(
+                gradleJdk,
+                systemJdk,
+                project.getConfigurations().getByName("testRuntimeClasspath")
+            );
 
             Map<ElasticsearchDistribution.Type, TaskProvider<?>> vmLifecyleTasks = lifecycleTasks(vmProject, "distroTest");
             Map<String, TaskProvider<?>> vmVersionTasks = versionTasks(vmProject, "distroUpgradeTest");
@@ -237,57 +248,60 @@ public class DistroTestPlugin implements Plugin<Project> {
         return versionTasks;
     }
 
-    private static Jdk createJdk(
-        NamedDomainObjectContainer<Jdk> jdksContainer,
-        String name,
+    private static TaskProvider<Copy> createJdk(
+        Project project,
+        String purpose,
         String vendor,
         String version,
         String platform,
         String architecture
     ) {
-        Jdk jdk = jdksContainer.create(name);
+        Jdk jdk = JdkDownloadPlugin.getContainer(project).create(platform + "-" + purpose);
         jdk.setVendor(vendor);
         jdk.setVersion(version);
         jdk.setPlatform(platform);
         jdk.setArchitecture(architecture);
-        return jdk;
+
+        String taskname = "copy" + Util.capitalize(platform) + Util.capitalize(purpose) + "Jdk";
+        TaskProvider<Copy> copyTask = project.getTasks().register(taskname, Copy.class);
+        copyTask.configure(t -> {
+            t.from(jdk);
+            t.into(new File(project.getBuildDir(), "jdks/" + platform + "-" + architecture + "-" + vendor + "-" + version));
+        });
+        return copyTask;
     }
 
-    private static List<Object> configureVM(Project project) {
+    private static void configureVM(Project project, TaskProvider<Copy> gradleJdkProvider, TaskProvider<Copy> systemJdkProvider) {
         String box = project.getName();
-
-        // setup jdks used by the distro tests, and by gradle executing
-
-        NamedDomainObjectContainer<Jdk> jdksContainer = JdkDownloadPlugin.getContainer(project);
-        String platform = box.contains("windows") ? "windows" : "linux";
-        Jdk systemJdk = createJdk(jdksContainer, "system", SYSTEM_JDK_VENDOR, SYSTEM_JDK_VERSION, platform, "x64");
-        Jdk gradleJdk = createJdk(jdksContainer, "gradle", GRADLE_JDK_VENDOR, GRADLE_JDK_VERSION, platform, "x64");
 
         // setup VM used by these tests
         VagrantExtension vagrant = project.getExtensions().getByType(VagrantExtension.class);
         vagrant.setBox(box);
-        vagrant.vmEnv("SYSTEM_JAVA_HOME", convertPath(project, vagrant, systemJdk, "", ""));
-        vagrant.vmEnv("JAVA_HOME", ""); // make sure any default java on the system is ignored
-        vagrant.vmEnv("PATH", convertPath(project, vagrant, gradleJdk, "/bin:$PATH", "\\bin;$Env:PATH"));
-        // pass these along to get correct build scans
+
+        vagrant.vmEnv("SYSTEM_JAVA_HOME", convertPath(project, vagrant, systemJdkProvider, "", ""));
+        // set java home for gradle to use. package tests will overwrite/remove this for each test case
+        vagrant.vmEnv("JAVA_HOME", convertPath(project, vagrant, gradleJdkProvider, "", ""));
         if (System.getenv("JENKINS_URL") != null) {
             Stream.of("JOB_NAME", "JENKINS_URL", "BUILD_NUMBER", "BUILD_URL").forEach(name -> vagrant.vmEnv(name, System.getenv(name)));
         }
         vagrant.setIsWindowsVM(isWindows(project));
-
-        return Arrays.asList(systemJdk, gradleJdk);
     }
 
-    private static Object convertPath(Project project, VagrantExtension vagrant, Jdk jdk, String additionaLinux, String additionalWindows) {
-        return new Object() {
-            @Override
-            public String toString() {
-                if (vagrant.isWindowsVM()) {
-                    return convertWindowsPath(project, jdk.getPath()) + additionalWindows;
-                }
-                return convertLinuxPath(project, jdk.getPath()) + additionaLinux;
+    private static Object convertPath(
+        Project project,
+        VagrantExtension vagrant,
+        TaskProvider<Copy> jdkProvider,
+        String additionaLinux,
+        String additionalWindows
+    ) {
+        return Util.toStringable(() -> {
+            String hostPath = jdkProvider.get().getDestinationDir().toString();
+            if (vagrant.isWindowsVM()) {
+                return convertWindowsPath(project, hostPath) + additionalWindows;
+            } else {
+                return convertLinuxPath(project, hostPath) + additionaLinux;
             }
-        };
+        });
     }
 
     private static Configuration configureExamplePlugin(Project project) {
@@ -295,6 +309,14 @@ public class DistroTestPlugin implements Plugin<Project> {
         DependencyHandler deps = project.getDependencies();
         Map<String, String> examplePluginProject = Map.of("path", ":example-plugins:custom-settings", "configuration", "zip");
         deps.add(EXAMPLE_PLUGIN_CONFIGURATION, deps.project(examplePluginProject));
+        return examplePlugin;
+    }
+
+    private static Configuration configureQuotaAwareFsPlugin(Project project) {
+        Configuration examplePlugin = project.getConfigurations().create(QUOTA_AWARE_FS_PLUGIN_CONFIGURATION);
+        DependencyHandler deps = project.getDependencies();
+        Map<String, String> quotaAwareFsPluginProject = Map.of("path", ":x-pack:quota-aware-fs", "configuration", "zip");
+        deps.add(QUOTA_AWARE_FS_PLUGIN_CONFIGURATION, deps.project(quotaAwareFsPluginProject));
         return examplePlugin;
     }
 

@@ -1,7 +1,8 @@
 /*
  * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
- * or more contributor license agreements. Licensed under the Elastic License;
- * you may not use this file except in compliance with the Elastic License.
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0; you may not use this file except in compliance with the Elastic License
+ * 2.0.
  */
 package org.elasticsearch.xpack.ml.inference.loadingservice;
 
@@ -34,6 +35,7 @@ import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.threadpool.ScalingExecutorBuilder;
 import org.elasticsearch.threadpool.TestThreadPool;
 import org.elasticsearch.threadpool.ThreadPool;
+import org.elasticsearch.xpack.core.ml.action.GetTrainedModelsAction;
 import org.elasticsearch.xpack.core.ml.inference.TrainedModelConfig;
 import org.elasticsearch.xpack.core.ml.inference.TrainedModelInput;
 import org.elasticsearch.xpack.core.ml.inference.results.InferenceResults;
@@ -174,7 +176,7 @@ public class ModelLoadingServiceTests extends ESTestCase {
             threadPool,
             clusterService,
             trainedModelStatsService,
-            Settings.builder().put(ModelLoadingService.INFERENCE_MODEL_CACHE_SIZE.getKey(), new ByteSizeValue(20L)).build(),
+            Settings.builder().put(ModelLoadingService.INFERENCE_MODEL_CACHE_SIZE.getKey(), ByteSizeValue.ofBytes(20L)).build(),
             "test-node",
             circuitBreaker);
 
@@ -437,9 +439,9 @@ public class ModelLoadingServiceTests extends ESTestCase {
         // the loading occurred or which models are currently in the cache due to evictions.
         // Verify that we have at least loaded all three
         assertBusy(() -> {
-            verify(trainedModelProvider, times(1)).getTrainedModel(eq(model1), eq(false), any());
-            verify(trainedModelProvider, times(1)).getTrainedModel(eq(model2), eq(false), any());
-            verify(trainedModelProvider, times(1)).getTrainedModel(eq(model3), eq(false), any());
+            verify(trainedModelProvider, times(1)).getTrainedModel(eq(model1), eq(GetTrainedModelsAction.Includes.empty()), any());
+            verify(trainedModelProvider, times(1)).getTrainedModel(eq(model2), eq(GetTrainedModelsAction.Includes.empty()), any());
+            verify(trainedModelProvider, times(1)).getTrainedModel(eq(model3), eq(GetTrainedModelsAction.Includes.empty()), any());
         });
         assertBusy(() -> {
             assertThat(circuitBreaker.getUsed(), equalTo(10L));
@@ -556,7 +558,7 @@ public class ModelLoadingServiceTests extends ESTestCase {
             ActionListener listener = (ActionListener) invocationOnMock.getArguments()[2];
             listener.onResponse(trainedModelConfig);
             return null;
-        }).when(trainedModelProvider).getTrainedModel(eq(modelId), eq(false), any());
+        }).when(trainedModelProvider).getTrainedModel(eq(modelId), eq(GetTrainedModelsAction.Includes.empty()), any());
     }
 
     @SuppressWarnings("unchecked")
@@ -568,7 +570,7 @@ public class ModelLoadingServiceTests extends ESTestCase {
                 listener.onFailure(new ResourceNotFoundException(
                     Messages.getMessage(Messages.INFERENCE_NOT_FOUND, modelId)));
                 return null;
-            }).when(trainedModelProvider).getTrainedModel(eq(modelId), eq(false), any());
+            }).when(trainedModelProvider).getTrainedModel(eq(modelId), eq(GetTrainedModelsAction.Includes.empty()), any());
         } else {
             TrainedModelConfig trainedModelConfig = mock(TrainedModelConfig.class);
             when(trainedModelConfig.getEstimatedHeapMemory()).thenReturn(0L);
@@ -577,7 +579,7 @@ public class ModelLoadingServiceTests extends ESTestCase {
                 ActionListener listener = (ActionListener) invocationOnMock.getArguments()[2];
                 listener.onResponse(trainedModelConfig);
                 return null;
-            }).when(trainedModelProvider).getTrainedModel(eq(modelId), eq(false), any());
+            }).when(trainedModelProvider).getTrainedModel(eq(modelId), eq(GetTrainedModelsAction.Includes.empty()), any());
             doAnswer(invocationOnMock -> {
                 @SuppressWarnings("rawtypes")
                 ActionListener listener = (ActionListener) invocationOnMock.getArguments()[1];
@@ -653,22 +655,20 @@ public class ModelLoadingServiceTests extends ESTestCase {
         }
 
         @Override
-        public double addEstimateBytesAndMaybeBreak(long bytes, String label) throws CircuitBreakingException {
+        public void addEstimateBytesAndMaybeBreak(long bytes, String label) throws CircuitBreakingException {
             synchronized (this) {
                 if (bytes + currentBytes >= maxBytes) {
                     trippedCount++;
                     circuitBreak(label, bytes);
                 }
                 currentBytes += bytes;
-                return currentBytes;
             }
         }
 
         @Override
-        public long addWithoutBreaking(long bytes) {
+        public void addWithoutBreaking(long bytes) {
             synchronized (this) {
                 currentBytes += bytes;
-                return currentBytes;
             }
         }
 

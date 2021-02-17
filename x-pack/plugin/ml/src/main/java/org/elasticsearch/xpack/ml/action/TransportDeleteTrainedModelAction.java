@@ -1,7 +1,8 @@
 /*
  * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
- * or more contributor license agreements. Licensed under the Elastic License;
- * you may not use this file except in compliance with the Elastic License.
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0; you may not use this file except in compliance with the Elastic License
+ * 2.0.
  */
 package org.elasticsearch.xpack.ml.action;
 
@@ -12,14 +13,13 @@ import org.elasticsearch.ElasticsearchStatusException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.master.AcknowledgedResponse;
-import org.elasticsearch.action.support.master.TransportMasterNodeAction;
+import org.elasticsearch.action.support.master.AcknowledgedTransportMasterNodeAction;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.block.ClusterBlockException;
 import org.elasticsearch.cluster.block.ClusterBlockLevel;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.inject.Inject;
-import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.ingest.IngestMetadata;
 import org.elasticsearch.ingest.IngestService;
 import org.elasticsearch.ingest.Pipeline;
@@ -33,19 +33,17 @@ import org.elasticsearch.xpack.ml.inference.ingest.InferenceProcessor;
 import org.elasticsearch.xpack.ml.inference.persistence.TrainedModelProvider;
 import org.elasticsearch.xpack.ml.notifications.InferenceAuditor;
 
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-
 
 /**
  * The action is a master node action to ensure it reads an up-to-date cluster
  * state in order to determine if there is a processor referencing the trained model
  */
 public class TransportDeleteTrainedModelAction
-    extends TransportMasterNodeAction<DeleteTrainedModelAction.Request, AcknowledgedResponse> {
+    extends AcknowledgedTransportMasterNodeAction<DeleteTrainedModelAction.Request> {
 
     private static final Logger logger = LogManager.getLogger(TransportDeleteTrainedModelAction.class);
 
@@ -60,20 +58,10 @@ public class TransportDeleteTrainedModelAction
                                              TrainedModelProvider configProvider, InferenceAuditor auditor,
                                              IngestService ingestService) {
         super(DeleteTrainedModelAction.NAME, transportService, clusterService, threadPool, actionFilters,
-            DeleteTrainedModelAction.Request::new, indexNameExpressionResolver);
+            DeleteTrainedModelAction.Request::new, indexNameExpressionResolver, ThreadPool.Names.SAME);
         this.trainedModelProvider = configProvider;
         this.ingestService = ingestService;
         this.auditor = Objects.requireNonNull(auditor);
-    }
-
-    @Override
-    protected String executor() {
-        return ThreadPool.Names.SAME;
-    }
-
-    @Override
-    protected AcknowledgedResponse read(StreamInput in) throws IOException {
-        return new AcknowledgedResponse(in);
     }
 
     @Override
@@ -95,7 +83,7 @@ public class TransportDeleteTrainedModelAction
         trainedModelProvider.deleteTrainedModel(request.getId(), ActionListener.wrap(
             r -> {
                 auditor.info(request.getId(), "trained model deleted");
-                listener.onResponse(new AcknowledgedResponse(true));
+                listener.onResponse(AcknowledgedResponse.TRUE);
             },
             listener::onFailure
         ));

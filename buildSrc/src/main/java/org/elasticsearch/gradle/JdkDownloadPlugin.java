@@ -1,20 +1,9 @@
 /*
- * Licensed to Elasticsearch under one or more contributor
- * license agreements. See the NOTICE file distributed with
- * this work for additional information regarding copyright
- * ownership. Elasticsearch licenses this file to you under
- * the Apache License, Version 2.0 (the "License"); you may
- * not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0 and the Server Side Public License, v 1; you may not use this file except
+ * in compliance with, at your election, the Elastic License 2.0 or the Server
+ * Side Public License, v 1.
  */
 
 package org.elasticsearch.gradle;
@@ -29,34 +18,57 @@ import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.dsl.RepositoryHandler;
 import org.gradle.api.artifacts.repositories.IvyArtifactRepository;
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition;
+import org.gradle.api.attributes.Attribute;
 import org.gradle.api.internal.artifacts.ArtifactAttributes;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Arrays;
 
 public class JdkDownloadPlugin implements Plugin<Project> {
 
     public static final String VENDOR_ADOPTOPENJDK = "adoptopenjdk";
     public static final String VENDOR_OPENJDK = "openjdk";
+    public static final String VENDOR_AZUL = "azul";
 
     private static final String REPO_NAME_PREFIX = "jdk_repo_";
     private static final String EXTENSION_NAME = "jdks";
+    public static final String JDK_TRIMMED_PREFIX = "(jdk-?\\d.*)|(zulu-?\\d.+).jdk";
+    public static final String ZULU_LINUX_AARCH_PATTERN = "zulu.*linux_aarch64";
 
     @Override
     public void apply(Project project) {
+        Attribute<Boolean> jdkAttribute = Attribute.of("jdk", Boolean.class);
+        project.getDependencies().getAttributesSchema().attribute(jdkAttribute);
         project.getDependencies().getArtifactTypes().maybeCreate(ArtifactTypeDefinition.ZIP_TYPE);
         project.getDependencies().registerTransform(UnzipTransform.class, transformSpec -> {
-            transformSpec.getFrom().attribute(ArtifactAttributes.ARTIFACT_FORMAT, ArtifactTypeDefinition.ZIP_TYPE);
-            transformSpec.getTo().attribute(ArtifactAttributes.ARTIFACT_FORMAT, ArtifactTypeDefinition.DIRECTORY_TYPE);
+            transformSpec.getFrom()
+                .attribute(ArtifactAttributes.ARTIFACT_FORMAT, ArtifactTypeDefinition.ZIP_TYPE)
+                .attribute(jdkAttribute, true);
+            transformSpec.getTo()
+                .attribute(ArtifactAttributes.ARTIFACT_FORMAT, ArtifactTypeDefinition.DIRECTORY_TYPE)
+                .attribute(jdkAttribute, true);
+            transformSpec.parameters(parameters -> parameters.setTrimmedPrefixPattern(JDK_TRIMMED_PREFIX));
         });
 
         ArtifactTypeDefinition tarArtifactTypeDefinition = project.getDependencies().getArtifactTypes().maybeCreate("tar.gz");
         project.getDependencies().registerTransform(SymbolicLinkPreservingUntarTransform.class, transformSpec -> {
-            transformSpec.getFrom().attribute(ArtifactAttributes.ARTIFACT_FORMAT, tarArtifactTypeDefinition.getName());
-            transformSpec.getTo().attribute(ArtifactAttributes.ARTIFACT_FORMAT, ArtifactTypeDefinition.DIRECTORY_TYPE);
+            transformSpec.getFrom()
+                .attribute(ArtifactAttributes.ARTIFACT_FORMAT, tarArtifactTypeDefinition.getName())
+                .attribute(jdkAttribute, true);
+            transformSpec.getTo()
+                .attribute(ArtifactAttributes.ARTIFACT_FORMAT, ArtifactTypeDefinition.DIRECTORY_TYPE)
+                .attribute(jdkAttribute, true);
+            transformSpec.parameters(parameters -> {
+                parameters.setTrimmedPrefixPattern(JDK_TRIMMED_PREFIX);
+                parameters.setKeepStructureFor(Arrays.asList(ZULU_LINUX_AARCH_PATTERN));
+            });
         });
 
         NamedDomainObjectContainer<Jdk> jdksContainer = project.container(Jdk.class, name -> {
             Configuration configuration = project.getConfigurations().create("jdk_" + name);
             configuration.setCanBeConsumed(false);
             configuration.getAttributes().attribute(ArtifactAttributes.ARTIFACT_FORMAT, ArtifactTypeDefinition.DIRECTORY_TYPE);
+            configuration.getAttributes().attribute(jdkAttribute, true);
             Jdk jdk = new Jdk(name, configuration, project.getObjects());
             configuration.defaultDependencies(dependencies -> {
                 jdk.finalizeValues();
@@ -116,6 +128,32 @@ public class JdkDownloadPlugin implements Plugin<Project> {
                     + jdk.getBuild()
                     + "/GPL/openjdk-[revision]_[module]-[classifier]_bin.[ext]";
             }
+        } else if (jdk.getVendor().equals(VENDOR_AZUL)) {
+            repoUrl = "https://cdn.azul.com";
+            // The following is an absolute hack until AdoptOpenJdk provides Apple aarch64 builds
+            String zuluPathSuffix = jdk.getPlatform().equals("linux") ? "-embedded" : "";
+            switch (jdk.getMajor()) {
+                case "15":
+                    artifactPattern = "zulu"
+                        + zuluPathSuffix
+                        + "/bin/zulu"
+                        + jdk.getMajor()
+                        + ".29.15-ca-jdk15.0.2-"
+                        + azulPlatform(jdk)
+                        + "_[classifier].[ext]";
+                    break;
+                case "11":
+                    artifactPattern = "zulu"
+                        + zuluPathSuffix
+                        + "/bin/zulu"
+                        + jdk.getMajor()
+                        + ".45.27-ca-jdk11.0.10-"
+                        + azulPlatform(jdk)
+                        + "_[classifier].[ext]";
+                    break;
+                default:
+                    throw new GradleException("Unknown Azul JDK major version  [" + jdk.getMajor() + "]");
+            }
         } else {
             throw new GradleException("Unknown JDK vendor [" + jdk.getVendor() + "]");
         }
@@ -132,13 +170,25 @@ public class JdkDownloadPlugin implements Plugin<Project> {
         }
     }
 
+    @NotNull
+    private String azulPlatform(Jdk jdk) {
+        switch (jdk.getPlatform()) {
+            case "linux":
+                return "linux";
+            case "darwin":
+                return "macosx";
+            default:
+                throw new GradleException("Unsupported Azul JDK platform requested version  [" + jdk.getPlatform() + "]");
+        }
+    }
+
     @SuppressWarnings("unchecked")
     public static NamedDomainObjectContainer<Jdk> getContainer(Project project) {
         return (NamedDomainObjectContainer<Jdk>) project.getExtensions().getByName(EXTENSION_NAME);
     }
 
     private static String dependencyNotation(Jdk jdk) {
-        String platformDep = jdk.getPlatform().equals("darwin") || jdk.getPlatform().equals("osx")
+        String platformDep = jdk.getPlatform().equals("darwin") || jdk.getPlatform().equals("mac")
             ? (jdk.getVendor().equals(VENDOR_ADOPTOPENJDK) ? "mac" : "osx")
             : jdk.getPlatform();
         String extension = jdk.getPlatform().equals("windows") ? "zip" : "tar.gz";

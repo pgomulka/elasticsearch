@@ -20,6 +20,12 @@ POST /my-index-000001/_open
 
 `POST /<target>/_open`
 
+[[open-index-api-prereqs]]
+==== {api-prereq-title}
+
+* If the {es} {security-features} are enabled, you must have the `manage`
+<<privileges-list-indices,index privilege>> for the target data stream, index,
+or index alias.
 
 [[open-index-api-desc]]
 ==== {api-description-title}
@@ -66,7 +72,7 @@ and then the previous write index can be closed.
 // end::closed-index[]
 
 [[open-index-api-wait-for-active-shards]]
-===== Wait For active shards
+===== Wait for active shards
 
 // tag::wait-for-active-shards[]
 

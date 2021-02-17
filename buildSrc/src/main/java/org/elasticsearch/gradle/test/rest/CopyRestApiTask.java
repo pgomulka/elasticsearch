@@ -1,38 +1,26 @@
 /*
- * Licensed to Elasticsearch under one or more contributor
- * license agreements. See the NOTICE file distributed with
- * this work for additional information regarding copyright
- * ownership. Elasticsearch licenses this file to you under
- * the Apache License, Version 2.0 (the "License"); you may
- * not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0 and the Server Side Public License, v 1; you may not use this file except
+ * in compliance with, at your election, the Elastic License 2.0 or the Server
+ * Side Public License, v 1.
  */
 package org.elasticsearch.gradle.test.rest;
 
 import org.elasticsearch.gradle.VersionProperties;
 import org.elasticsearch.gradle.info.BuildParams;
-import org.elasticsearch.gradle.util.GradleUtils;
 import org.gradle.api.DefaultTask;
-import org.gradle.api.Project;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.file.ConfigurableFileCollection;
+import org.gradle.api.file.ArchiveOperations;
+import org.gradle.api.file.FileCollection;
+import org.gradle.api.file.FileSystemOperations;
 import org.gradle.api.file.FileTree;
-import org.gradle.api.plugins.JavaPluginConvention;
+import org.gradle.api.file.ProjectLayout;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFiles;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.SkipWhenEmpty;
-import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.api.tasks.util.PatternFilterable;
 import org.gradle.api.tasks.util.PatternSet;
@@ -43,35 +31,52 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static org.elasticsearch.gradle.util.GradleUtils.getProjectPathFromTask;
 
 /**
  * Copies the files needed for the Rest YAML specs to the current projects test resources output directory.
  * This is intended to be be used from {@link RestResourcesPlugin} since the plugin wires up the needed
  * configurations and custom extensions.
+ *
  * @see RestResourcesPlugin
  */
 public class CopyRestApiTask extends DefaultTask {
     private static final String REST_API_PREFIX = "rest-api-spec/api";
-    final ListProperty<String> includeCore = getProject().getObjects().listProperty(String.class);
-    final ListProperty<String> includeXpack = getProject().getObjects().listProperty(String.class);
-    String sourceSetName;
-    Configuration coreConfig;
-    Configuration xpackConfig;
+    private static final String REST_TEST_PREFIX = "rest-api-spec/test";
+    private final ListProperty<String> includeCore = getProject().getObjects().listProperty(String.class);
+    private final ListProperty<String> includeXpack = getProject().getObjects().listProperty(String.class);
+
+    private File outputResourceDir;
+    private File sourceResourceDir;
+    private boolean skipHasRestTestCheck;
+    private FileCollection coreConfig;
+    private FileCollection xpackConfig;
+    private FileCollection additionalConfig;
+    private Function<FileCollection, FileTree> coreConfigToFileTree = FileCollection::getAsFileTree;
+    private Function<FileCollection, FileTree> xpackConfigToFileTree = FileCollection::getAsFileTree;
+    private Function<FileCollection, FileTree> additionalConfigToFileTree = FileCollection::getAsFileTree;
 
     private final PatternFilterable corePatternSet;
     private final PatternFilterable xpackPatternSet;
-
-    public CopyRestApiTask() {
-        corePatternSet = getPatternSetFactory().create();
-        xpackPatternSet = getPatternSetFactory().create();
-    }
+    private final ProjectLayout projectLayout;
+    private final FileSystemOperations fileSystemOperations;
+    private final ArchiveOperations archiveOperations;
 
     @Inject
-    protected Factory<PatternSet> getPatternSetFactory() {
-        throw new UnsupportedOperationException();
+    public CopyRestApiTask(
+        ProjectLayout projectLayout,
+        Factory<PatternSet> patternSetFactory,
+        FileSystemOperations fileSystemOperations,
+        ArchiveOperations archiveOperations
+    ) {
+        corePatternSet = patternSetFactory.create();
+        xpackPatternSet = patternSetFactory.create();
+        this.projectLayout = projectLayout;
+        this.fileSystemOperations = fileSystemOperations;
+        this.archiveOperations = archiveOperations;
     }
 
     @Input
@@ -85,8 +90,8 @@ public class CopyRestApiTask extends DefaultTask {
     }
 
     @Input
-    String getSourceSetName() {
-        return sourceSetName;
+    public boolean isSkipHasRestTestCheck() {
+        return skipHasRestTestCheck;
     }
 
     @SkipWhenEmpty
@@ -96,18 +101,21 @@ public class CopyRestApiTask extends DefaultTask {
         FileTree xpackFileTree = null;
         if (includeXpack.get().isEmpty() == false) {
             xpackPatternSet.setIncludes(includeXpack.get().stream().map(prefix -> prefix + "*/**").collect(Collectors.toList()));
-            xpackFileTree = xpackConfig.getAsFileTree().matching(xpackPatternSet);
+            xpackFileTree = xpackConfigToFileTree.apply(xpackConfig).matching(xpackPatternSet);
         }
-        boolean projectHasYamlRestTests = projectHasYamlRestTests();
+        boolean projectHasYamlRestTests = skipHasRestTestCheck || projectHasYamlRestTests();
         if (includeCore.get().isEmpty() == false || projectHasYamlRestTests) {
             if (BuildParams.isInternal()) {
                 corePatternSet.setIncludes(includeCore.get().stream().map(prefix -> prefix + "*/**").collect(Collectors.toList()));
-                coreFileTree = coreConfig.getAsFileTree().matching(corePatternSet); // directory on disk
+                coreFileTree = coreConfigToFileTree.apply(coreConfig).matching(corePatternSet); // directory on disk
             } else {
                 coreFileTree = coreConfig.getAsFileTree(); // jar file
             }
         }
-        ConfigurableFileCollection fileCollection = getProject().files(coreFileTree, xpackFileTree);
+
+        FileCollection fileCollection = additionalConfig == null
+            ? projectLayout.files(coreFileTree, xpackFileTree)
+            : projectLayout.files(coreFileTree, xpackFileTree, additionalConfigToFileTree.apply(additionalConfig));
 
         // if project has rest tests or the includes are explicitly configured execute the task, else NO-SOURCE due to the null input
         return projectHasYamlRestTests || includeCore.get().isEmpty() == false || includeXpack.get().isEmpty() == false
@@ -117,35 +125,29 @@ public class CopyRestApiTask extends DefaultTask {
 
     @OutputDirectory
     public File getOutputDir() {
-        return new File(
-            getSourceSet().orElseThrow(() -> new IllegalArgumentException("could not find source set [" + sourceSetName + "]"))
-                .getOutput()
-                .getResourcesDir(),
-            REST_API_PREFIX
-        );
+        return new File(outputResourceDir, REST_API_PREFIX);
     }
 
     @TaskAction
     void copy() {
-        Project project = getProject();
         // always copy the core specs if the task executes
+        String projectPath = getProjectPathFromTask(getPath());
         if (BuildParams.isInternal()) {
-            getLogger().debug("Rest specs for project [{}] will be copied to the test resources.", project.getPath());
-            project.copy(c -> {
-                c.from(coreConfig.getSingleFile());
+            getLogger().debug("Rest specs for project [{}] will be copied to the test resources.", projectPath);
+            fileSystemOperations.copy(c -> {
+                c.from(coreConfigToFileTree.apply(coreConfig));
                 c.into(getOutputDir());
                 c.include(corePatternSet.getIncludes());
             });
         } else {
             getLogger().debug(
                 "Rest specs for project [{}] will be copied to the test resources from the published jar (version: [{}]).",
-                project.getPath(),
+                projectPath,
                 VersionProperties.getElasticsearch()
             );
-            project.copy(c -> {
-                c.from(project.zipTree(coreConfig.getSingleFile()));
-                // this ends up as the same dir as outputDir
-                c.into(Objects.requireNonNull(getSourceSet().orElseThrow().getOutput().getResourcesDir()));
+            fileSystemOperations.copy(c -> {
+                c.from(archiveOperations.zipTree(coreConfig.getSingleFile())); // jar file
+                c.into(Objects.requireNonNull(outputResourceDir));
                 if (includeCore.get().isEmpty()) {
                     c.include(REST_API_PREFIX + "/**");
                 } else {
@@ -157,11 +159,19 @@ public class CopyRestApiTask extends DefaultTask {
         }
         // only copy x-pack specs if explicitly instructed
         if (includeXpack.get().isEmpty() == false) {
-            getLogger().debug("X-pack rest specs for project [{}] will be copied to the test resources.", project.getPath());
-            project.copy(c -> {
-                c.from(xpackConfig.getSingleFile());
+            getLogger().debug("X-pack rest specs for project [{}] will be copied to the test resources.", projectPath);
+            fileSystemOperations.copy(c -> {
+                c.from(xpackConfigToFileTree.apply(xpackConfig));
                 c.into(getOutputDir());
                 c.include(xpackPatternSet.getIncludes());
+            });
+        }
+
+        // copy any additional config
+        if (additionalConfig != null) {
+            fileSystemOperations.copy(c -> {
+                c.from(additionalConfigToFileTree.apply(additionalConfig));
+                c.into(getOutputDir());
             });
         }
     }
@@ -170,19 +180,18 @@ public class CopyRestApiTask extends DefaultTask {
      * Returns true if any files with a .yml extension exist the test resources rest-api-spec/test directory (from source or output dir)
      */
     private boolean projectHasYamlRestTests() {
-        File testSourceResourceDir = getTestSourceResourceDir();
-        File testOutputResourceDir = getTestOutputResourceDir(); // check output for cases where tests are copied programmatically
-
-        if (testSourceResourceDir == null && testOutputResourceDir == null) {
+        if (sourceResourceDir == null && outputResourceDir == null) {
             return false;
         }
         try {
-            if (testSourceResourceDir != null && new File(testSourceResourceDir, "rest-api-spec/test").exists()) {
-                return Files.walk(testSourceResourceDir.toPath().resolve("rest-api-spec/test"))
+            // check source folder for tests
+            if (sourceResourceDir != null && new File(sourceResourceDir, REST_TEST_PREFIX).exists()) {
+                return Files.walk(sourceResourceDir.toPath().resolve(REST_TEST_PREFIX))
                     .anyMatch(p -> p.getFileName().toString().endsWith("yml"));
             }
-            if (testOutputResourceDir != null && new File(testOutputResourceDir, "rest-api-spec/test").exists()) {
-                return Files.walk(testOutputResourceDir.toPath().resolve("rest-api-spec/test"))
+            // check output for cases where tests are copied programmatically
+            if (outputResourceDir != null && new File(outputResourceDir, REST_TEST_PREFIX).exists()) {
+                return Files.walk(new File(outputResourceDir, REST_TEST_PREFIX).toPath())
                     .anyMatch(p -> p.getFileName().toString().endsWith("yml"));
             }
         } catch (IOException e) {
@@ -191,34 +200,50 @@ public class CopyRestApiTask extends DefaultTask {
         return false;
     }
 
-    private File getTestSourceResourceDir() {
-        Optional<SourceSet> testSourceSet = getSourceSet();
-        if (testSourceSet.isPresent()) {
-            SourceSet testSources = testSourceSet.get();
-            Set<File> resourceDir = testSources.getResources()
-                .getSrcDirs()
-                .stream()
-                .filter(f -> f.isDirectory() && f.getParentFile().getName().equals(getSourceSetName()) && f.getName().equals("resources"))
-                .collect(Collectors.toSet());
-            assert resourceDir.size() <= 1;
-            if (resourceDir.size() == 0) {
-                return null;
-            }
-            return resourceDir.iterator().next();
-        } else {
-            return null;
-        }
+    public void setSourceResourceDir(File sourceResourceDir) {
+        this.sourceResourceDir = sourceResourceDir;
     }
 
-    private File getTestOutputResourceDir() {
-        Optional<SourceSet> testSourceSet = getSourceSet();
-        return testSourceSet.map(sourceSet -> sourceSet.getOutput().getResourcesDir()).orElse(null);
+    public void setOutputResourceDir(File outputResourceDir) {
+        this.outputResourceDir = outputResourceDir;
     }
 
-    private Optional<SourceSet> getSourceSet() {
-        Project project = getProject();
-        return project.getConvention().findPlugin(JavaPluginConvention.class) == null
-            ? Optional.empty()
-            : Optional.ofNullable(GradleUtils.getJavaSourceSets(project).findByName(getSourceSetName()));
+    public void setSkipHasRestTestCheck(boolean skipHasRestTestCheck) {
+        this.skipHasRestTestCheck = skipHasRestTestCheck;
     }
+
+    public void setCoreConfig(FileCollection coreConfig) {
+        this.coreConfig = coreConfig;
+    }
+
+    public void setXpackConfig(FileCollection xpackConfig) {
+        this.xpackConfig = xpackConfig;
+    }
+
+    public void setAdditionalConfig(FileCollection additionalConfig) {
+        this.additionalConfig = additionalConfig;
+    }
+
+    public void setCoreConfigToFileTree(Function<FileCollection, FileTree> coreConfigToFileTree) {
+        this.coreConfigToFileTree = coreConfigToFileTree;
+    }
+
+    public void setXpackConfigToFileTree(Function<FileCollection, FileTree> xpackConfigToFileTree) {
+        this.xpackConfigToFileTree = xpackConfigToFileTree;
+    }
+
+    public void setAdditionalConfigToFileTree(Function<FileCollection, FileTree> additionalConfigToFileTree) {
+        this.additionalConfigToFileTree = additionalConfigToFileTree;
+    }
+
+    @Internal
+    public FileCollection getCoreConfig() {
+        return coreConfig;
+    }
+
+    @Internal
+    public FileCollection getXpackConfig() {
+        return xpackConfig;
+    }
+
 }

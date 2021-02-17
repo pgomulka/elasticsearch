@@ -1,7 +1,8 @@
 /*
  * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
- * or more contributor license agreements. Licensed under the Elastic License;
- * you may not use this file except in compliance with the Elastic License.
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0; you may not use this file except in compliance with the Elastic License
+ * 2.0.
  */
 
 package org.elasticsearch.xpack.slm;
@@ -115,7 +116,7 @@ public class SnapshotRetentionServiceTests extends ESTestCase {
         }
 
         FakeRetentionTask(Consumer<SchedulerEngine.Event> onTrigger) {
-            super(mock(Client.class), null, System::nanoTime, mock(SnapshotHistoryStore.class), mock(ThreadPool.class));
+            super(mock(Client.class), null, System::nanoTime, mock(SnapshotHistoryStore.class));
             this.onTrigger = onTrigger;
         }
 

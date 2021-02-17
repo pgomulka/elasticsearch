@@ -1,4 +1,5 @@
 apply plugin: 'elasticsearch.esplugin'
+apply plugin: 'elasticsearch.internal-cluster-test'
 
 esplugin {
   name 'flattened'
@@ -9,8 +10,7 @@ esplugin {
 archivesBaseName = 'x-pack-flattened'
 
 dependencies {
-  compileOnly project(path: xpackModule('core'), configuration: 'default')
-  testImplementation project(path: xpackModule('core'), configuration: 'testArtifacts')
+  compileOnly project(path: xpackModule('core'))
+  testImplementation(testArtifact(project(xpackModule('core'))))
 }
 
-integTest.enabled = false

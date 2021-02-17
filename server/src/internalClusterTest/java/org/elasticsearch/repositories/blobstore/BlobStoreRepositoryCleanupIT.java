@@ -1,20 +1,9 @@
 /*
- * Licensed to Elasticsearch under one or more contributor
- * license agreements. See the NOTICE file distributed with
- * this work for additional information regarding copyright
- * ownership. Elasticsearch licenses this file to you under
- * the Apache License, Version 2.0 (the "License"); you may
- * not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0 and the Server Side Public License, v 1; you may not use this file except
+ * in compliance with, at your election, the Elastic License 2.0 or the Server
+ * Side Public License, v 1.
  */
 package org.elasticsearch.repositories.blobstore;
 
@@ -22,16 +11,13 @@ import org.elasticsearch.action.ActionRunnable;
 import org.elasticsearch.action.admin.cluster.snapshots.create.CreateSnapshotResponse;
 import org.elasticsearch.action.support.PlainActionFuture;
 import org.elasticsearch.cluster.RepositoryCleanupInProgress;
+import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.repositories.RepositoriesService;
 import org.elasticsearch.snapshots.AbstractSnapshotIntegTestCase;
 import org.elasticsearch.snapshots.SnapshotState;
 import org.elasticsearch.test.ESIntegTestCase;
 
-import java.io.ByteArrayInputStream;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertFutureThrows;
 import static org.hamcrest.Matchers.is;
@@ -42,15 +28,15 @@ public class BlobStoreRepositoryCleanupIT extends AbstractSnapshotIntegTestCase 
     public void testMasterFailoverDuringCleanup() throws Exception {
         startBlockedCleanup("test-repo");
 
+        final int nodeCount = internalCluster().numDataAndMasterNodes();
         logger.info("-->  stopping master node");
         internalCluster().stopCurrentMasterNode();
 
+        ensureStableCluster(nodeCount - 1);
+
         logger.info("-->  wait for cleanup to finish and disappear from cluster state");
-        assertBusy(() -> {
-            RepositoryCleanupInProgress cleanupInProgress =
-                client().admin().cluster().prepareState().get().getState().custom(RepositoryCleanupInProgress.TYPE);
-            assertFalse(cleanupInProgress.hasCleanupInProgress());
-        }, 30, TimeUnit.SECONDS);
+        awaitClusterState(state ->
+                state.custom(RepositoryCleanupInProgress.TYPE, RepositoryCleanupInProgress.EMPTY).hasCleanupInProgress() == false);
     }
 
     public void testRepeatCleanupsDontRemove() throws Exception {
@@ -68,11 +54,8 @@ public class BlobStoreRepositoryCleanupIT extends AbstractSnapshotIntegTestCase 
         unblockNode("test-repo", masterNode);
 
         logger.info("-->  wait for cleanup to finish and disappear from cluster state");
-        assertBusy(() -> {
-            RepositoryCleanupInProgress cleanupInProgress =
-                client().admin().cluster().prepareState().get().getState().custom(RepositoryCleanupInProgress.TYPE);
-            assertFalse(cleanupInProgress.hasCleanupInProgress());
-        }, 30, TimeUnit.SECONDS);
+        awaitClusterState(state ->
+                state.custom(RepositoryCleanupInProgress.TYPE, RepositoryCleanupInProgress.EMPTY).hasCleanupInProgress() == false);
     }
 
     private String startBlockedCleanup(String repoName) throws Exception {
@@ -86,22 +69,23 @@ public class BlobStoreRepositoryCleanupIT extends AbstractSnapshotIntegTestCase 
         client().admin().cluster().prepareCreateSnapshot(repoName, "test-snap")
             .setWaitForCompletion(true).get();
 
-        final RepositoriesService service = internalCluster().getInstance(RepositoriesService.class, internalCluster().getMasterName());
-        final BlobStoreRepository repository = (BlobStoreRepository) service.repository(repoName);
+        final BlobStoreRepository repository = getRepositoryOnMaster(repoName);
 
         logger.info("--> creating a garbage data blob");
         final PlainActionFuture<Void> garbageFuture = PlainActionFuture.newFuture();
         repository.threadPool().generic().execute(ActionRunnable.run(garbageFuture, () -> repository.blobStore()
-            .blobContainer(repository.basePath()).writeBlob("snap-foo.dat", new ByteArrayInputStream(new byte[1]), 1, true)));
+            .blobContainer(repository.basePath()).writeBlob("snap-foo.dat", new BytesArray(new byte[1]), true)));
         garbageFuture.get();
 
-        final String masterNode = blockMasterFromFinalizingSnapshotOnIndexFile(repoName);
+        blockMasterFromFinalizingSnapshotOnIndexFile(repoName);
 
         logger.info("--> starting repository cleanup");
         client().admin().cluster().prepareCleanupRepository(repoName).execute();
 
-        logger.info("--> waiting for block to kick in on " + masterNode);
-        waitForBlock(masterNode, repoName, TimeValue.timeValueSeconds(60));
+        final String masterNode = internalCluster().getMasterName();
+        waitForBlock(masterNode, repoName);
+        awaitClusterState(state ->
+                state.custom(RepositoryCleanupInProgress.TYPE, RepositoryCleanupInProgress.EMPTY).hasCleanupInProgress());
         return masterNode;
     }
 
@@ -118,16 +102,14 @@ public class BlobStoreRepositoryCleanupIT extends AbstractSnapshotIntegTestCase 
             assertThat(createSnapshotResponse.getSnapshotInfo().state(), is(SnapshotState.SUCCESS));
         }
 
-        final RepositoriesService service = internalCluster().getInstance(RepositoriesService.class, internalCluster().getMasterName());
-        final BlobStoreRepository repository = (BlobStoreRepository) service.repository(repoName);
-
+        final BlobStoreRepository repository = getRepositoryOnMaster(repoName);
         logger.info("--> write two outdated index-N blobs");
         for (int i = 0; i < 2; ++i) {
             final PlainActionFuture<Void> createOldIndexNFuture = PlainActionFuture.newFuture();
             final int generation = i;
             repository.threadPool().generic().execute(ActionRunnable.run(createOldIndexNFuture, () -> repository.blobStore()
                 .blobContainer(repository.basePath()).writeBlob(BlobStoreRepository.INDEX_FILE_PREFIX + generation,
-                    new ByteArrayInputStream(new byte[1]), 1, true)));
+                        new BytesArray(new byte[1]), true)));
             createOldIndexNFuture.get();
         }
 

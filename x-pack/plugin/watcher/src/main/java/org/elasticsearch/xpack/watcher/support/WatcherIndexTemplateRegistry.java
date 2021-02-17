@@ -1,7 +1,8 @@
 /*
  * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
- * or more contributor license agreements. Licensed under the Elastic License;
- * you may not use this file except in compliance with the Elastic License.
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0; you may not use this file except in compliance with the Elastic License
+ * 2.0.
  */
 package org.elasticsearch.xpack.watcher.support;
 
@@ -64,7 +65,7 @@ public class WatcherIndexTemplateRegistry extends IndexTemplateRegistry {
     }
 
     @Override
-    protected List<IndexTemplateConfig> getLegacyTemplateConfigs() {
+    protected List<IndexTemplateConfig> getComposableTemplateConfigs() {
         return templatesToUse;
     }
 
@@ -85,10 +86,10 @@ public class WatcherIndexTemplateRegistry extends IndexTemplateRegistry {
     }
 
     public static boolean validate(ClusterState state) {
-        return (state.getMetadata().getTemplates().containsKey(WatcherIndexTemplateRegistryField.HISTORY_TEMPLATE_NAME) ||
-            state.getMetadata().getTemplates().containsKey(WatcherIndexTemplateRegistryField.HISTORY_TEMPLATE_NAME_NO_ILM)) &&
-            state.getMetadata().getTemplates().containsKey(WatcherIndexTemplateRegistryField.TRIGGERED_TEMPLATE_NAME) &&
-            state.getMetadata().getTemplates().containsKey(WatcherIndexTemplateRegistryField.WATCHES_TEMPLATE_NAME);
+        return (state.getMetadata().templatesV2().containsKey(WatcherIndexTemplateRegistryField.HISTORY_TEMPLATE_NAME) ||
+            state.getMetadata().templatesV2().containsKey(WatcherIndexTemplateRegistryField.HISTORY_TEMPLATE_NAME_NO_ILM)) &&
+            state.getMetadata().templatesV2().containsKey(WatcherIndexTemplateRegistryField.TRIGGERED_TEMPLATE_NAME) &&
+            state.getMetadata().templatesV2().containsKey(WatcherIndexTemplateRegistryField.WATCHES_TEMPLATE_NAME);
     }
 
 }

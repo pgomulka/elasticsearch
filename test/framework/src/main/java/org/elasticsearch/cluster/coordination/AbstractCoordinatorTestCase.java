@@ -1,20 +1,9 @@
 /*
- * Licensed to Elasticsearch under one or more contributor
- * license agreements. See the NOTICE file distributed with
- * this work for additional information regarding copyright
- * ownership. Elasticsearch licenses this file to you under
- * the Apache License, Version 2.0 (the "License"); you may
- * not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0 and the Server Side Public License, v 1; you may not use this file except
+ * in compliance with, at your election, the Elastic License 2.0 or the Server
+ * Side Public License, v 1.
  */
 package org.elasticsearch.cluster.coordination;
 
@@ -371,14 +360,20 @@ public class AbstractCoordinatorTestCase extends ESTestCase {
                 final int thisStep = step; // for lambdas
 
                 if (randomSteps <= step && finishTime == -1) {
-                    finishTime = deterministicTaskQueue.getLatestDeferredExecutionTime();
                     if (coolDown) {
+                        // Heal all nodes BEFORE finishTime is set so it can take into account any pending disruption that
+                        // would prevent the cluster to reach a stable state after cooling down. Additionally, avoid any new disruptions
+                        // to happen in this phase.
+                        // See #61711 for a particular instance where having unhealthy nodes while cooling down can be problematic.
+                        disconnectedNodes.clear();
+                        blackholedNodes.clear();
                         deterministicTaskQueue.setExecutionDelayVariabilityMillis(DEFAULT_DELAY_VARIABILITY);
                         logger.debug("----> [runRandomly {}] reducing delay variability and running until [{}ms]", step, finishTime);
                     } else {
                         logger.debug("----> [runRandomly {}] running until [{}ms] with delay variability of [{}ms]", step, finishTime,
                             deterministicTaskQueue.getExecutionDelayVariabilityMillis());
                     }
+                    finishTime = deterministicTaskQueue.getLatestDeferredExecutionTime();
                 }
 
                 try {
@@ -445,12 +440,14 @@ public class AbstractCoordinatorTestCase extends ESTestCase {
                                 }
                                 break;
                             case 1:
-                                if (clusterNode.disconnect()) {
+                                // Avoid disruptions during cool down period
+                                if (finishTime == -1 && clusterNode.disconnect()) {
                                     logger.debug("----> [runRandomly {}] disconnecting {}", step, clusterNode.getId());
                                 }
                                 break;
                             case 2:
-                                if (clusterNode.blackhole()) {
+                                // Avoid disruptions during cool down period
+                                if (finishTime == -1 && clusterNode.blackhole()) {
                                     logger.debug("----> [runRandomly {}] blackholing {}", step, clusterNode.getId());
                                 }
                                 break;
@@ -929,7 +926,7 @@ public class AbstractCoordinatorTestCase extends ESTestCase {
 
             private void setUp() {
                 final ThreadPool threadPool = deterministicTaskQueue.getThreadPool(this::onNode);
-                mockTransport = new DisruptableMockTransport(localNode, logger) {
+                mockTransport = new DisruptableMockTransport(localNode, logger, deterministicTaskQueue) {
                     @Override
                     protected void execute(Runnable runnable) {
                         deterministicTaskQueue.scheduleNow(onNode(runnable));

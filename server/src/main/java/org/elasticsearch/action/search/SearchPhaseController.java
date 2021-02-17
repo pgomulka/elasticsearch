@@ -1,20 +1,9 @@
 /*
- * Licensed to Elasticsearch under one or more contributor
- * license agreements. See the NOTICE file distributed with
- * this work for additional information regarding copyright
- * ownership. Elasticsearch licenses this file to you under
- * the Apache License, Version 2.0 (the "License"); you may
- * not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0 and the Server Side Public License, v 1; you may not use this file except
+ * in compliance with, at your election, the Elastic License 2.0 or the Server
+ * Side Public License, v 1.
  */
 
 package org.elasticsearch.action.search;
@@ -34,6 +23,7 @@ import org.apache.lucene.search.TopFieldDocs;
 import org.apache.lucene.search.TotalHits;
 import org.apache.lucene.search.TotalHits.Relation;
 import org.apache.lucene.search.grouping.CollapseTopFieldDocs;
+import org.elasticsearch.common.breaker.CircuitBreaker;
 import org.elasticsearch.common.collect.HppcMaps;
 import org.elasticsearch.common.io.stream.NamedWriteableRegistry;
 import org.elasticsearch.common.lucene.search.TopDocsAndMaxScore;
@@ -107,7 +97,7 @@ public final class SearchPhaseController {
 
             }
 
-            assert !lEntry.fieldStatistics().containsKey(null);
+            assert lEntry.fieldStatistics().containsKey(null) == false;
             final Object[] keys = lEntry.fieldStatistics().keys;
             final Object[] values = lEntry.fieldStatistics().values;
             for (int i = 0; i < keys.length; i++) {
@@ -274,7 +264,7 @@ public final class SearchPhaseController {
         ScoreDoc[] sortedDocs = reducedQueryPhase.sortedTopDocs.scoreDocs;
         SearchHits hits = getHits(reducedQueryPhase, ignoreFrom, fetchResults, resultsLookup);
         if (reducedQueryPhase.suggest != null) {
-            if (!fetchResults.isEmpty()) {
+            if (fetchResults.isEmpty() == false) {
                 int currentOffset = hits.getHits().length;
                 for (CompletionSuggestion suggestion : reducedQueryPhase.suggest.filter(CompletionSuggestion.class)) {
                     final List<CompletionSuggestion.Entry.Option> suggestionOptions = suggestion.getOptions();
@@ -329,7 +319,7 @@ public final class SearchPhaseController {
         numSearchHits = Math.min(sortedTopDocs.scoreDocs.length, numSearchHits);
         // merge hits
         List<SearchHit> hits = new ArrayList<>();
-        if (!fetchResults.isEmpty()) {
+        if (fetchResults.isEmpty() == false) {
             for (int i = 0; i < numSearchHits; i++) {
                 ScoreDoc shardDoc = sortedTopDocs.scoreDocs[i];
                 SearchPhaseResult fetchResultProvider = resultsLookup.apply(shardDoc.shardIndex);
@@ -426,9 +416,9 @@ public final class SearchPhaseController {
         if (queryResults.isEmpty()) {
             throw new IllegalStateException(errorMsg);
         }
-        final QuerySearchResult firstResult = queryResults.stream().findFirst().get().queryResult();
-        final boolean hasSuggest = firstResult.suggest() != null;
-        final boolean hasProfileResults = firstResult.hasProfileResults();
+        validateMergeSortValueFormats(queryResults);
+        final boolean hasSuggest = queryResults.stream().anyMatch(res -> res.queryResult().suggest() != null);
+        final boolean hasProfileResults =  queryResults.stream().anyMatch(res -> res.queryResult().hasProfileResults());
 
         // count the total (we use the query result provider here, since we might not get any hits (we scrolled past them))
         final Map<String, List<Suggestion>> groupedSuggestions = hasSuggest ? new HashMap<>() : Collections.emptyMap();
@@ -436,11 +426,16 @@ public final class SearchPhaseController {
             : Collections.emptyMap();
         int from = 0;
         int size = 0;
+        DocValueFormat[] sortValueFormats = null;
         for (SearchPhaseResult entry : queryResults) {
             QuerySearchResult result = entry.queryResult();
             from = result.from();
             // sorted queries can set the size to 0 if they have enough competitive hits.
             size = Math.max(result.size(), size);
+            if (result.sortValueFormats() != null) {
+                sortValueFormats = result.sortValueFormats();
+            }
+
             if (hasSuggest) {
                 assert result.suggest() != null;
                 for (Suggestion<? extends Suggestion.Entry<? extends Suggestion.Entry.Option>> suggestion : result.suggest()) {
@@ -475,7 +470,7 @@ public final class SearchPhaseController {
         final TotalHits totalHits = topDocsStats.getTotalHits();
         return new ReducedQueryPhase(totalHits, topDocsStats.fetchHits, topDocsStats.getMaxScore(),
             topDocsStats.timedOut, topDocsStats.terminatedEarly, reducedSuggest, aggregations, shardResults, sortedTopDocs,
-            firstResult.sortValueFormats(), numReducePhases, size, from, false);
+            sortValueFormats, numReducePhases, size, from, false);
     }
 
     private static InternalAggregations reduceAggs(InternalAggregation.ReduceContextBuilder aggReduceContextBuilder,
@@ -483,6 +478,36 @@ public final class SearchPhaseController {
                                                    List<InternalAggregations> toReduce) {
         return toReduce.isEmpty() ? null : InternalAggregations.topLevelReduce(toReduce,
             performFinalReduce ? aggReduceContextBuilder.forFinalReduction() : aggReduceContextBuilder.forPartialReduction());
+    }
+
+    /**
+     * Checks that query results from all shards have consistent unsigned_long format.
+     * Sort queries on a field that has long type in one index, and unsigned_long in another index
+     * don't work correctly. Throw an error if this kind of sorting is detected.
+     * //TODO: instead of throwing error, find a way to sort long and unsigned_long together
+     */
+    private static void validateMergeSortValueFormats(Collection<? extends SearchPhaseResult> queryResults) {
+        boolean[] ulFormats = null;
+        boolean firstResult = true;
+        for (SearchPhaseResult entry : queryResults) {
+            DocValueFormat[] formats = entry.queryResult().sortValueFormats();
+            if (formats == null) return;
+            if (firstResult) {
+                firstResult = false;
+                ulFormats = new boolean[formats.length];
+                for (int i = 0; i < formats.length; i++) {
+                    ulFormats[i] = formats[i] == DocValueFormat.UNSIGNED_LONG_SHIFTED ? true : false;
+                }
+            } else {
+                for (int i = 0; i < formats.length; i++) {
+                    // if the format is unsigned_long in one shard, and something different in another shard
+                    if (ulFormats[i] ^ (formats[i] == DocValueFormat.UNSIGNED_LONG_SHIFTED)) {
+                        throw new IllegalArgumentException("Can't do sort across indices, as a field has [unsigned_long] type " +
+                            "in one index, and different type in another index!");
+                    }
+                }
+            }
+        }
     }
 
     /*
@@ -558,23 +583,21 @@ public final class SearchPhaseController {
         }
     }
 
+    InternalAggregation.ReduceContextBuilder getReduceContext(SearchRequest request) {
+        return requestToAggReduceContextBuilder.apply(request);
+    }
+
     /**
-     * Returns a new ArraySearchPhaseResults instance. This might return an instance that reduces search responses incrementally.
+     * Returns a new {@link QueryPhaseResultConsumer} instance that reduces search responses incrementally.
      */
-    ArraySearchPhaseResults<SearchPhaseResult> newSearchPhaseResults(Executor executor,
-                                                                     SearchProgressListener listener,
-                                                                     SearchRequest request,
-                                                                     int numShards,
-                                                                     Consumer<Exception> onPartialMergeFailure) {
-        SearchSourceBuilder source = request.source();
-        final boolean hasAggs = source != null && source.aggregations() != null;
-        final boolean hasTopDocs = source == null || source.size() != 0;
-        final int trackTotalHitsUpTo = request.resolveTrackTotalHitsUpTo();
-        InternalAggregation.ReduceContextBuilder aggReduceContextBuilder = requestToAggReduceContextBuilder.apply(request);
-        int topNSize = getTopDocsSize(request);
-        int bufferSize = (hasAggs || hasTopDocs) ? Math.min(request.getBatchedReduceSize(), numShards)  : numShards;
-        return new QueryPhaseResultConsumer(executor, this,  listener, aggReduceContextBuilder, namedWriteableRegistry,
-            numShards, bufferSize, hasTopDocs, hasAggs, trackTotalHitsUpTo, topNSize, request.isFinalReduce(), onPartialMergeFailure);
+    QueryPhaseResultConsumer newSearchPhaseResults(Executor executor,
+                                                   CircuitBreaker circuitBreaker,
+                                                   SearchProgressListener listener,
+                                                   SearchRequest request,
+                                                   int numShards,
+                                                   Consumer<Exception> onPartialMergeFailure) {
+        return new QueryPhaseResultConsumer(request, executor, circuitBreaker,
+            this,  listener, namedWriteableRegistry, numShards, onPartialMergeFailure);
     }
 
     static final class TopDocsStats {
@@ -625,7 +648,7 @@ public final class SearchPhaseController {
                 }
             }
             fetchHits += topDocs.topDocs.scoreDocs.length;
-            if (!Float.isNaN(topDocs.maxScore)) {
+            if (Float.isNaN(topDocs.maxScore) == false) {
                 maxScore = Math.max(maxScore, topDocs.maxScore);
             }
             if (timedOut) {

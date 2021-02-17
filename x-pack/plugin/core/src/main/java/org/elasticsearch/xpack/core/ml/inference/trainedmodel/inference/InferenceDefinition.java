@@ -1,7 +1,8 @@
 /*
  * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
- * or more contributor license agreements. Licensed under the Elastic License;
- * you may not use this file except in compliance with the Elastic License.
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0; you may not use this file except in compliance with the Elastic License
+ * 2.0.
  */
 
 package org.elasticsearch.xpack.core.ml.inference.trainedmodel.inference;
@@ -100,6 +101,15 @@ public class InferenceDefinition {
                 .collect(HashMap::new, Map::putAll, Map::putAll);
             return decoderMap;
         }
+    }
+
+    @Override
+    public String toString() {
+        return "InferenceDefinition{" +
+            "trainedModel=" + trainedModel +
+            ", preProcessors=" + preProcessors +
+            ", decoderMap=" + decoderMap +
+            '}';
     }
 
     public static Builder builder() {

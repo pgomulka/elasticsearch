@@ -13,14 +13,19 @@ Returns cluster nodes statistics.
 
 `GET /_nodes/<node_id>/stats` +
 
-`GET/_nodes/stats/<metric>` +
+`GET /_nodes/stats/<metric>` +
 
-`GET/_nodes/<node_id>/stats/<metric>` +
+`GET /_nodes/<node_id>/stats/<metric>` +
 
 `GET /_nodes/stats/<metric>/<index_metric>` +
 
 `GET /_nodes/<node_id>/stats/<metric>/<index_metric>`
 
+[[cluster-nodes-stats-api-prereqs]]
+==== {api-prereq-title}
+
+* If the {es} {security-features} are enabled, you must have the `monitor` or
+`manage` <<privileges-list-cluster,cluster privilege>> to use this API.
 
 [[cluster-nodes-stats-api-desc]]
 ==== {api-description-title}
@@ -163,7 +168,7 @@ is not `0`, a reason for the rejection or failure is included in the response.
 
 `cluster_name`::
 (string)
-Name of the cluster. Based on the <<cluster.name>> setting.
+Name of the cluster. Based on the <<cluster-name>> setting.
 
 `nodes`::
 (object)
@@ -186,11 +191,11 @@ since the {wikipedia}/Unix_time[Unix Epoch].
 
 `name`::
 (string)
-Human-readable identifier for the node. Based on the <<node.name>> setting.
+Human-readable identifier for the node. Based on the <<node-name>> setting.
 
 `transport_address`::
 (string)
-Host and port for the <<modules-transport,transport layer>>, used for internal
+Host and port for the <<transport-settings,transport layer>>, used for internal
 communication between nodes in a cluster.
 
 `host`::
@@ -312,7 +317,7 @@ Number of deletion operations currently running.
 Total number of noop operations.
 
 `is_throttled`::
-(boolean)
+(Boolean)
 Number of times
 operations were throttled.
 
@@ -1875,7 +1880,7 @@ Total number of HTTP connections opened for the node.
 ======
 
 [[cluster-nodes-stats-api-response-body-breakers]]
-`beakers`::
+`breakers`::
 (object)
 Contains circuit breaker statistics for the node.
 +

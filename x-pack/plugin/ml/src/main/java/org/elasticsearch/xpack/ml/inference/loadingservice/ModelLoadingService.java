@@ -1,7 +1,8 @@
 /*
  * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
- * or more contributor license agreements. Licensed under the Elastic License;
- * you may not use this file except in compliance with the Elastic License.
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0; you may not use this file except in compliance with the Elastic License
+ * 2.0.
  */
 package org.elasticsearch.xpack.ml.inference.loadingservice;
 
@@ -9,7 +10,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.apache.logging.log4j.util.MessageSupplier;
-import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.cluster.ClusterChangedEvent;
 import org.elasticsearch.cluster.ClusterState;
@@ -20,7 +20,6 @@ import org.elasticsearch.common.breaker.CircuitBreakingException;
 import org.elasticsearch.common.cache.Cache;
 import org.elasticsearch.common.cache.CacheBuilder;
 import org.elasticsearch.common.cache.RemovalNotification;
-import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.ByteSizeValue;
@@ -28,6 +27,7 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.util.set.Sets;
 import org.elasticsearch.ingest.IngestMetadata;
 import org.elasticsearch.threadpool.ThreadPool;
+import org.elasticsearch.xpack.core.ml.action.GetTrainedModelsAction;
 import org.elasticsearch.xpack.core.ml.inference.TrainedModelConfig;
 import org.elasticsearch.xpack.core.ml.inference.results.InferenceResults;
 import org.elasticsearch.xpack.core.ml.inference.trainedmodel.ClassificationConfig;
@@ -43,7 +43,6 @@ import org.elasticsearch.xpack.ml.inference.persistence.TrainedModelProvider;
 import org.elasticsearch.xpack.ml.notifications.InferenceAuditor;
 
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -270,7 +269,7 @@ public class ModelLoadingService implements ClusterStateListener {
     }
 
     private void loadModel(String modelId, Consumer consumer) {
-        provider.getTrainedModel(modelId, false, ActionListener.wrap(
+        provider.getTrainedModel(modelId, GetTrainedModelsAction.Includes.empty(), ActionListener.wrap(
             trainedModelConfig -> {
                 trainedModelCircuitBreaker.addEstimateBytesAndMaybeBreak(trainedModelConfig.getEstimatedHeapMemory(), modelId);
                 provider.getTrainedModelForInference(modelId, ActionListener.wrap(
@@ -306,7 +305,7 @@ public class ModelLoadingService implements ClusterStateListener {
         // If we the model is not loaded and we did not kick off a new loading attempt, this means that we may be getting called
         // by a simulated pipeline
         logger.trace(() -> new ParameterizedMessage("[{}] not actively loading, eager loading without cache", modelId));
-        provider.getTrainedModel(modelId, false, ActionListener.wrap(
+        provider.getTrainedModel(modelId, GetTrainedModelsAction.Includes.empty(), ActionListener.wrap(
             trainedModelConfig -> {
                 // Verify we can pull the model into memory without causing OOM
                 trainedModelCircuitBreaker.addEstimateBytesAndMaybeBreak(trainedModelConfig.getEstimatedHeapMemory(), modelId);
@@ -378,28 +377,36 @@ public class ModelLoadingService implements ClusterStateListener {
             trainedModelConfig.getLicenseLevel(),
             modelStatsService,
             trainedModelCircuitBreaker);
+        boolean modelAcquired = false;
         synchronized (loadingListeners) {
             listeners = loadingListeners.remove(modelId);
-            // If there is no loadingListener that means the loading was canceled and the listener was already notified as such
-            // Consequently, we should not store the retrieved model
+            // if there are no listeners, simply release and leave
             if (listeners == null) {
                 loadedModel.release();
                 return;
             }
 
-            // temporarily increase the reference count before adding to
-            // the cache in case the model is evicted before the listeners
-            // are called in which case acquire() would throw.
-            loadedModel.acquire();
-            localModelCache.put(modelId, new ModelAndConsumer(loadedModel, consumer));
-            shouldNotAudit.remove(modelId);
+            // If the model is referenced, that means it is currently in a pipeline somewhere
+            // Also, if the consume is a search consumer, we should always cache it
+            if (referencedModels.contains(modelId) || consumer.equals(Consumer.SEARCH)) {
+                // temporarily increase the reference count before adding to
+                // the cache in case the model is evicted before the listeners
+                // are called in which case acquire() would throw.
+                loadedModel.acquire();
+                localModelCache.put(modelId, new ModelAndConsumer(loadedModel, consumer));
+                shouldNotAudit.remove(modelId);
+                modelAcquired = true;
+            }
         } // synchronized (loadingListeners)
         for (ActionListener<LocalModel> listener = listeners.poll(); listener != null; listener = listeners.poll()) {
             loadedModel.acquire();
             listener.onResponse(loadedModel);
         }
         // account for the acquire in the synchronized block above
-        loadedModel.release();
+        // We cannot simply utilize the same conditionals as `referencedModels` could have changed once we exited the synchronized block
+        if (modelAcquired) {
+            loadedModel.release();
+        }
     }
 
     private void handleLoadFailure(String modelId, Exception failure) {
@@ -424,13 +431,17 @@ public class ModelLoadingService implements ClusterStateListener {
                     "model cache entry evicted." +
                         "current cache [{}] current max [{}] model size [{}]. " +
                         "If this is undesired, consider updating setting [{}] or [{}].",
-                    new ByteSizeValue(localModelCache.weight()).getStringRep(),
+                    ByteSizeValue.ofBytes(localModelCache.weight()).getStringRep(),
                     maxCacheSize.getStringRep(),
-                    new ByteSizeValue(notification.getValue().model.ramBytesUsed()).getStringRep(),
+                    ByteSizeValue.ofBytes(notification.getValue().model.ramBytesUsed()).getStringRep(),
                     INFERENCE_MODEL_CACHE_SIZE.getKey(),
                     INFERENCE_MODEL_CACHE_TTL.getKey());
                 auditIfNecessary(notification.getKey(), msg);
             }
+
+            logger.trace(() -> new ParameterizedMessage("Persisting stats for evicted model [{}]",
+                notification.getValue().model.getModelId()));
+
             // If the model is no longer referenced, flush the stats to persist as soon as possible
             notification.getValue().model.persistStats(referencedModels.contains(notification.getKey()) == false);
         } finally {
@@ -452,8 +463,6 @@ public class ModelLoadingService implements ClusterStateListener {
         if (allReferencedModelKeys.equals(referencedModels)) {
             return;
         }
-        // The listeners still waiting for a model and we are canceling the load?
-        List<Tuple<String, List<ActionListener<LocalModel>>>> drainWithFailure = new ArrayList<>();
         Set<String> referencedModelsBeforeClusterState = null;
         Set<String> loadingModelBeforeClusterState = null;
         Set<String> removedModels = null;
@@ -461,13 +470,6 @@ public class ModelLoadingService implements ClusterStateListener {
             referencedModelsBeforeClusterState = new HashSet<>(referencedModels);
             if (logger.isTraceEnabled()) {
                 loadingModelBeforeClusterState = new HashSet<>(loadingListeners.keySet());
-            }
-            // If we had models still loading here but are no longer referenced
-            // we should remove them from loadingListeners and alert the listeners
-            for (String modelId : loadingListeners.keySet()) {
-                if (allReferencedModelKeys.contains(modelId) == false) {
-                    drainWithFailure.add(Tuple.tuple(modelId, new ArrayList<>(loadingListeners.remove(modelId))));
-                }
             }
             removedModels = Sets.difference(referencedModelsBeforeClusterState, allReferencedModelKeys);
 
@@ -500,14 +502,6 @@ public class ModelLoadingService implements ClusterStateListener {
             if (referencedModels.equals(referencedModelsBeforeClusterState) == false) {
                 logger.trace("cluster state event changed referenced models: before {} after {}", referencedModelsBeforeClusterState,
                     referencedModels);
-            }
-        }
-        for (Tuple<String, List<ActionListener<LocalModel>>> modelAndListeners : drainWithFailure) {
-            final String msg = new ParameterizedMessage(
-                "Cancelling load of model [{}] as it is no longer referenced by a pipeline",
-                modelAndListeners.v1()).getFormat();
-            for (ActionListener<LocalModel> listener : modelAndListeners.v2()) {
-                listener.onFailure(new ElasticsearchException(msg));
             }
         }
         removedModels.forEach(this::auditUnreferencedModel);

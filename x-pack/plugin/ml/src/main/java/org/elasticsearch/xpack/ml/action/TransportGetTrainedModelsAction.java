@@ -1,7 +1,8 @@
 /*
  * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
- * or more contributor license agreements. Licensed under the Elastic License;
- * you may not use this file except in compliance with the Elastic License.
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0; you may not use this file except in compliance with the Elastic License
+ * 2.0.
  */
 package org.elasticsearch.xpack.ml.action;
 
@@ -49,23 +50,32 @@ public class TransportGetTrainedModelsAction extends HandledTransportAction<Requ
                     return;
                 }
 
-                if (request.isIncludeModelDefinition() && totalAndIds.v2().size() > 1) {
+                if (request.getIncludes().isIncludeModelDefinition() && totalAndIds.v2().size() > 1) {
                     listener.onFailure(
                         ExceptionsHelper.badRequestException(Messages.INFERENCE_TOO_MANY_DEFINITIONS_REQUESTED)
                     );
                     return;
                 }
 
-                if (request.isIncludeModelDefinition()) {
-                    provider.getTrainedModel(totalAndIds.v2().iterator().next(), true, ActionListener.wrap(
-                        config -> listener.onResponse(responseBuilder.setModels(Collections.singletonList(config)).build()),
-                        listener::onFailure
-                    ));
+                if (request.getIncludes().isIncludeModelDefinition()) {
+                    provider.getTrainedModel(
+                        totalAndIds.v2().iterator().next(),
+                        request.getIncludes(),
+                        ActionListener.wrap(
+                            config -> listener.onResponse(responseBuilder.setModels(Collections.singletonList(config)).build()),
+                            listener::onFailure
+                        )
+                    );
                 } else {
-                    provider.getTrainedModels(totalAndIds.v2(), request.isAllowNoResources(), ActionListener.wrap(
-                        configs -> listener.onResponse(responseBuilder.setModels(configs).build()),
-                        listener::onFailure
-                    ));
+                    provider.getTrainedModels(
+                        totalAndIds.v2(),
+                        request.getIncludes(),
+                        request.isAllowNoResources(),
+                        ActionListener.wrap(
+                            configs -> listener.onResponse(responseBuilder.setModels(configs).build()),
+                            listener::onFailure
+                        )
+                    );
                 }
             },
             listener::onFailure

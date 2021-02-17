@@ -1,7 +1,8 @@
 /*
  * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
- * or more contributor license agreements. Licensed under the Elastic License;
- * you may not use this file except in compliance with the Elastic License.
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0; you may not use this file except in compliance with the Elastic License
+ * 2.0.
  */
 
 package org.elasticsearch.test.eql;
@@ -20,6 +21,9 @@ import java.util.Set;
 public class EqlSpecLoader {
     public static List<EqlSpec> load(String path, boolean supported, Set<String> uniqueTestNames) throws Exception {
         try (InputStream is = EqlSpecLoader.class.getResourceAsStream(path)) {
+            if (is == null) {
+                throw new IllegalAccessException("Cannot find classpath resource " + path);
+            }
             return readFromStream(is, supported, uniqueTestNames);
         }
     }
@@ -69,20 +73,6 @@ public class EqlSpecLoader {
             spec.name(getTrimmedString(table, "name"));
             spec.note(getTrimmedString(table, "note"));
             spec.description(getTrimmedString(table, "description"));
-
-            Boolean caseSensitive = table.getBoolean("case_sensitive");
-            Boolean caseInsensitive = table.getBoolean("case_insensitive");
-            // if case_sensitive is TRUE and case_insensitive is not TRUE (FALSE or NULL), then the test is case sensitive only
-            if (Boolean.TRUE.equals(caseSensitive)) {
-                if (Boolean.FALSE.equals(caseInsensitive) || caseInsensitive == null) {
-                    spec.caseSensitive(true);
-                }
-            }
-            // if case_sensitive is not TRUE (FALSE or NULL) and case_insensitive is TRUE, then the test is case insensitive only
-            else if (Boolean.TRUE.equals(caseInsensitive)) {
-                spec.caseSensitive(false);
-            }
-            // in all other cases, the test should run no matter the case sensitivity (should test both scenarios)
 
             List<?> arr = table.getList("tags");
             if (arr != null) {

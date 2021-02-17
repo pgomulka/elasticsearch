@@ -1,7 +1,8 @@
 /*
  * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
- * or more contributor license agreements. Licensed under the Elastic License;
- * you may not use this file except in compliance with the Elastic License.
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0; you may not use this file except in compliance with the Elastic License
+ * 2.0.
  */
 package org.elasticsearch.xpack.ml.dataframe.extractor;
 
@@ -105,7 +106,7 @@ public class ExtractedFieldsDetectorTests extends ESTestCase {
         assertThat(fieldExtraction.v2().get(0).getName(), equalTo("some_keyword"));
         assertThat(fieldExtraction.v2().get(0).isIncluded(), is(false));
         assertThat(fieldExtraction.v2().get(0).getReason(), equalTo("unsupported type; supported types are " +
-            "[boolean, byte, double, float, half_float, integer, long, scaled_float, short]"));
+            "[boolean, byte, double, float, half_float, integer, long, scaled_float, short, unsigned_long]"));
     }
 
     public void testDetect_GivenOutlierDetectionAndFieldWithNumericAndNonNumericTypes() {
@@ -121,7 +122,7 @@ public class ExtractedFieldsDetectorTests extends ESTestCase {
         assertThat(fieldExtraction.v2().get(0).getName(), equalTo("indecisive_field"));
         assertThat(fieldExtraction.v2().get(0).isIncluded(), is(false));
         assertThat(fieldExtraction.v2().get(0).getReason(), equalTo("unsupported type; supported types are " +
-            "[boolean, byte, double, float, half_float, integer, long, scaled_float, short]"));
+            "[boolean, byte, double, float, half_float, integer, long, scaled_float, short, unsigned_long]"));
     }
 
     public void testDetect_GivenOutlierDetectionAndMultipleFields() {
@@ -147,7 +148,7 @@ public class ExtractedFieldsDetectorTests extends ESTestCase {
             FieldSelection.included("some_boolean", Collections.singleton("boolean"), false, FieldSelection.FeatureType.NUMERICAL),
             FieldSelection.included("some_float", Collections.singleton("float"), false, FieldSelection.FeatureType.NUMERICAL),
             FieldSelection.excluded("some_keyword", Collections.singleton("keyword"), "unsupported type; " +
-                "supported types are [boolean, byte, double, float, half_float, integer, long, scaled_float, short]"),
+                "supported types are [boolean, byte, double, float, half_float, integer, long, scaled_float, short, unsigned_long]"),
             FieldSelection.included("some_long", Collections.singleton("long"), false, FieldSelection.FeatureType.NUMERICAL)
         );
     }
@@ -282,7 +283,7 @@ public class ExtractedFieldsDetectorTests extends ESTestCase {
         ElasticsearchStatusException e = expectThrows(ElasticsearchStatusException.class, extractedFieldsDetector::detect);
 
         assertThat(e.getMessage(), equalTo("invalid types [keyword] for required field [foo]; " +
-            "expected types are [byte, double, float, half_float, integer, long, scaled_float, short]"));
+            "expected types are [byte, double, float, half_float, integer, long, scaled_float, short, unsigned_long]"));
     }
 
     public void testDetect_GivenClassificationAndRequiredFieldHasInvalidType() {
@@ -298,7 +299,7 @@ public class ExtractedFieldsDetectorTests extends ESTestCase {
         ElasticsearchStatusException e = expectThrows(ElasticsearchStatusException.class, extractedFieldsDetector::detect);
 
         assertThat(e.getMessage(), equalTo("invalid types [float] for required field [some_float]; " +
-            "expected types are [boolean, byte, integer, ip, keyword, long, short, text]"));
+            "expected types are [boolean, byte, integer, ip, keyword, long, short, text, unsigned_long]"));
     }
 
     public void testDetect_GivenClassificationAndDependentVariableHasInvalidCardinality() {
@@ -371,7 +372,8 @@ public class ExtractedFieldsDetectorTests extends ESTestCase {
 
         assertFieldSelectionContains(fieldExtraction.v2(),
             FieldSelection.excluded("categorical", Collections.singleton("keyword"),
-                "unsupported type; supported types are [boolean, byte, double, float, half_float, integer, long, scaled_float, short]"),
+                "unsupported type; supported types are " +
+                    "[boolean, byte, double, float, half_float, integer, long, scaled_float, short, unsigned_long]"),
             FieldSelection.included("numeric", Collections.singleton("float"), false, FieldSelection.FeatureType.NUMERICAL)
         );
     }
@@ -471,7 +473,7 @@ public class ExtractedFieldsDetectorTests extends ESTestCase {
         ElasticsearchStatusException e = expectThrows(ElasticsearchStatusException.class, extractedFieldsDetector::detect);
 
         assertThat(e.getMessage(), equalTo("field [your_keyword] has unsupported type [keyword]. " +
-            "Supported types are [boolean, byte, double, float, half_float, integer, long, scaled_float, short]."));
+            "Supported types are [boolean, byte, double, float, half_float, integer, long, scaled_float, short, unsigned_long]."));
     }
 
     public void testDetect_GivenNotIncludedFieldHasUnsupportedType() {
@@ -492,7 +494,8 @@ public class ExtractedFieldsDetectorTests extends ESTestCase {
 
         assertFieldSelectionContains(fieldExtraction.v2(),
             FieldSelection.excluded("categorical", Collections.singleton("keyword"),
-                "unsupported type; supported types are [boolean, byte, double, float, half_float, integer, long, scaled_float, short]"),
+                "unsupported type; supported types are " +
+                    "[boolean, byte, double, float, half_float, integer, long, scaled_float, short, unsigned_long]"),
             FieldSelection.included("numeric", Collections.singleton("float"), false, FieldSelection.FeatureType.NUMERICAL)
         );
     }
@@ -517,7 +520,7 @@ public class ExtractedFieldsDetectorTests extends ESTestCase {
             FieldSelection.included("my_field1", Collections.singleton("float"), false, FieldSelection.FeatureType.NUMERICAL),
             FieldSelection.included("your_field2", Collections.singleton("float"), false, FieldSelection.FeatureType.NUMERICAL),
             FieldSelection.excluded("your_keyword", Collections.singleton("keyword"), "unsupported type; supported types " +
-                "are [boolean, byte, double, float, half_float, integer, long, scaled_float, short]")
+                "are [boolean, byte, double, float, half_float, integer, long, scaled_float, short, unsigned_long]")
         );
     }
 
@@ -1167,7 +1170,8 @@ public class ExtractedFieldsDetectorTests extends ESTestCase {
                 null,
                 null,
                 null,
-                featureprocessors))
+                featureprocessors,
+                null))
             .build();
     }
 

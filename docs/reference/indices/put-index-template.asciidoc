@@ -38,6 +38,12 @@ DELETE _index_template/template_*
 
 `PUT /_index_template/<index-template>`
 
+[[put-index-template-api-prereqs]]
+==== {api-prereq-title}
+
+* If the {es} {security-features} are enabled, you must have the
+`manage_index_templates` or `manage` <<privileges-list-cluster,cluster
+privilege>> to use this API.
 
 [[put-index-template-api-desc]]
 ==== {api-description-title}
@@ -70,7 +76,7 @@ Name of the index template to create.
 ==== {api-query-parms-title}
 
 `create`::
-(Optional, boolean)
+(Optional, Boolean)
 If `true`, this request cannot replace or update existing index templates. Defaults to `false`.
 
 include::{docdir}/rest-api/common-parms.asciidoc[tag=master-timeout]
@@ -84,27 +90,24 @@ include::{docdir}/rest-api/common-parms.asciidoc[tag=master-timeout]
 Array of wildcard (`*`) expressions
 used to match the names of data streams and indices during creation.
 +
-[IMPORTANT]
-====
-{es} has built-in index templates for the `metrics-*-*` and `logs-*-*` index
-patterns. {ingest-guide}/ingest-management-overview.html[{agent}] uses these
-templates to create data streams. If you use {agent}, assign your index
-templates a priority lower than `100` to avoid an override of the built-in
-templates.
-
-Otherwise, to avoid accidentally applying the built-in templates, use a
-non-overlapping index pattern, or assign your templates a `priority` higher or
-lower than `100`.
-====
+include::{es-repo-dir}/indices/index-templates.asciidoc[tag=built-in-index-templates]
 
 [xpack]#`data_stream`#::
 (Optional, object)
-Indicates whether the template is used to create data streams and their backing
-indices. If so, use an empty object as the argument: +
-`data_stream: { }`.
+If this object is included, the template is used to create data streams and
+their backing indices. Supports an empty object: `data_stream: { }`
 +
 Data streams require a matching index template with a `data_stream` object.
 See <<create-a-data-stream-template>>.
++
+.Properties of `data_stream`
+[%collapsible%open]
+====
+[[data-stream-hidden]]
+`hidden`::
+(Optional, Boolean)
+If `true`, the data stream is <<hidden-indices,hidden>>. Defaults to `false`.
+====
 
 `template`::
 (Optional, object)

@@ -1,7 +1,8 @@
 /*
  * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
- * or more contributor license agreements. Licensed under the Elastic License;
- * you may not use this file except in compliance with the Elastic License.
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0; you may not use this file except in compliance with the Elastic License
+ * 2.0.
  */
 package org.elasticsearch.xpack.security.authc.oidc;
 
@@ -27,6 +28,7 @@ import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.jwt.proc.BadJWTException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
 import com.nimbusds.oauth2.sdk.auth.Secret;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.Issuer;
@@ -886,8 +888,11 @@ public class OpenIdConnectAuthenticatorTests extends OpenIdConnectTestCase {
             new ResponseType("id_token", "token"),
             new Scope("openid"),
             JWSAlgorithm.RS384,
+            ClientAuthenticationMethod.CLIENT_SECRET_BASIC,
+            JWSAlgorithm.HS384,
             new URI("https://rp.elastic.co/successfull_logout"));
     }
+
     private RelyingPartyConfiguration getRpConfig(String alg) throws URISyntaxException {
         return new RelyingPartyConfiguration(
             new ClientID("rp-my"),
@@ -896,6 +901,8 @@ public class OpenIdConnectAuthenticatorTests extends OpenIdConnectTestCase {
             new ResponseType("id_token", "token"),
             new Scope("openid"),
             JWSAlgorithm.parse(alg),
+            ClientAuthenticationMethod.CLIENT_SECRET_BASIC,
+            JWSAlgorithm.HS384,
             new URI("https://rp.elastic.co/successfull_logout"));
     }
 
@@ -907,6 +914,8 @@ public class OpenIdConnectAuthenticatorTests extends OpenIdConnectTestCase {
             new ResponseType("id_token"),
             new Scope("openid"),
             JWSAlgorithm.parse(alg),
+            ClientAuthenticationMethod.CLIENT_SECRET_BASIC,
+            JWSAlgorithm.HS384,
             new URI("https://rp.elastic.co/successfull_logout"));
     }
 

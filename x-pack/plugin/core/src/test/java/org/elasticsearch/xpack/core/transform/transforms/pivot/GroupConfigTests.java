@@ -1,7 +1,8 @@
 /*
  * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
- * or more contributor license agreements. Licensed under the Elastic License;
- * you may not use this file except in compliance with the Elastic License.
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0; you may not use this file except in compliance with the Elastic License
+ * 2.0.
  */
 
 package org.elasticsearch.xpack.core.transform.transforms.pivot;
@@ -127,6 +128,28 @@ public class GroupConfigTests extends AbstractSerializingTestCase<GroupConfig> {
         try (XContentParser parser = createParser(source)) {
             Exception e = expectThrows(ParsingException.class, () -> GroupConfig.fromXContent(parser, false));
             assertTrue(e.getMessage().startsWith("Invalid group name"));
+        }
+    }
+
+    public void testInvalidGroupSourceValidation() throws IOException {
+        XContentBuilder source = JsonXContent.contentBuilder()
+            .startObject()
+            .startObject(randomAlphaOfLengthBetween(1, 20))
+            .startObject("terms")
+            .endObject()
+            .endObject()
+            .endObject();
+
+        // lenient, passes but reports invalid
+        try (XContentParser parser = createParser(source)) {
+            GroupConfig groupConfig = GroupConfig.fromXContent(parser, true);
+            assertFalse(groupConfig.isValid());
+        }
+
+        // strict throws
+        try (XContentParser parser = createParser(source)) {
+            Exception e = expectThrows(IllegalArgumentException.class, () -> GroupConfig.fromXContent(parser, false));
+            assertTrue(e.getMessage().startsWith("Required one of fields [field, script], but none were specified."));
         }
     }
 

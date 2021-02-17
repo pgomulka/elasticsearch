@@ -1,24 +1,12 @@
 /*
- * Licensed to Elasticsearch under one or more contributor
- * license agreements. See the NOTICE file distributed with
- * this work for additional information regarding copyright
- * ownership. Elasticsearch licenses this file to you under
- * the Apache License, Version 2.0 (the "License"); you may
- * not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0 and the Server Side Public License, v 1; you may not use this file except
+ * in compliance with, at your election, the Elastic License 2.0 or the Server
+ * Side Public License, v 1.
  */
 package org.elasticsearch.snapshots;
 
-import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.Version;
 import org.elasticsearch.action.ShardOperationFailedException;
 import org.elasticsearch.action.admin.cluster.snapshots.get.GetSnapshotsRequest;
@@ -34,6 +22,7 @@ import org.elasticsearch.common.xcontent.ObjectParser;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.common.xcontent.XContentParserUtils;
 import org.elasticsearch.repositories.IndexId;
 import org.elasticsearch.rest.RestStatus;
 
@@ -48,12 +37,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import static org.elasticsearch.snapshots.SnapshotsService.FEATURE_STATES_VERSION;
+
 /**
  * Information about a snapshot
  */
 public final class SnapshotInfo implements Comparable<SnapshotInfo>, ToXContent, Writeable {
-
-    public static final Version DATA_STREAMS_IN_SNAPSHOT = Version.V_7_9_0;
 
     public static final String CONTEXT_MODE_PARAM = "context_mode";
     public static final String CONTEXT_MODE_SNAPSHOT = "SNAPSHOT";
@@ -82,6 +71,7 @@ public final class SnapshotInfo implements Comparable<SnapshotInfo>, ToXContent,
     private static final String SUCCESSFUL_SHARDS = "successful_shards";
     private static final String INCLUDE_GLOBAL_STATE = "include_global_state";
     private static final String USER_METADATA = "metadata";
+    private static final String FEATURE_STATES = "feature_states";
 
     private static final Comparator<SnapshotInfo> COMPARATOR =
         Comparator.comparing(SnapshotInfo::startTime).thenComparing(SnapshotInfo::snapshotId);
@@ -93,6 +83,7 @@ public final class SnapshotInfo implements Comparable<SnapshotInfo>, ToXContent,
         private String reason = null;
         private List<String> indices = null;
         private List<String> dataStreams = null;
+        private List<SnapshotFeatureInfo> featureStates = null;
         private long startTime = 0L;
         private long endTime = 0L;
         private ShardStatsBuilder shardStatsBuilder = null;
@@ -123,6 +114,10 @@ public final class SnapshotInfo implements Comparable<SnapshotInfo>, ToXContent,
 
         private void setDataStreams(List<String> dataStreams) {
             this.dataStreams = dataStreams;
+        }
+
+        private void setFeatureStates(List<SnapshotFeatureInfo> featureStates) {
+            this.featureStates = featureStates;
         }
 
         private void setStartTime(long startTime) {
@@ -164,6 +159,10 @@ public final class SnapshotInfo implements Comparable<SnapshotInfo>, ToXContent,
                 dataStreams = Collections.emptyList();
             }
 
+            if (featureStates == null) {
+                featureStates = Collections.emptyList();
+            }
+
             SnapshotState snapshotState = state == null ? null : SnapshotState.valueOf(state);
             Version version = this.version == -1 ? Version.CURRENT : Version.fromId(this.version);
 
@@ -174,8 +173,9 @@ public final class SnapshotInfo implements Comparable<SnapshotInfo>, ToXContent,
                 shardFailures = new ArrayList<>();
             }
 
-            return new SnapshotInfo(snapshotId, indices, dataStreams, snapshotState, reason, version, startTime, endTime,
-                    totalShards, successfulShards, shardFailures, includeGlobalState, userMetadata);
+            return new SnapshotInfo(snapshotId, indices, dataStreams, featureStates, reason, version, startTime, endTime, totalShards,
+                successfulShards, shardFailures, includeGlobalState, userMetadata, snapshotState
+            );
         }
     }
 
@@ -213,6 +213,8 @@ public final class SnapshotInfo implements Comparable<SnapshotInfo>, ToXContent,
         SNAPSHOT_INFO_PARSER.declareString(SnapshotInfoBuilder::setReason, new ParseField(REASON));
         SNAPSHOT_INFO_PARSER.declareStringArray(SnapshotInfoBuilder::setIndices, new ParseField(INDICES));
         SNAPSHOT_INFO_PARSER.declareStringArray(SnapshotInfoBuilder::setDataStreams, new ParseField(DATA_STREAMS));
+        SNAPSHOT_INFO_PARSER.declareObjectArray(SnapshotInfoBuilder::setFeatureStates, SnapshotFeatureInfo.SNAPSHOT_FEATURE_INFO_PARSER,
+            new ParseField(FEATURE_STATES));
         SNAPSHOT_INFO_PARSER.declareLong(SnapshotInfoBuilder::setStartTime, new ParseField(START_TIME_IN_MILLIS));
         SNAPSHOT_INFO_PARSER.declareLong(SnapshotInfoBuilder::setEndTime, new ParseField(END_TIME_IN_MILLIS));
         SNAPSHOT_INFO_PARSER.declareObject(SnapshotInfoBuilder::setShardStatsBuilder, SHARD_STATS_PARSER, new ParseField(SHARDS));
@@ -238,6 +240,8 @@ public final class SnapshotInfo implements Comparable<SnapshotInfo>, ToXContent,
 
     private final List<String> dataStreams;
 
+    private final List<SnapshotFeatureInfo> featureStates;
+
     private final long startTime;
 
     private final long endTime;
@@ -257,33 +261,40 @@ public final class SnapshotInfo implements Comparable<SnapshotInfo>, ToXContent,
 
     private final List<SnapshotShardFailure> shardFailures;
 
-    public SnapshotInfo(SnapshotId snapshotId, List<String> indices, List<String> dataStreams, SnapshotState state) {
-        this(snapshotId, indices, dataStreams, state, null, null, 0L, 0L, 0, 0, Collections.emptyList(), null, null);
+    public SnapshotInfo(SnapshotId snapshotId, List<String> indices, List<String> dataStreams, List<SnapshotFeatureInfo> featureStates,
+                        SnapshotState state) {
+        this(snapshotId, indices, dataStreams, featureStates, null, null, 0L, 0L, 0, 0, Collections.emptyList(), null, null, state);
     }
 
-    public SnapshotInfo(SnapshotId snapshotId, List<String> indices, List<String> dataStreams, SnapshotState state, Version version) {
-        this(snapshotId, indices, dataStreams, state, null, version, 0L, 0L, 0, 0, Collections.emptyList(), null, null);
+    public SnapshotInfo(SnapshotId snapshotId, List<String> indices, List<String> dataStreams, List<SnapshotFeatureInfo> featureStates,
+                        Version version, SnapshotState state) {
+        this(snapshotId, indices, dataStreams, featureStates, null, version, 0L, 0L, 0, 0, Collections.emptyList(), null, null, state);
     }
 
     public SnapshotInfo(SnapshotsInProgress.Entry entry) {
         this(entry.snapshot().getSnapshotId(),
-            entry.indices().stream().map(IndexId::getName).collect(Collectors.toList()), entry.dataStreams(), SnapshotState.IN_PROGRESS,
-            null, Version.CURRENT, entry.startTime(), 0L, 0, 0, Collections.emptyList(), entry.includeGlobalState(), entry.userMetadata());
+            entry.indices().stream().map(IndexId::getName).collect(Collectors.toList()), entry.dataStreams(), entry.featureStates(),
+            null, Version.CURRENT, entry.startTime(), 0L, 0, 0, Collections.emptyList(), entry.includeGlobalState(), entry.userMetadata(),
+            SnapshotState.IN_PROGRESS
+        );
     }
 
-    public SnapshotInfo(SnapshotId snapshotId, List<String> indices, List<String> dataStreams, long startTime, String reason,
-                        long endTime, int totalShards, List<SnapshotShardFailure> shardFailures, Boolean includeGlobalState,
-                        Map<String, Object> userMetadata) {
-        this(snapshotId, indices, dataStreams, snapshotState(reason, shardFailures), reason, Version.CURRENT,
-             startTime, endTime, totalShards, totalShards - shardFailures.size(), shardFailures, includeGlobalState, userMetadata);
+    public SnapshotInfo(SnapshotId snapshotId, List<String> indices, List<String> dataStreams, List<SnapshotFeatureInfo> featureStates,
+                        String reason, long endTime, int totalShards, List<SnapshotShardFailure> shardFailures, Boolean includeGlobalState,
+                        Map<String, Object> userMetadata, long startTime) {
+        this(snapshotId, indices, dataStreams, featureStates, reason, Version.CURRENT, startTime, endTime, totalShards,
+            totalShards - shardFailures.size(), shardFailures, includeGlobalState, userMetadata, snapshotState(reason, shardFailures)
+        );
     }
 
-    SnapshotInfo(SnapshotId snapshotId, List<String> indices, List<String> dataStreams, SnapshotState state, String reason,
-                         Version version, long startTime, long endTime, int totalShards, int successfulShards,
-                         List<SnapshotShardFailure> shardFailures, Boolean includeGlobalState, Map<String, Object> userMetadata) {
+    SnapshotInfo(SnapshotId snapshotId, List<String> indices, List<String> dataStreams, List<SnapshotFeatureInfo> featureStates,
+                 String reason, Version version, long startTime, long endTime, int totalShards, int successfulShards,
+                 List<SnapshotShardFailure> shardFailures, Boolean includeGlobalState, Map<String, Object> userMetadata,
+                 SnapshotState state) {
         this.snapshotId = Objects.requireNonNull(snapshotId);
         this.indices = Collections.unmodifiableList(Objects.requireNonNull(indices));
         this.dataStreams = Collections.unmodifiableList(Objects.requireNonNull(dataStreams));
+        this.featureStates = Collections.unmodifiableList(Objects.requireNonNull(featureStates));
         this.state = state;
         this.reason = reason;
         this.version = version;
@@ -312,10 +323,11 @@ public final class SnapshotInfo implements Comparable<SnapshotInfo>, ToXContent,
         version = in.readBoolean() ? Version.readVersion(in) : null;
         includeGlobalState = in.readOptionalBoolean();
         userMetadata = in.readMap();
-        if (in.getVersion().onOrAfter(DATA_STREAMS_IN_SNAPSHOT)) {
-            dataStreams = in.readStringList();
+        dataStreams = in.readStringList();
+        if (in.getVersion().before(FEATURE_STATES_VERSION)) {
+            featureStates = Collections.emptyList();
         } else {
-            dataStreams = Collections.emptyList();
+            featureStates = Collections.unmodifiableList(in.readList(SnapshotFeatureInfo::new));
         }
     }
 
@@ -324,7 +336,7 @@ public final class SnapshotInfo implements Comparable<SnapshotInfo>, ToXContent,
      * all information stripped out except the snapshot id, state, and indices.
      */
     public SnapshotInfo basic() {
-        return new SnapshotInfo(snapshotId, indices, Collections.emptyList(), state);
+        return new SnapshotInfo(snapshotId, indices, Collections.emptyList(), featureStates, state);
     }
 
     /**
@@ -456,6 +468,10 @@ public final class SnapshotInfo implements Comparable<SnapshotInfo>, ToXContent,
         return userMetadata;
     }
 
+    public List<SnapshotFeatureInfo> featureStates() {
+        return featureStates;
+    }
+
     /**
      * Compares two snapshots by their start time; if the start times are the same, then
      * compares the two snapshots by their snapshot ids.
@@ -479,6 +495,7 @@ public final class SnapshotInfo implements Comparable<SnapshotInfo>, ToXContent,
             ", includeGlobalState=" + includeGlobalState +
             ", version=" + version +
             ", shardFailures=" + shardFailures +
+            ", featureStates=" + featureStates +
             '}';
     }
 
@@ -543,7 +560,7 @@ public final class SnapshotInfo implements Comparable<SnapshotInfo>, ToXContent,
             builder.field(END_TIME_IN_MILLIS, endTime);
             builder.humanReadableField(DURATION_IN_MILLIS, DURATION, new TimeValue(Math.max(0L, endTime - startTime)));
         }
-        if (verbose || !shardFailures.isEmpty()) {
+        if (verbose || shardFailures.isEmpty() == false) {
             builder.startArray(FAILURES);
             for (SnapshotShardFailure shardFailure : shardFailures) {
                 shardFailure.toXContent(builder, params);
@@ -556,6 +573,14 @@ public final class SnapshotInfo implements Comparable<SnapshotInfo>, ToXContent,
             builder.field(FAILED, failedShards());
             builder.field(SUCCESSFUL, successfulShards);
             builder.endObject();
+        }
+        if (verbose || featureStates.isEmpty() == false) {
+            builder.startArray(FEATURE_STATES);
+            for (SnapshotFeatureInfo snapshotFeatureInfo : featureStates) {
+                builder.value(snapshotFeatureInfo);
+            }
+            builder.endArray();
+
         }
         builder.endObject();
         return builder;
@@ -594,6 +619,12 @@ public final class SnapshotInfo implements Comparable<SnapshotInfo>, ToXContent,
             shardFailure.toXContent(builder, params);
         }
         builder.endArray();
+        builder.startArray(FEATURE_STATES);
+        for (SnapshotFeatureInfo snapshotFeatureInfo : featureStates) {
+            builder.value(snapshotFeatureInfo);
+        }
+        builder.endArray();
+
         builder.endObject();
         return builder;
     }
@@ -618,6 +649,7 @@ public final class SnapshotInfo implements Comparable<SnapshotInfo>, ToXContent,
         Boolean includeGlobalState = null;
         Map<String, Object> userMetadata = null;
         List<SnapshotShardFailure> shardFailures = Collections.emptyList();
+        List<SnapshotFeatureInfo> featureStates = Collections.emptyList();
         if (parser.currentToken() == null) { // fresh parser? move to the first token
             parser.nextToken();
         }
@@ -625,70 +657,73 @@ public final class SnapshotInfo implements Comparable<SnapshotInfo>, ToXContent,
             parser.nextToken();
         }
         XContentParser.Token token;
-        if ((token = parser.nextToken()) == XContentParser.Token.START_OBJECT) {
-            String currentFieldName = parser.currentName();
-            if (SNAPSHOT.equals(currentFieldName)) {
-                while ((token = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
-                    if (token == XContentParser.Token.FIELD_NAME) {
-                        currentFieldName = parser.currentName();
-                        token = parser.nextToken();
-                        if (token.isValue()) {
-                            if (NAME.equals(currentFieldName)) {
-                                name = parser.text();
-                            } else if (UUID.equals(currentFieldName)) {
-                                uuid = parser.text();
-                            } else if (STATE.equals(currentFieldName)) {
-                                state = SnapshotState.valueOf(parser.text());
-                            } else if (REASON.equals(currentFieldName)) {
-                                reason = parser.text();
-                            } else if (START_TIME.equals(currentFieldName)) {
-                                startTime = parser.longValue();
-                            } else if (END_TIME.equals(currentFieldName)) {
-                                endTime = parser.longValue();
-                            } else if (TOTAL_SHARDS.equals(currentFieldName)) {
-                                totalShards = parser.intValue();
-                            } else if (SUCCESSFUL_SHARDS.equals(currentFieldName)) {
-                                successfulShards = parser.intValue();
-                            } else if (VERSION_ID.equals(currentFieldName)) {
-                                version = Version.fromId(parser.intValue());
-                            } else if (INCLUDE_GLOBAL_STATE.equals(currentFieldName)) {
-                                includeGlobalState = parser.booleanValue();
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+        String currentFieldName = parser.currentName();
+        if (SNAPSHOT.equals(currentFieldName)) {
+            while ((token = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
+                if (token == XContentParser.Token.FIELD_NAME) {
+                    currentFieldName = parser.currentName();
+                    token = parser.nextToken();
+                    if (token.isValue()) {
+                        if (NAME.equals(currentFieldName)) {
+                            name = parser.text();
+                        } else if (UUID.equals(currentFieldName)) {
+                            uuid = parser.text();
+                        } else if (STATE.equals(currentFieldName)) {
+                            state = SnapshotState.valueOf(parser.text());
+                        } else if (REASON.equals(currentFieldName)) {
+                            reason = parser.text();
+                        } else if (START_TIME.equals(currentFieldName)) {
+                            startTime = parser.longValue();
+                        } else if (END_TIME.equals(currentFieldName)) {
+                            endTime = parser.longValue();
+                        } else if (TOTAL_SHARDS.equals(currentFieldName)) {
+                            totalShards = parser.intValue();
+                        } else if (SUCCESSFUL_SHARDS.equals(currentFieldName)) {
+                            successfulShards = parser.intValue();
+                        } else if (VERSION_ID.equals(currentFieldName)) {
+                            version = Version.fromId(parser.intValue());
+                        } else if (INCLUDE_GLOBAL_STATE.equals(currentFieldName)) {
+                            includeGlobalState = parser.booleanValue();
+                        }
+                    } else if (token == XContentParser.Token.START_ARRAY) {
+                        if (DATA_STREAMS.equals(currentFieldName)){
+                            dataStreams = new ArrayList<>();
+                            while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
+                                dataStreams.add(parser.text());
                             }
-                        } else if (token == XContentParser.Token.START_ARRAY) {
-                            if (DATA_STREAMS.equals(currentFieldName)){
-                                dataStreams = new ArrayList<>();
-                                while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
-                                    dataStreams.add(parser.text());
-                                }
-                            } else if (INDICES.equals(currentFieldName)) {
-                                ArrayList<String> indicesArray = new ArrayList<>();
-                                while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
-                                    indicesArray.add(parser.text());
-                                }
-                                indices = Collections.unmodifiableList(indicesArray);
-                            } else if (FAILURES.equals(currentFieldName)) {
-                                ArrayList<SnapshotShardFailure> shardFailureArrayList = new ArrayList<>();
-                                while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
-                                    shardFailureArrayList.add(SnapshotShardFailure.fromXContent(parser));
-                                }
-                                shardFailures = Collections.unmodifiableList(shardFailureArrayList);
-                            } else {
-                                // It was probably created by newer version - ignoring
-                                parser.skipChildren();
+                        } else if (INDICES.equals(currentFieldName)) {
+                            ArrayList<String> indicesArray = new ArrayList<>();
+                            while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
+                                indicesArray.add(parser.text());
                             }
-                        } else if (token == XContentParser.Token.START_OBJECT) {
-                            if (USER_METADATA.equals(currentFieldName)) {
-                                userMetadata = parser.map();
-                            } else {
-                                // It was probably created by newer version - ignoring
-                                parser.skipChildren();
+                            indices = Collections.unmodifiableList(indicesArray);
+                        } else if (FAILURES.equals(currentFieldName)) {
+                            ArrayList<SnapshotShardFailure> shardFailureArrayList = new ArrayList<>();
+                            while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
+                                shardFailureArrayList.add(SnapshotShardFailure.fromXContent(parser));
                             }
+                            shardFailures = Collections.unmodifiableList(shardFailureArrayList);
+                        } else if (FEATURE_STATES.equals(currentFieldName)) {
+                            ArrayList<SnapshotFeatureInfo> snapshotFeatureInfoArrayList = new ArrayList<>();
+                            while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
+                                snapshotFeatureInfoArrayList.add(SnapshotFeatureInfo.fromXContent(parser));
+                            }
+                            featureStates = Collections.unmodifiableList(snapshotFeatureInfoArrayList);
+                        } else {
+                            // It was probably created by newer version - ignoring
+                            parser.skipChildren();
+                        }
+                    } else if (token == XContentParser.Token.START_OBJECT) {
+                        if (USER_METADATA.equals(currentFieldName)) {
+                            userMetadata = parser.map();
+                        } else {
+                            // It was probably created by newer version - ignoring
+                            parser.skipChildren();
                         }
                     }
                 }
             }
-        } else {
-            throw new ElasticsearchParseException("unexpected token  [" + token + "]");
         }
         if (uuid == null) {
             // the old format where there wasn't a UUID
@@ -697,7 +732,7 @@ public final class SnapshotInfo implements Comparable<SnapshotInfo>, ToXContent,
         return new SnapshotInfo(new SnapshotId(name, uuid),
                                 indices,
                                 dataStreams,
-                                state,
+                                featureStates,
                                 reason,
                                 version,
                                 startTime,
@@ -706,7 +741,9 @@ public final class SnapshotInfo implements Comparable<SnapshotInfo>, ToXContent,
                                 successfulShards,
                                 shardFailures,
                                 includeGlobalState,
-                                userMetadata);
+                                userMetadata,
+                                state
+        );
     }
 
     @Override
@@ -733,8 +770,9 @@ public final class SnapshotInfo implements Comparable<SnapshotInfo>, ToXContent,
         }
         out.writeOptionalBoolean(includeGlobalState);
         out.writeMap(userMetadata);
-        if(out.getVersion().onOrAfter(DATA_STREAMS_IN_SNAPSHOT)){
-            out.writeStringCollection(dataStreams);
+        out.writeStringCollection(dataStreams);
+        if (out.getVersion().onOrAfter(FEATURE_STATES_VERSION)) {
+            out.writeList(featureStates);
         }
     }
 
@@ -767,13 +805,15 @@ public final class SnapshotInfo implements Comparable<SnapshotInfo>, ToXContent,
             Objects.equals(includeGlobalState, that.includeGlobalState) &&
             Objects.equals(version, that.version) &&
             Objects.equals(shardFailures, that.shardFailures) &&
-            Objects.equals(userMetadata, that.userMetadata);
+            Objects.equals(userMetadata, that.userMetadata) &&
+            Objects.equals(featureStates, that.featureStates);
     }
 
     @Override
     public int hashCode() {
-
         return Objects.hash(snapshotId, state, reason, indices, dataStreams, startTime, endTime,
-                totalShards, successfulShards, includeGlobalState, version, shardFailures, userMetadata);
+                totalShards, successfulShards, includeGlobalState, version, shardFailures, userMetadata,
+            featureStates);
     }
+
 }

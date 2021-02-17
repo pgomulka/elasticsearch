@@ -1,7 +1,8 @@
 /*
  * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
- * or more contributor license agreements. Licensed under the Elastic License;
- * you may not use this file except in compliance with the Elastic License.
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0; you may not use this file except in compliance with the Elastic License
+ * 2.0.
  */
 
 package org.elasticsearch.xpack.eql.action;
@@ -17,12 +18,13 @@ import org.elasticsearch.action.fieldcaps.FieldCapabilitiesAction;
 import org.elasticsearch.action.support.ActionFilter;
 import org.elasticsearch.action.support.ActionFilterChain;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.util.CollectionUtils;
 import org.elasticsearch.index.IndexModule;
 import org.elasticsearch.index.shard.SearchOperationListener;
 import org.elasticsearch.plugins.ActionPlugin;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.plugins.PluginsService;
-import org.elasticsearch.search.internal.SearchContext;
+import org.elasticsearch.search.internal.ReaderContext;
 import org.elasticsearch.tasks.Task;
 import org.elasticsearch.tasks.TaskId;
 import org.elasticsearch.tasks.TaskInfo;
@@ -157,7 +159,7 @@ public abstract class AbstractEqlBlockingIntegTestCase extends AbstractEqlIntegT
             super.onIndexModule(indexModule);
             indexModule.addSearchOperationListener(new SearchOperationListener() {
                 @Override
-                public void onNewContext(SearchContext context) {
+                public void onNewReaderContext(ReaderContext readerContext) {
                     contexts.incrementAndGet();
                     try {
                         logger.trace("blocking search on " + nodeId);
@@ -208,9 +210,7 @@ public abstract class AbstractEqlBlockingIntegTestCase extends AbstractEqlIntegT
 
     @Override
     protected Collection<Class<? extends Plugin>> nodePlugins() {
-        List<Class<? extends Plugin>> plugins = new ArrayList<>(super.nodePlugins());
-        plugins.add(SearchBlockPlugin.class);
-        return plugins;
+        return CollectionUtils.appendToCopy(super.nodePlugins(), SearchBlockPlugin.class);
     }
 
     protected TaskId findTaskWithXOpaqueId(String id, String action) {

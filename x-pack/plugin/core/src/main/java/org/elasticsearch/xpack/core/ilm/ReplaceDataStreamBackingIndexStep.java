@@ -1,7 +1,8 @@
 /*
  * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
- * or more contributor license agreements. Licensed under the Elastic License;
- * you may not use this file except in compliance with the Elastic License.
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0; you may not use this file except in compliance with the Elastic License
+ * 2.0.
  */
 package org.elasticsearch.xpack.core.ilm;
 
@@ -75,7 +76,7 @@ public class ReplaceDataStreamBackingIndexStep extends ClusterStateActionStep {
         }
 
         assert dataStream.getWriteIndex() != null : dataStream.getName() + " has no write index";
-        if (dataStream.getWriteIndex().getIndex().equals(originalIndex)) {
+        if (dataStream.getWriteIndex().getIndex().equals(index)) {
             String errorMessage = String.format(Locale.ROOT, "index [%s] is the write index for data stream [%s], pausing " +
                 "ILM execution of lifecycle [%s] until this index is no longer the write index for the data stream via manual or " +
                 "automated rollover", originalIndex, dataStream.getName(), policyName);

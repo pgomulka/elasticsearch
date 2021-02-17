@@ -1,17 +1,20 @@
 /*
  * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
- * or more contributor license agreements. Licensed under the Elastic License;
- * you may not use this file except in compliance with the Elastic License.
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0; you may not use this file except in compliance with the Elastic License
+ * 2.0.
  */
 package org.elasticsearch.xpack.ml.integration;
 
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.Version;
 import org.elasticsearch.action.support.PlainActionFuture;
+import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.license.License;
 import org.elasticsearch.xpack.core.action.util.PageParams;
+import org.elasticsearch.xpack.core.ml.action.GetTrainedModelsAction;
 import org.elasticsearch.xpack.core.ml.dataframe.DataFrameAnalyticsConfig;
 import org.elasticsearch.xpack.core.ml.dataframe.DataFrameAnalyticsDest;
 import org.elasticsearch.xpack.core.ml.dataframe.DataFrameAnalyticsSource;
@@ -22,7 +25,9 @@ import org.elasticsearch.xpack.core.ml.inference.TrainedModelDefinition;
 import org.elasticsearch.xpack.core.ml.inference.TrainedModelDefinitionTests;
 import org.elasticsearch.xpack.core.ml.inference.TrainedModelInputTests;
 import org.elasticsearch.xpack.core.ml.inference.trainedmodel.TargetType;
+import org.elasticsearch.xpack.core.ml.inference.trainedmodel.metadata.FeatureImportanceBaselineTests;
 import org.elasticsearch.xpack.core.ml.inference.trainedmodel.metadata.TotalFeatureImportanceTests;
+import org.elasticsearch.xpack.core.ml.inference.trainedmodel.metadata.HyperparametersTests;
 import org.elasticsearch.xpack.core.ml.inference.trainedmodel.metadata.TrainedModelMetadata;
 import org.elasticsearch.xpack.ml.MlSingleNodeTestCase;
 import org.elasticsearch.xpack.ml.dataframe.process.ChunkedTrainedModelPersister;
@@ -42,11 +47,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.startsWith;
 
 public class ChunkedTrainedModelPersisterIT extends MlSingleNodeTestCase {
@@ -75,7 +82,7 @@ public class ChunkedTrainedModelPersisterIT extends MlSingleNodeTestCase {
 
         ChunkedTrainedModelPersister persister = new ChunkedTrainedModelPersister(trainedModelProvider,
             analyticsConfig,
-            new DataFrameAnalyticsAuditor(client(), "test-node"),
+            new DataFrameAnalyticsAuditor(client(), getInstanceFromNode(ClusterService.class)),
             (ex) -> { throw new ElasticsearchException(ex); },
             new ExtractedFields(extractedFieldList, Collections.emptyList(), Collections.emptyMap())
         );
@@ -88,6 +95,10 @@ public class ChunkedTrainedModelPersisterIT extends MlSingleNodeTestCase {
         }
         ModelMetadata modelMetadata = new ModelMetadata(Stream.generate(TotalFeatureImportanceTests::randomInstance)
             .limit(randomIntBetween(1, 10))
+            .collect(Collectors.toList()),
+            FeatureImportanceBaselineTests.randomInstance(),
+            Stream.generate(HyperparametersTests::randomInstance)
+            .limit(randomIntBetween(1, 10))
             .collect(Collectors.toList()));
         persister.createAndIndexInferenceModelMetadata(modelMetadata);
 
@@ -95,19 +106,23 @@ public class ChunkedTrainedModelPersisterIT extends MlSingleNodeTestCase {
         trainedModelProvider.expandIds(modelId + "*", false, PageParams.defaultParams(), Collections.emptySet(), getIdsFuture);
         Tuple<Long, Set<String>> ids = getIdsFuture.actionGet();
         assertThat(ids.v1(), equalTo(1L));
+        String inferenceModelId = ids.v2().iterator().next();
 
         PlainActionFuture<TrainedModelConfig> getTrainedModelFuture = new PlainActionFuture<>();
-        trainedModelProvider.getTrainedModel(ids.v2().iterator().next(), true, getTrainedModelFuture);
+        trainedModelProvider.getTrainedModel(inferenceModelId, GetTrainedModelsAction.Includes.all(), getTrainedModelFuture);
 
         TrainedModelConfig storedConfig = getTrainedModelFuture.actionGet();
         assertThat(storedConfig.getCompressedDefinition(), equalTo(compressedDefinition));
         assertThat(storedConfig.getEstimatedOperations(), equalTo((long)modelSizeInfo.numOperations()));
         assertThat(storedConfig.getEstimatedHeapMemory(), equalTo(modelSizeInfo.ramBytesUsed()));
+        assertThat(storedConfig.getMetadata(), hasKey("total_feature_importance"));
+        assertThat(storedConfig.getMetadata(), hasKey("feature_importance_baseline"));
+        assertThat(storedConfig.getMetadata(), hasKey("hyperparameters"));
 
-        PlainActionFuture<TrainedModelMetadata> getTrainedMetadataFuture = new PlainActionFuture<>();
-        trainedModelProvider.getTrainedModelMetadata(ids.v2().iterator().next(), getTrainedMetadataFuture);
+        PlainActionFuture<Map<String, TrainedModelMetadata>> getTrainedMetadataFuture = new PlainActionFuture<>();
+        trainedModelProvider.getTrainedModelMetadata(Collections.singletonList(inferenceModelId), getTrainedMetadataFuture);
 
-        TrainedModelMetadata storedMetadata = getTrainedMetadataFuture.actionGet();
+        TrainedModelMetadata storedMetadata = getTrainedMetadataFuture.actionGet().get(inferenceModelId);
         assertThat(storedMetadata.getModelId(), startsWith(modelId));
         assertThat(storedMetadata.getTotalFeatureImportances(), equalTo(modelMetadata.getFeatureImportances()));
     }

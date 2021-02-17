@@ -1,20 +1,9 @@
 /*
- * Licensed to Elasticsearch under one or more contributor
- * license agreements. See the NOTICE file distributed with
- * this work for additional information regarding copyright
- * ownership. Elasticsearch licenses this file to you under
- * the Apache License, Version 2.0 (the "License"); you may
- * not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0 and the Server Side Public License, v 1; you may not use this file except
+ * in compliance with, at your election, the Elastic License 2.0 or the Server
+ * Side Public License, v 1.
  */
 
 package org.elasticsearch.index.mapper;
@@ -24,10 +13,10 @@ import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.search.Query;
 import org.elasticsearch.Version;
 import org.elasticsearch.common.Explicit;
+import org.elasticsearch.common.logging.DeprecationCategory;
 import org.elasticsearch.common.logging.DeprecationLogger;
-import org.elasticsearch.index.query.QueryShardContext;
+import org.elasticsearch.index.query.SearchExecutionContext;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -47,7 +36,7 @@ public class FieldNamesFieldMapper extends MetadataFieldMapper {
     public static final String CONTENT_TYPE = "_field_names";
 
     @Override
-    public ParametrizedFieldMapper.Builder getMergeBuilder() {
+    public FieldMapper.Builder getMergeBuilder() {
         return new Builder(indexVersionCreated).init(this);
     }
 
@@ -93,13 +82,14 @@ public class FieldNamesFieldMapper extends MetadataFieldMapper {
         }
 
         @Override
-        public FieldNamesFieldMapper build(BuilderContext context) {
+        public FieldNamesFieldMapper build() {
             if (enabled.getValue().explicit()) {
                 if (indexVersionCreated.onOrAfter(Version.V_8_0_0)) {
                     throw new MapperParsingException("The `enabled` setting for the `_field_names` field has been deprecated and "
                         + "removed. Please remove it from your mappings and templates.");
                 } else {
-                    deprecationLogger.deprecate("field_names_enabled_parameter", ENABLED_DEPRECATION_MESSAGE);
+                    deprecationLogger.deprecate(DeprecationCategory.TEMPLATES,
+                        "field_names_enabled_parameter", ENABLED_DEPRECATION_MESSAGE);
                 }
             }
             FieldNamesFieldType fieldNamesFieldType = new FieldNamesFieldType(enabled.getValue().value());
@@ -117,7 +107,7 @@ public class FieldNamesFieldMapper extends MetadataFieldMapper {
         private final boolean enabled;
 
         public FieldNamesFieldType(boolean enabled) {
-            super(Defaults.NAME, true, false, TextSearchInfo.SIMPLE_MATCH_ONLY, Collections.emptyMap());
+            super(Defaults.NAME, true, false, false, TextSearchInfo.SIMPLE_MATCH_ONLY, Collections.emptyMap());
             this.enabled = enabled;
         }
 
@@ -131,16 +121,21 @@ public class FieldNamesFieldMapper extends MetadataFieldMapper {
         }
 
         @Override
-        public Query existsQuery(QueryShardContext context) {
+        public ValueFetcher valueFetcher(SearchExecutionContext context, String format) {
+            throw new UnsupportedOperationException("Cannot fetch values for internal field [" + name() + "].");
+        }
+
+        @Override
+        public Query existsQuery(SearchExecutionContext context) {
             throw new UnsupportedOperationException("Cannot run exists query on _field_names");
         }
 
         @Override
-        public Query termQuery(Object value, QueryShardContext context) {
+        public Query termQuery(Object value, SearchExecutionContext context) {
             if (isEnabled() == false) {
                 throw new IllegalStateException("Cannot run [exists] queries if the [_field_names] field is disabled");
             }
-            deprecationLogger.deprecate("terms_query_on_field_names",
+            deprecationLogger.deprecate(DeprecationCategory.MAPPINGS, "terms_query_on_field_names",
                 "terms query on the _field_names field is deprecated and will be removed, use exists query instead");
             return super.termQuery(value, context);
         }
@@ -158,19 +153,6 @@ public class FieldNamesFieldMapper extends MetadataFieldMapper {
     @Override
     public FieldNamesFieldType fieldType() {
         return (FieldNamesFieldType) super.fieldType();
-    }
-
-    @Override
-    public void preParse(ParseContext context) {
-    }
-
-    @Override
-    public void postParse(ParseContext context) {
-    }
-
-    @Override
-    protected void parseCreateField(ParseContext context) throws IOException {
-        // Adding values to the _field_names field is handled by the mappers for each field type
     }
 
     static Iterable<String> extractFieldNames(final String fullPath) {

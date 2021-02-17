@@ -1,20 +1,9 @@
 /*
- * Licensed to Elasticsearch under one or more contributor
- * license agreements. See the NOTICE file distributed with
- * this work for additional information regarding copyright
- * ownership. Elasticsearch licenses this file to you under
- * the Apache License, Version 2.0 (the "License"); you may
- * not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0 and the Server Side Public License, v 1; you may not use this file except
+ * in compliance with, at your election, the Elastic License 2.0 or the Server
+ * Side Public License, v 1.
  */
 
 package org.elasticsearch.painless;
@@ -260,12 +249,6 @@ public class WhenThingsGoWrongTests extends ScriptTestCase {
         expectScriptThrows(StackOverflowError.class, () -> {
             exec("void recurse(int x, int y) {recurse(x, y)} recurse(1, 2);");
         });
-    }
-
-    public void testRegexDisabledByDefault() {
-        IllegalStateException e = expectScriptThrows(IllegalStateException.class, () -> exec("return 'foo' ==~ /foo/"));
-        assertEquals("Regexes are disabled. Set [script.painless.regex.enabled] to [true] in elasticsearch.yaml to allow them. "
-                + "Be careful though, regexes break out of Painless's protection against deep recursion and long loops.", e.getMessage());
     }
 
     public void testCanNotOverrideRegexEnabled() {
@@ -540,7 +523,7 @@ public class WhenThingsGoWrongTests extends ScriptTestCase {
         iae = expectScriptThrows(IllegalArgumentException.class, () -> exec("while (test0) {int x = 1;}"));
         assertEquals(iae.getMessage(), "cannot resolve symbol [test0]");
     }
-    
+
     public void testPartialType() {
         int dots = randomIntBetween(1, 5);
         StringBuilder builder = new StringBuilder("test0");
@@ -845,5 +828,11 @@ public class WhenThingsGoWrongTests extends ScriptTestCase {
         // while
         iae = expectScriptThrows(IllegalArgumentException.class, () -> exec("while (java.util.List) {java.util.List x = 1;}"));
         assertEquals(iae.getMessage(), "value required: instead found unexpected type [java.util.List]");
+    }
+
+    public void testInvalidNullSafeBehavior() {
+        expectScriptThrows(ClassCastException.class, () ->
+                exec("def test = ['hostname': 'somehostname']; test?.hostname && params.host.hostname != ''"));
+        expectScriptThrows(NullPointerException.class, () -> exec("params?.host?.hostname && params.host?.hostname != ''"));
     }
 }

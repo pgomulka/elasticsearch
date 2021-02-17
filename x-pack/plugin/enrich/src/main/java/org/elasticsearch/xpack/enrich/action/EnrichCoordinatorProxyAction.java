@@ -1,7 +1,8 @@
 /*
  * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
- * or more contributor license agreements. Licensed under the Elastic License;
- * you may not use this file except in compliance with the Elastic License.
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0; you may not use this file except in compliance with the Elastic License
+ * 2.0.
  */
 package org.elasticsearch.xpack.enrich.action;
 
@@ -65,10 +66,12 @@ public class EnrichCoordinatorProxyAction extends ActionType<SearchResponse> {
         @Override
         protected void doExecute(Task task, SearchRequest request, ActionListener<SearchResponse> listener) {
             // Write tp is expected when executing enrich processor from index / bulk api
+            // System_write is expected when executing enrich against system indices
             // Management tp is expected when executing enrich processor from ingest simulate api
             // Search tp is allowed for now - After enriching, the remaining parts of the pipeline are processed on the
             // search thread, which could end up here again if there is more than one enrich processor in a pipeline.
             assert Thread.currentThread().getName().contains(ThreadPool.Names.WRITE)
+                || Thread.currentThread().getName().contains(ThreadPool.Names.SYSTEM_WRITE)
                 || Thread.currentThread().getName().contains(ThreadPool.Names.SEARCH)
                 || Thread.currentThread().getName().contains(ThreadPool.Names.MANAGEMENT);
             coordinator.schedule(request, listener);

@@ -1,7 +1,8 @@
 /*
  * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
- * or more contributor license agreements. Licensed under the Elastic License;
- * you may not use this file except in compliance with the Elastic License.
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0; you may not use this file except in compliance with the Elastic License
+ * 2.0.
  */
 package org.elasticsearch.xpack.sql.qa.rest;
 
@@ -20,7 +21,6 @@ import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.io.Streams;
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.test.NotEqualMessageBuilder;
 import org.elasticsearch.xpack.sql.proto.Mode;
@@ -48,6 +48,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
 import static java.util.Collections.unmodifiableMap;
+import static org.elasticsearch.xpack.ql.TestUtils.getNumberOfSearchContexts;
 import static org.hamcrest.Matchers.containsString;
 
 /**
@@ -417,6 +418,50 @@ public abstract class RestSqlTestCase extends BaseRestSqlTestCase implements Err
         );
     }
 
+    public void testCountAndCountDistinct() throws IOException {
+        String mode = randomMode();
+        index(
+            "test",
+            "{\"gender\":\"m\", \"langs\": 1}",
+            "{\"gender\":\"m\", \"langs\": 1}",
+            "{\"gender\":\"m\", \"langs\": 2}",
+            "{\"gender\":\"m\", \"langs\": 3}",
+            "{\"gender\":\"m\", \"langs\": 3}",
+            "{\"gender\":\"f\", \"langs\": 1}",
+            "{\"gender\":\"f\", \"langs\": 2}",
+            "{\"gender\":\"f\", \"langs\": 2}",
+            "{\"gender\":\"f\", \"langs\": 2}",
+            "{\"gender\":\"f\", \"langs\": 3}",
+            "{\"gender\":\"f\", \"langs\": 3}"
+        );
+
+        Map<String, Object> expected = new HashMap<>();
+        boolean columnar = randomBoolean();
+        expected.put(
+            "columns",
+            Arrays.asList(
+                columnInfo(mode, "gender", "text", JDBCType.VARCHAR, Integer.MAX_VALUE),
+                columnInfo(mode, "cnt", "long", JDBCType.BIGINT, 20),
+                columnInfo(mode, "cnt_dist", "long", JDBCType.BIGINT, 20)
+            )
+        );
+        if (columnar) {
+            expected.put("values", Arrays.asList(Arrays.asList("f", "m"), Arrays.asList(6, 5), Arrays.asList(3, 3)));
+        } else {
+            expected.put("rows", Arrays.asList(Arrays.asList("f", 6, 3), Arrays.asList("m", 5, 3)));
+        }
+
+        Map<String, Object> response = runSql(
+            mode,
+            "SELECT gender, COUNT(langs) AS cnt, COUNT(DISTINCT langs) AS cnt_dist " + "FROM test GROUP BY gender ORDER BY gender",
+            columnar
+        );
+
+        String cursor = (String) response.remove("cursor");
+        assertNotNull(cursor);
+        assertResponse(expected, response);
+    }
+
     @Override
     public void testSelectScoreSubField() throws Exception {
         index("{\"foo\":1}");
@@ -627,11 +672,10 @@ public abstract class RestSqlTestCase extends BaseRestSqlTestCase implements Err
 
         Map<String, Object> response = runTranslateSql(query("SELECT * FROM test").toString());
         assertEquals(1000, response.get("size"));
+        assertFalse((Boolean) response.get("_source"));
         @SuppressWarnings("unchecked")
-        Map<String, Object> source = (Map<String, Object>) response.get("_source");
-        assertNotNull(source);
-        assertEquals(emptyList(), source.get("excludes"));
-        assertEquals(singletonList("test"), source.get("includes"));
+        List<Map<String, Object>> source = (List<Map<String, Object>>) response.get("fields");
+        assertEquals(singletonList(singletonMap("field", "test")), source);
     }
 
     public void testBasicQueryWithFilter() throws IOException {
@@ -692,97 +736,16 @@ public abstract class RestSqlTestCase extends BaseRestSqlTestCase implements Err
         );
     }
 
-    /**
-     * Test for filtering the field_caps response with a filter.
-     * Because there is no actual SELECT involved (thus, the REST request filter not actually being applied on an actual _search), we can
-     * test if the filtering is correctly applied at field_caps request level.
-     */
-    public void testSysColumnsCommandWithFilter() throws IOException {
-        String mode = randomMode();
-        // create three indices with same @timestamp date field and with differently named one more field
-        indexWithIndexName("test2018", "{\"@timestamp\":\"2018-06-01\",\"field2018\":\"foo\"}");
-        indexWithIndexName("test2019", "{\"@timestamp\":\"2019-06-01\",\"field2019\":\"foo\"}");
-        indexWithIndexName("test2020", "{\"@timestamp\":\"2020-06-01\",\"field2020\":\"foo\"}");
-
-        // filter the results so that only test2020's columns are displayed
-        Map<String, Object> actual = runSql(
-            new StringEntity(
-                query("SYS COLUMNS").mode(mode).filter("{\"range\": {\"@timestamp\": {\"gte\": \"2020\"}}}").toString(),
-                ContentType.APPLICATION_JSON
-            ),
-            StringUtils.EMPTY,
-            mode
-        );
-        @SuppressWarnings("unchecked")
-        List<List<String>> rows = (List<List<String>>) actual.get("rows");
-        assertEquals(3, rows.size());
-        List<String> currentRow = rows.get(0);
-        assertEquals("test2020", currentRow.get(2));
-        assertEquals("@timestamp", currentRow.get(3));
-        currentRow = rows.get(1);
-        assertEquals("test2020", currentRow.get(2));
-        assertEquals("field2020", currentRow.get(3));
-        currentRow = rows.get(2);
-        assertEquals("test2020", currentRow.get(2));
-        assertEquals("field2020.keyword", currentRow.get(3));
-    }
-
-    /**
-     * Similar test with {@link #testSysColumnsCommandWithFilter()} but using "SHOW COLUMNS" command which, compared to "SYS COLUMNS"
-     * goes through a different calls path in IndexResolver
-     */
-    @SuppressWarnings("unchecked")
-    public void testShowColumnsCommandWithFilter() throws IOException {
-        String mode = randomMode();
-        // create three indices with same @timestamp date field and with differently named one more field
-        indexWithIndexName("test2018", "{\"@timestamp\":\"2018-06-01\",\"field2018\":\"foo\"}");
-        indexWithIndexName("test2019", "{\"@timestamp\":\"2019-06-01\",\"field2019\":\"foo\"}");
-        indexWithIndexName("test2020", "{\"@timestamp\":\"2020-06-01\",\"field2020\":\"foo\"}");
-
-        // filter the results so that only test2020's columns are displayed
-        Map<String, Object> actual = runSql(
-            new StringEntity(
-                query("SHOW COLUMNS FROM test2020").mode(mode).filter("{\"range\": {\"@timestamp\": {\"gte\": \"2020\"}}}").toString(),
-                ContentType.APPLICATION_JSON
-            ),
-            StringUtils.EMPTY,
-            mode
-        );
-
-        List<List<String>> rows = (List<List<String>>) actual.get("rows");
-        assertEquals(3, rows.size());
-        List<String> currentRow = rows.get(0);
-        assertEquals("@timestamp", currentRow.get(0));
-        currentRow = rows.get(1);
-        assertEquals("field2020", currentRow.get(0));
-        currentRow = rows.get(2);
-        assertEquals("field2020.keyword", currentRow.get(0));
-
-        // the second test is from an index that is filtered out by the range filter, so the result list should be empty
-        actual = runSql(
-            new StringEntity(
-                query("SHOW COLUMNS FROM test2019").mode(mode).filter("{\"range\": {\"@timestamp\": {\"gte\": \"2020\"}}}").toString(),
-                ContentType.APPLICATION_JSON
-            ),
-            StringUtils.EMPTY,
-            mode
-        );
-
-        rows = (List<List<String>>) actual.get("rows");
-        assertTrue(rows.isEmpty());
-    }
-
     public void testBasicTranslateQueryWithFilter() throws IOException {
         index("{\"test\":\"foo\"}", "{\"test\":\"bar\"}");
 
         Map<String, Object> response = runTranslateSql(query("SELECT * FROM test").filter("{\"match\": {\"test\": \"foo\"}}").toString());
 
         assertEquals(response.get("size"), 1000);
+        assertFalse((Boolean) response.get("_source"));
         @SuppressWarnings("unchecked")
-        Map<String, Object> source = (Map<String, Object>) response.get("_source");
-        assertNotNull(source);
-        assertEquals(emptyList(), source.get("excludes"));
-        assertEquals(singletonList("test"), source.get("includes"));
+        List<Map<String, Object>> source = (List<Map<String, Object>>) response.get("fields");
+        assertEquals(singletonList(singletonMap("field", "test")), source);
 
         @SuppressWarnings("unchecked")
         Map<String, Object> query = (Map<String, Object>) response.get("query");
@@ -819,7 +782,7 @@ public abstract class RestSqlTestCase extends BaseRestSqlTestCase implements Err
 
         assertEquals(response.get("size"), 0);
         assertEquals(false, response.get("_source"));
-        assertEquals("_none_", response.get("stored_fields"));
+        assertNull(response.get("stored_fields"));
 
         @SuppressWarnings("unchecked")
         Map<String, Object> aggregations = (Map<String, Object>) response.get("aggregations");
@@ -1033,7 +996,7 @@ public abstract class RestSqlTestCase extends BaseRestSqlTestCase implements Err
         );
         assertEquals(true, response.get("succeeded"));
 
-        assertEquals(0, getNumberOfSearchContexts("test"));
+        assertEquals(0, getNumberOfSearchContexts(client(), "test"));
     }
 
     private Tuple<String, String> runSqlAsText(String sql, String accept) throws IOException {
@@ -1080,37 +1043,6 @@ public abstract class RestSqlTestCase extends BaseRestSqlTestCase implements Err
             NotEqualMessageBuilder message = new NotEqualMessageBuilder();
             message.compareMaps(actual, expected);
             fail("Response does not match:\n" + message.toString());
-        }
-    }
-
-    public static int getNumberOfSearchContexts(String index) throws IOException {
-        return getOpenContexts(searchStats(), index);
-    }
-
-    public static void assertNoSearchContexts() throws IOException {
-        Map<String, Object> stats = searchStats();
-        @SuppressWarnings("unchecked")
-        Map<String, Object> indicesStats = (Map<String, Object>) stats.get("indices");
-        for (String index : indicesStats.keySet()) {
-            if (index.startsWith(".") == false) { // We are not interested in internal indices
-                assertEquals(index + " should have no search contexts", 0, getOpenContexts(stats, index));
-            }
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private static int getOpenContexts(Map<String, Object> stats, String index) {
-        stats = (Map<String, Object>) stats.get("indices");
-        stats = (Map<String, Object>) stats.get(index);
-        stats = (Map<String, Object>) stats.get("total");
-        stats = (Map<String, Object>) stats.get("search");
-        return (Integer) stats.get("open_contexts");
-    }
-
-    private static Map<String, Object> searchStats() throws IOException {
-        Response response = client().performRequest(new Request("GET", "/_stats/search"));
-        try (InputStream content = response.getEntity().getContent()) {
-            return XContentHelper.convertToMap(JsonXContent.jsonXContent, content, false);
         }
     }
 }

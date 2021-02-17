@@ -1,7 +1,8 @@
 /*
  * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
- * or more contributor license agreements. Licensed under the Elastic License;
- * you may not use this file except in compliance with the Elastic License.
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0; you may not use this file except in compliance with the Elastic License
+ * 2.0.
  */
 
 package org.elasticsearch.xpack.eql.planner;
@@ -9,6 +10,7 @@ package org.elasticsearch.xpack.eql.planner;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.xpack.eql.EqlTestUtils;
 import org.elasticsearch.xpack.eql.analysis.Analyzer;
+import org.elasticsearch.xpack.eql.analysis.PostAnalyzer;
 import org.elasticsearch.xpack.eql.analysis.PreAnalyzer;
 import org.elasticsearch.xpack.eql.analysis.Verifier;
 import org.elasticsearch.xpack.eql.expression.function.EqlFunctionRegistry;
@@ -25,6 +27,7 @@ import static org.elasticsearch.xpack.ql.type.TypesTests.loadMapping;
 public abstract class AbstractQueryFolderTestCase extends ESTestCase {
     protected EqlParser parser = new EqlParser();
     protected PreAnalyzer preAnalyzer = new PreAnalyzer();
+    protected PostAnalyzer postAnalyzer = new PostAnalyzer();
     protected EqlConfiguration configuration = EqlTestUtils.randomConfiguration();
     protected Analyzer analyzer = new Analyzer(configuration, new EqlFunctionRegistry(), new Verifier(new Metrics()));
     protected Optimizer optimizer = new Optimizer();
@@ -33,7 +36,8 @@ public abstract class AbstractQueryFolderTestCase extends ESTestCase {
     protected IndexResolution index = IndexResolution.valid(new EsIndex("test", loadMapping("mapping-default.json", true)));
 
     protected PhysicalPlan plan(IndexResolution resolution, String eql) {
-        return planner.plan(optimizer.optimize(analyzer.analyze(preAnalyzer.preAnalyze(parser.createStatement(eql), resolution))));
+        return planner.plan(optimizer.optimize(postAnalyzer.postAnalyze(analyzer.analyze(preAnalyzer.preAnalyze(parser.createStatement(eql),
+                resolution)), configuration)));
     }
 
     protected PhysicalPlan plan(String eql) {

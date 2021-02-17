@@ -1,28 +1,19 @@
 /*
- * Licensed to Elasticsearch under one or more contributor
- * license agreements. See the NOTICE file distributed with
- * this work for additional information regarding copyright
- * ownership. Elasticsearch licenses this file to you under
- * the Apache License, Version 2.0 (the "License"); you may
- * not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0 and the Server Side Public License, v 1; you may not use this file except
+ * in compliance with, at your election, the Elastic License 2.0 or the Server
+ * Side Public License, v 1.
  */
 
 package org.elasticsearch.client.ml.inference.results;
 
 import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.xcontent.ConstructingObjectParser;
+import org.elasticsearch.common.xcontent.ObjectParser;
 import org.elasticsearch.common.xcontent.ToXContentObject;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentParseException;
 import org.elasticsearch.common.xcontent.XContentParser;
 
 import java.io.IOException;
@@ -47,7 +38,7 @@ public class FeatureImportance implements ToXContentObject {
 
     static {
         PARSER.declareString(constructorArg(), new ParseField(FeatureImportance.FEATURE_NAME));
-        PARSER.declareDouble(constructorArg(), new ParseField(FeatureImportance.IMPORTANCE));
+        PARSER.declareDouble(optionalConstructorArg(), new ParseField(FeatureImportance.IMPORTANCE));
         PARSER.declareObjectArray(optionalConstructorArg(),
             (p, c) -> ClassImportance.fromXContent(p),
             new ParseField(FeatureImportance.CLASSES));
@@ -58,10 +49,10 @@ public class FeatureImportance implements ToXContentObject {
     }
 
     private final List<ClassImportance> classImportance;
-    private final double importance;
+    private final Double importance;
     private final String featureName;
 
-    public FeatureImportance(String featureName, double importance, List<ClassImportance> classImportance) {
+    public FeatureImportance(String featureName, Double importance, List<ClassImportance> classImportance) {
         this.featureName = Objects.requireNonNull(featureName);
         this.importance = importance;
         this.classImportance = classImportance == null ? null : Collections.unmodifiableList(classImportance);
@@ -71,7 +62,7 @@ public class FeatureImportance implements ToXContentObject {
         return classImportance;
     }
 
-    public double getImportance() {
+    public Double getImportance() {
         return importance;
     }
 
@@ -83,7 +74,9 @@ public class FeatureImportance implements ToXContentObject {
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject();
         builder.field(FEATURE_NAME, featureName);
-        builder.field(IMPORTANCE, importance);
+        if (importance != null) {
+            builder.field(IMPORTANCE, importance);
+        }
         if (classImportance != null && classImportance.isEmpty() == false) {
             builder.field(CLASSES, classImportance);
         }
@@ -113,11 +106,20 @@ public class FeatureImportance implements ToXContentObject {
         private static final ConstructingObjectParser<ClassImportance, Void> PARSER =
             new ConstructingObjectParser<>("feature_importance_class_importance",
                 true,
-                a -> new ClassImportance((String) a[0], (Double) a[1])
+                a -> new ClassImportance(a[0], (Double) a[1])
             );
 
         static {
-            PARSER.declareString(constructorArg(), new ParseField(CLASS_NAME));
+            PARSER.declareField(ConstructingObjectParser.constructorArg(), (p, c) -> {
+                if (p.currentToken() == XContentParser.Token.VALUE_STRING) {
+                    return p.text();
+                } else if (p.currentToken() == XContentParser.Token.VALUE_NUMBER) {
+                    return p.numberValue();
+                } else if (p.currentToken() == XContentParser.Token.VALUE_BOOLEAN) {
+                    return p.booleanValue();
+                }
+                throw new XContentParseException("Unsupported token [" + p.currentToken() + "]");
+            }, new ParseField(CLASS_NAME), ObjectParser.ValueType.VALUE);
             PARSER.declareDouble(constructorArg(), new ParseField(FeatureImportance.IMPORTANCE));
         }
 
@@ -125,15 +127,15 @@ public class FeatureImportance implements ToXContentObject {
             return PARSER.apply(parser, null);
         }
 
-        private final String className;
+        private final Object className;
         private final double importance;
 
-        public ClassImportance(String className, double importance) {
+        public ClassImportance(Object className, double importance) {
             this.className = className;
             this.importance = importance;
         }
 
-        public String getClassName() {
+        public Object getClassName() {
             return className;
         }
 

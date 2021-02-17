@@ -1,7 +1,8 @@
 /*
  * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
- * or more contributor license agreements. Licensed under the Elastic License;
- * you may not use this file except in compliance with the Elastic License.
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0; you may not use this file except in compliance with the Elastic License
+ * 2.0.
  */
 package org.elasticsearch.xpack.ml.job.process.autodetect;
 
@@ -44,7 +45,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
 import java.time.ZonedDateTime;
-import java.util.Collections;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -197,7 +197,7 @@ public class AutodetectCommunicator implements Closeable {
             processKilled = true;
             autodetectResultProcessor.setProcessKilled();
             autodetectWorkerExecutor.shutdown();
-            autodetectProcess.kill();
+            autodetectProcess.kill(awaitCompletion);
 
             if (awaitCompletion) {
                 try {
@@ -225,8 +225,8 @@ public class AutodetectCommunicator implements Closeable {
             }
 
             // Filters have to be written before detectors
-            if (update.getFilter() != null) {
-                autodetectProcess.writeUpdateFiltersMessage(Collections.singletonList(update.getFilter()));
+            if (update.getFilters() != null) {
+                autodetectProcess.writeUpdateFiltersMessage(update.getFilters());
             }
 
             // Add detector rules
@@ -318,7 +318,7 @@ public class AutodetectCommunicator implements Closeable {
      * Throws an exception if the process has exited
      */
     private void checkProcessIsAlive() {
-        if (!autodetectProcess.isProcessAlive()) {
+        if (autodetectProcess.isProcessAlive() == false) {
             // Don't log here - it just causes double logging when the exception gets logged
             throw new ElasticsearchException("[{}] Unexpected death of autodetect: {}", job.getId(), autodetectProcess.readError());
         }

@@ -1,7 +1,8 @@
 /*
  * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
- * or more contributor license agreements. Licensed under the Elastic License;
- * you may not use this file except in compliance with the Elastic License.
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0; you may not use this file except in compliance with the Elastic License
+ * 2.0.
  */
 package org.elasticsearch.xpack.sql.plan.logical.command;
 
@@ -66,7 +67,7 @@ public class ShowColumns extends Command {
         String regex = pattern != null ? pattern.asJavaRegex() : null;
 
         boolean withFrozen = includeFrozen || session.configuration().includeFrozen();
-        session.indexResolver().resolveAsMergedMapping(idx, regex, withFrozen, session.configuration().filter(), ActionListener.wrap(
+        session.indexResolver().resolveAsMergedMapping(idx, regex, withFrozen, ActionListener.wrap(
                 indexResult -> {
                     List<List<?>> rows = emptyList();
                     if (indexResult.isValid()) {

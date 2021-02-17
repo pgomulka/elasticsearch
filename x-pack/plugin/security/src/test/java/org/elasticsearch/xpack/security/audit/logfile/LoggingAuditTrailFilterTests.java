@@ -1,7 +1,8 @@
 /*
  * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
- * or more contributor license agreements. Licensed under the Elastic License;
- * you may not use this file except in compliance with the Elastic License.
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0; you may not use this file except in compliance with the Elastic License
+ * 2.0.
  */
 package org.elasticsearch.xpack.security.audit.logfile;
 
@@ -38,6 +39,7 @@ import org.elasticsearch.xpack.security.audit.logfile.LoggingAuditTrailTests.Moc
 import org.elasticsearch.xpack.security.audit.logfile.LoggingAuditTrailTests.RestContent;
 import org.elasticsearch.xpack.security.authc.ApiKeyService;
 import org.elasticsearch.xpack.security.rest.RemoteHostHeader;
+import org.elasticsearch.xpack.security.support.CacheInvalidatorRegistry;
 import org.elasticsearch.xpack.security.support.SecurityIndexManager;
 import org.elasticsearch.xpack.security.transport.filter.SecurityIpFilterRule;
 import org.junit.Before;
@@ -91,7 +93,8 @@ public class LoggingAuditTrailFilterTests extends ESTestCase {
             return null;
         }).when(clusterService).addListener(Mockito.isA(LoggingAuditTrail.class));
         apiKeyService = new ApiKeyService(settings, Clock.systemUTC(), mock(Client.class), new XPackLicenseState(settings, () -> 0),
-                mock(SecurityIndexManager.class), clusterService, mock(ThreadPool.class));
+                                          mock(SecurityIndexManager.class), clusterService,
+                                          mock(CacheInvalidatorRegistry.class), mock(ThreadPool.class));
     }
 
     public void testPolicyDoesNotMatchNullValuesInEvent() throws Exception {

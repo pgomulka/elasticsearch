@@ -1,35 +1,28 @@
 /*
- * Licensed to Elasticsearch under one or more contributor
- * license agreements. See the NOTICE file distributed with
- * this work for additional information regarding copyright
- * ownership. Elasticsearch licenses this file to you under
- * the Apache License, Version 2.0 (the "License"); you may
- * not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0 and the Server Side Public License, v 1; you may not use this file except
+ * in compliance with, at your election, the Elastic License 2.0 or the Server
+ * Side Public License, v 1.
  */
 
 package org.elasticsearch.client.eql;
 
 import org.apache.lucene.search.TotalHits;
 import org.elasticsearch.client.AbstractResponseTestCase;
+import org.elasticsearch.common.bytes.BytesReference;
+import org.elasticsearch.common.xcontent.ToXContent;
+import org.elasticsearch.common.xcontent.ToXContentObject;
+import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.lookup.SourceLookup;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Supplier;
 
 import static org.hamcrest.Matchers.equalTo;
@@ -38,13 +31,59 @@ import static org.hamcrest.Matchers.is;
 public class EqlSearchResponseTests extends AbstractResponseTestCase<org.elasticsearch.xpack.eql.action.EqlSearchResponse,
     EqlSearchResponse> {
 
-    static List<SearchHit> randomEvents() {
+    private static class RandomSource implements ToXContentObject {
+
+        private final String key;
+        private final String value;
+
+        RandomSource(Supplier<String> randomStringSupplier) {
+            this.key = randomStringSupplier.get();
+            this.value = randomStringSupplier.get();
+        }
+
+        @Override
+        public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
+            builder.startObject();
+            builder.field(key, value);
+            builder.endObject();
+            return builder;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(key, value);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            RandomSource other = (RandomSource) obj;
+            return Objects.equals(key, other.key) && Objects.equals(value, other.value);
+        }
+
+        public BytesReference toBytes(XContentType type) {
+            try (XContentBuilder builder = XContentBuilder.builder(type.xContent())) {
+                toXContent(builder, ToXContent.EMPTY_PARAMS);
+                return BytesReference.bytes(builder);
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+    }
+
+    static List<org.elasticsearch.xpack.eql.action.EqlSearchResponse.Event> randomEvents(XContentType xType) {
         int size = randomIntBetween(1, 10);
-        List<SearchHit> hits = null;
+        List<org.elasticsearch.xpack.eql.action.EqlSearchResponse.Event> hits = null;
         if (randomBoolean()) {
             hits = new ArrayList<>();
             for (int i = 0; i < size; i++) {
-                hits.add(new SearchHit(i, randomAlphaOfLength(10), new HashMap<>(), new HashMap<>()));
+                BytesReference bytes = new RandomSource(() -> randomAlphaOfLength(10)).toBytes(xType);
+                hits.add(new org.elasticsearch.xpack.eql.action.EqlSearchResponse.Event(String.valueOf(i), randomAlphaOfLength(10), bytes));
             }
         }
         if (randomBoolean()) {
@@ -53,10 +92,10 @@ public class EqlSearchResponseTests extends AbstractResponseTestCase<org.elastic
         return hits;
     }
 
-    public static org.elasticsearch.xpack.eql.action.EqlSearchResponse createRandomEventsResponse(TotalHits totalHits) {
+    public static org.elasticsearch.xpack.eql.action.EqlSearchResponse createRandomEventsResponse(TotalHits totalHits, XContentType xType) {
         org.elasticsearch.xpack.eql.action.EqlSearchResponse.Hits hits = null;
         if (randomBoolean()) {
-            hits = new org.elasticsearch.xpack.eql.action.EqlSearchResponse.Hits(randomEvents(), null, null, totalHits);
+            hits = new org.elasticsearch.xpack.eql.action.EqlSearchResponse.Hits(randomEvents(xType), null, totalHits);
         }
         if (randomBoolean()) {
             return new org.elasticsearch.xpack.eql.action.EqlSearchResponse(hits, randomIntBetween(0, 1001), randomBoolean());
@@ -66,7 +105,8 @@ public class EqlSearchResponseTests extends AbstractResponseTestCase<org.elastic
         }
     }
 
-    public static org.elasticsearch.xpack.eql.action.EqlSearchResponse createRandomSequencesResponse(TotalHits totalHits) {
+    public static org.elasticsearch.xpack.eql.action.EqlSearchResponse createRandomSequencesResponse(TotalHits totalHits,
+                                                                                                     XContentType xType) {
         int size = randomIntBetween(1, 10);
         List<org.elasticsearch.xpack.eql.action.EqlSearchResponse.Sequence> seq = null;
         if (randomBoolean()) {
@@ -77,12 +117,12 @@ public class EqlSearchResponseTests extends AbstractResponseTestCase<org.elastic
                 if (randomBoolean()) {
                     joins = Arrays.asList(randomFrom(randoms).get());
                 }
-                seq.add(new org.elasticsearch.xpack.eql.action.EqlSearchResponse.Sequence(joins, randomEvents()));
+                seq.add(new org.elasticsearch.xpack.eql.action.EqlSearchResponse.Sequence(joins, randomEvents(xType)));
             }
         }
         org.elasticsearch.xpack.eql.action.EqlSearchResponse.Hits hits = null;
         if (randomBoolean()) {
-            hits = new org.elasticsearch.xpack.eql.action.EqlSearchResponse.Hits(null, seq, null, totalHits);
+            hits = new org.elasticsearch.xpack.eql.action.EqlSearchResponse.Hits(null, seq, totalHits);
         }
         if (randomBoolean()) {
             return new org.elasticsearch.xpack.eql.action.EqlSearchResponse(hits, randomIntBetween(0, 1001), randomBoolean());
@@ -102,41 +142,13 @@ public class EqlSearchResponseTests extends AbstractResponseTestCase<org.elastic
         return randoms;
     }
 
-    public static org.elasticsearch.xpack.eql.action.EqlSearchResponse createRandomCountResponse(TotalHits totalHits) {
-        int size = randomIntBetween(1, 10);
-        List<org.elasticsearch.xpack.eql.action.EqlSearchResponse.Count> cn = null;
-        if (randomBoolean()) {
-            List<Supplier<Object[]>> randoms = getKeysGenerators();
-            cn = new ArrayList<>();
-            for (int i = 0; i < size; i++) {
-                List<Object> keys = null;
-                if (randomBoolean()) {
-                    keys = Arrays.asList(randomFrom(randoms).get());
-                }
-                cn.add(new org.elasticsearch.xpack.eql.action.EqlSearchResponse.Count(randomIntBetween(0, 41), keys, randomFloat()));
-            }
-        }
-        org.elasticsearch.xpack.eql.action.EqlSearchResponse.Hits hits = null;
-        if (randomBoolean()) {
-            hits = new org.elasticsearch.xpack.eql.action.EqlSearchResponse.Hits(null, null, cn, totalHits);
-        }
-        if (randomBoolean()) {
-            return new org.elasticsearch.xpack.eql.action.EqlSearchResponse(hits, randomIntBetween(0, 1001), randomBoolean());
-        } else {
-            return new org.elasticsearch.xpack.eql.action.EqlSearchResponse(hits, randomIntBetween(0, 1001), randomBoolean(),
-                randomAlphaOfLength(10), randomBoolean(), randomBoolean());
-        }
-    }
-
-    public static org.elasticsearch.xpack.eql.action.EqlSearchResponse createRandomInstance(TotalHits totalHits) {
-        int type = between(0, 2);
+    public static org.elasticsearch.xpack.eql.action.EqlSearchResponse createRandomInstance(TotalHits totalHits, XContentType xType) {
+        int type = between(0, 1);
         switch (type) {
             case 0:
-                return createRandomEventsResponse(totalHits);
+                return createRandomEventsResponse(totalHits, xType);
             case 1:
-                return createRandomSequencesResponse(totalHits);
-            case 2:
-                return createRandomCountResponse(totalHits);
+                return createRandomSequencesResponse(totalHits, xType);
             default:
                 return null;
         }
@@ -148,7 +160,7 @@ public class EqlSearchResponseTests extends AbstractResponseTestCase<org.elastic
         if (randomBoolean()) {
             totalHits = new TotalHits(randomIntBetween(100, 1000), TotalHits.Relation.EQUAL_TO);
         }
-        return createRandomInstance(totalHits);
+        return createRandomInstance(totalHits, xContentType);
     }
 
     @Override
@@ -162,23 +174,10 @@ public class EqlSearchResponseTests extends AbstractResponseTestCase<org.elastic
         assertThat(serverTestInstance.took(), is(clientInstance.took()));
         assertThat(serverTestInstance.isTimeout(), is(clientInstance.isTimeout()));
         assertThat(serverTestInstance.hits().totalHits(), is(clientInstance.hits().totalHits()));
-        if (serverTestInstance.hits().counts() == null) {
-            assertNull(clientInstance.hits().counts());
-        } else {
-            assertThat(serverTestInstance.hits().counts().size(), equalTo(clientInstance.hits().counts().size()));
-            for (int i = 0; i < serverTestInstance.hits().counts().size(); i++) {
-                assertThat(serverTestInstance.hits().counts().get(i).count(), is(clientInstance.hits().counts().get(i).count()));
-                assertThat(serverTestInstance.hits().counts().get(i).keys(), is(clientInstance.hits().counts().get(i).keys()));
-                assertThat(serverTestInstance.hits().counts().get(i).percent(), is(clientInstance.hits().counts().get(i).percent()));
-            }
-        }
         if (serverTestInstance.hits().events() == null) {
             assertNull(clientInstance.hits().events());
         } else {
-            assertThat(serverTestInstance.hits().events().size(), equalTo(clientInstance.hits().events().size()));
-            for (int i = 0; i < serverTestInstance.hits().events().size(); i++) {
-                assertThat(serverTestInstance.hits().events().get(i), is(clientInstance.hits().events().get(i)));
-            }
+            assertEvents(serverTestInstance.hits().events(), clientInstance.hits().events());
         }
         if (serverTestInstance.hits().sequences() == null) {
             assertNull(clientInstance.hits().sequences());
@@ -187,8 +186,19 @@ public class EqlSearchResponseTests extends AbstractResponseTestCase<org.elastic
             for (int i = 0; i < serverTestInstance.hits().sequences().size(); i++) {
                 assertThat(serverTestInstance.hits().sequences().get(i).joinKeys(),
                     is(clientInstance.hits().sequences().get(i).joinKeys()));
-                assertThat(serverTestInstance.hits().sequences().get(i).events(), is(clientInstance.hits().sequences().get(i).events()));
+                assertEvents(serverTestInstance.hits().sequences().get(i).events(), clientInstance.hits().sequences().get(i).events());
             }
+        }
+    }
+
+    private void assertEvents(
+        List<org.elasticsearch.xpack.eql.action.EqlSearchResponse.Event> serverEvents,
+        List<EqlSearchResponse.Event> clientEvents
+    ) {
+        assertThat(serverEvents.size(), equalTo(clientEvents.size()));
+        for (int j = 0; j < serverEvents.size(); j++) {
+            assertThat(
+                SourceLookup.sourceAsMap(serverEvents.get(j).source()), is(clientEvents.get(j).sourceAsMap()));
         }
     }
 }
