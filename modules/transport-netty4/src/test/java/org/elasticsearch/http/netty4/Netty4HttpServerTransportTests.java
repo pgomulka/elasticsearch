@@ -52,6 +52,7 @@ import org.elasticsearch.http.HttpServerTransport;
 import org.elasticsearch.http.HttpTransportSettings;
 import org.elasticsearch.http.NullDispatcher;
 import org.elasticsearch.indices.breaker.NoneCircuitBreakerService;
+import org.elasticsearch.plugins.RestCompatibility;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestRequest;
@@ -163,7 +164,7 @@ public class Netty4HttpServerTransportTests extends ESTestCase {
             }
         };
         try (Netty4HttpServerTransport transport = new Netty4HttpServerTransport(settings, networkService, bigArrays, threadPool,
-                xContentRegistry(), dispatcher, clusterSettings, new SharedGroupFactory(settings))) {
+                xContentRegistry(), dispatcher, clusterSettings, new SharedGroupFactory(settings), RestCompatibility.CURRENT_VERSION)) {
             transport.start();
             final TransportAddress remoteAddress = randomFrom(transport.boundAddress().boundAddresses());
             try (Netty4HttpClient client = new Netty4HttpClient()) {
@@ -197,7 +198,8 @@ public class Netty4HttpServerTransportTests extends ESTestCase {
     public void testBindUnavailableAddress() {
         Settings initialSettings = createSettings();
         try (Netty4HttpServerTransport transport = new Netty4HttpServerTransport(initialSettings, networkService, bigArrays, threadPool,
-                xContentRegistry(), new NullDispatcher(), clusterSettings, new SharedGroupFactory(Settings.EMPTY))) {
+                xContentRegistry(), new NullDispatcher(), clusterSettings, new SharedGroupFactory(Settings.EMPTY),
+                RestCompatibility.CURRENT_VERSION)) {
             transport.start();
             TransportAddress remoteAddress = randomFrom(transport.boundAddress().boundAddresses());
             Settings settings = Settings.builder()
@@ -205,7 +207,8 @@ public class Netty4HttpServerTransportTests extends ESTestCase {
                 .put("network.host", remoteAddress.getAddress())
                 .build();
             try (Netty4HttpServerTransport otherTransport = new Netty4HttpServerTransport(settings, networkService, bigArrays, threadPool,
-                    xContentRegistry(), new NullDispatcher(), clusterSettings, new SharedGroupFactory(settings))) {
+                    xContentRegistry(), new NullDispatcher(), clusterSettings, new SharedGroupFactory(settings),
+                    RestCompatibility.CURRENT_VERSION)) {
                 BindHttpException bindHttpException = expectThrows(BindHttpException.class, otherTransport::start);
                 assertEquals(
                     "Failed to bind to " + NetworkAddress.format(remoteAddress.address()),
@@ -251,7 +254,7 @@ public class Netty4HttpServerTransportTests extends ESTestCase {
 
         try (Netty4HttpServerTransport transport = new Netty4HttpServerTransport(
             settings, networkService, bigArrays, threadPool, xContentRegistry(), dispatcher, clusterSettings,
-            new SharedGroupFactory(settings))) {
+            new SharedGroupFactory(settings), RestCompatibility.CURRENT_VERSION)) {
             transport.start();
             final TransportAddress remoteAddress = randomFrom(transport.boundAddress().boundAddresses());
 
@@ -361,7 +364,7 @@ public class Netty4HttpServerTransportTests extends ESTestCase {
 
         try (Netty4HttpServerTransport transport = new Netty4HttpServerTransport(settings, networkService, bigArrays, threadPool,
             xContentRegistry(), dispatcher, new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS),
-            new SharedGroupFactory(settings))) {
+            new SharedGroupFactory(settings), RestCompatibility.CURRENT_VERSION)) {
             transport.start();
             final TransportAddress remoteAddress = randomFrom(transport.boundAddress().boundAddresses());
 
@@ -424,7 +427,7 @@ public class Netty4HttpServerTransportTests extends ESTestCase {
         NioEventLoopGroup group = new NioEventLoopGroup();
         try (Netty4HttpServerTransport transport = new Netty4HttpServerTransport(settings, networkService, bigArrays, threadPool,
             xContentRegistry(), dispatcher, new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS),
-            new SharedGroupFactory(settings))) {
+            new SharedGroupFactory(settings), RestCompatibility.CURRENT_VERSION)) {
             transport.start();
             final TransportAddress remoteAddress = randomFrom(transport.boundAddress().boundAddresses());
 

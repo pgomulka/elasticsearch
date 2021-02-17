@@ -7,6 +7,7 @@
  */
 package org.elasticsearch.rest;
 
+import org.elasticsearch.Version;
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.io.Streams;
@@ -130,7 +131,8 @@ public abstract class AbstractRestChannel implements RestChannel {
         if (pretty) {
             builder.prettyPrint().lfAtEnd();
         }
-
+        //todo USAGE_2 here we can set a compatible version on a builder
+        builder.setCompatibleMajorVersion(request.getCompatibleVersion().major);
         builder.humanReadable(human);
         return builder;
     }

@@ -9,7 +9,7 @@
 package org.elasticsearch.test.rest;
 
 import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.support.PlainListenableActionFuture;
+import org.elasticsearch.action.support.ListenableActionFuture;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
@@ -17,6 +17,7 @@ import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.http.HttpChannel;
 import org.elasticsearch.http.HttpRequest;
 import org.elasticsearch.http.HttpResponse;
+import org.elasticsearch.plugins.RestCompatibility;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
 
@@ -30,12 +31,13 @@ public class FakeRestRequest extends RestRequest {
 
     public FakeRestRequest() {
         this(NamedXContentRegistry.EMPTY, new FakeHttpRequest(Method.GET, "", BytesArray.EMPTY, new HashMap<>()), new HashMap<>(),
-            new FakeHttpChannel(null));
+            new FakeHttpChannel(null), RestCompatibility.CURRENT_VERSION);
     }
 
     private FakeRestRequest(NamedXContentRegistry xContentRegistry, HttpRequest httpRequest, Map<String, String> params,
-                            HttpChannel httpChannel) {
-        super(xContentRegistry, params, httpRequest.uri(), httpRequest.getHeaders(), httpRequest, httpChannel);
+                            HttpChannel httpChannel, RestCompatibility currentVersion) {
+        super(xContentRegistry, params, httpRequest.uri(), httpRequest.getHeaders(), httpRequest, httpChannel,
+            currentVersion);
     }
 
     public static class FakeHttpRequest implements HttpRequest {
@@ -129,7 +131,7 @@ public class FakeRestRequest extends RestRequest {
     private static class FakeHttpChannel implements HttpChannel {
 
         private final InetSocketAddress remoteAddress;
-        private final PlainListenableActionFuture<Void> closeFuture = PlainListenableActionFuture.newListenableFuture();
+        private final ListenableActionFuture<Void> closeFuture = new ListenableActionFuture<>();
 
         private FakeHttpChannel(InetSocketAddress remoteAddress) {
             this.remoteAddress = remoteAddress;
@@ -182,6 +184,7 @@ public class FakeRestRequest extends RestRequest {
         private InetSocketAddress address = null;
 
         private Exception inboundException;
+        private RestCompatibility restCompatibility;
 
         public Builder(NamedXContentRegistry xContentRegistry) {
             this.xContentRegistry = xContentRegistry;
@@ -225,9 +228,13 @@ public class FakeRestRequest extends RestRequest {
             return this;
         }
 
+        public Builder withRestCompatibility(RestCompatibility restCompatibility){
+            this.restCompatibility = restCompatibility;
+            return this;
+        }
         public FakeRestRequest build() {
             FakeHttpRequest fakeHttpRequest = new FakeHttpRequest(method, path, content, headers, inboundException);
-            return new FakeRestRequest(xContentRegistry, fakeHttpRequest, params, new FakeHttpChannel(address));
+            return new FakeRestRequest(xContentRegistry, fakeHttpRequest, params, new FakeHttpChannel(address), restCompatibility);
         }
     }
 
