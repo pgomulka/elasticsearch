@@ -16,9 +16,11 @@ import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.util.set.Sets;
 import org.elasticsearch.common.xcontent.ConstructingObjectParser;
 import org.elasticsearch.common.xcontent.ParseField;
+import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.ToXContentObject;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.core.RestApiVersion;
 import org.elasticsearch.snapshots.SnapshotInfo;
 
 import java.io.IOException;
@@ -172,6 +174,10 @@ public class GetSnapshotsResponse extends ActionResponse implements ToXContentOb
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
+        if(builder.getRestApiVersion() == RestApiVersion.V_7){
+            return v7ToXContent(builder, params);
+        }
+
         builder.startObject();
         builder.startArray("responses");
 
@@ -196,6 +202,29 @@ public class GetSnapshotsResponse extends ActionResponse implements ToXContentOb
         builder.endArray();
         builder.endObject();
         return builder;
+    }
+
+    private XContentBuilder v7ToXContent(XContentBuilder builder, Params params) throws IOException {
+        builder.startObject();
+        if(failedResponses.isEmpty() == false) {
+            for (Map.Entry<String, ElasticsearchException> error : failedResponses.entrySet()) {
+//                builder.startObject();
+                ElasticsearchException.generateFailureXContent(builder, params, error.getValue(), true);
+                error.getValue().status();
+//                builder.endObject();
+            }
+        } else {
+            builder.startArray("snapshots");
+            for (Map.Entry<String, List<SnapshotInfo>> snapshots : successfulResponses.entrySet()) {
+                for (SnapshotInfo snapshotInfo : snapshots.getValue()) {
+                    snapshotInfo.toXContent(builder, params);
+                }
+            }
+            builder.endArray();
+        }
+        builder.endObject();
+        return builder;
+
     }
 
     @Override

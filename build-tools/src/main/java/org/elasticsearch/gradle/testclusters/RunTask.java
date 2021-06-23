@@ -128,6 +128,7 @@ public class RunTask extends DefaultTestClustersTask {
                 if (keystorePassword.length() > 0) {
                     node.keystorePassword(keystorePassword);
                 }
+                node.setting("path.repo","/Users/przemek/scratch/elasticsearch-7.13.0/snapshots");
             }
         }
     }
