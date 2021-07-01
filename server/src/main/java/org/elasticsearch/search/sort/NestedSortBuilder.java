@@ -29,10 +29,13 @@ public class NestedSortBuilder implements Writeable, ToXContentObject {
     public static final ParseField FILTER_FIELD = new ParseField("filter");
     public static final ParseField MAX_CHILDREN_FIELD = new ParseField("max_children");
 
-    private final String path;
+    private  String path;
     private QueryBuilder filter;
     private int maxChildren = Integer.MAX_VALUE;
     private NestedSortBuilder nestedSort;
+
+    public NestedSortBuilder() {
+    }
 
     public NestedSortBuilder(String path) {
         this.path = path;
@@ -44,7 +47,10 @@ public class NestedSortBuilder implements Writeable, ToXContentObject {
         nestedSort = in.readOptionalWriteable(NestedSortBuilder::new);
         maxChildren = in.readVInt();
     }
-
+    public NestedSortBuilder setPath(final String path) {
+        this.path = path;
+        return this;
+    }
     public String getPath() {
         return path;
     }

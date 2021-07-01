@@ -44,6 +44,8 @@ public abstract class SortBuilder<T extends SortBuilder<T>> implements NamedWrit
 
     // parse fields common to more than one SortBuilder
     public static final ParseField ORDER_FIELD = new ParseField("order");
+    public static final ParseField NESTED_FILTER_FIELD = new ParseField("nested_filter");
+    public static final ParseField NESTED_PATH_FIELD = new ParseField("nested_path");
 
     private static final Map<String, Parser<?>> PARSERS = Map.of(
             ScriptSortBuilder.NAME, ScriptSortBuilder::fromXContent,
