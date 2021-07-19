@@ -442,6 +442,39 @@ public abstract class Rounding implements Writeable {
         }
     }
 
+    /*688618286532L
+    0 = 688534200000
+1 = 688620600000
+2 = 688707000000
+3 = 688793400000
+4 = 688879800000
+5 = 688966200000
+6 = 689052600000
+7 = 689139000000
+8 = 689225400000
+9 = 689311800000
+10 = 689398200000
+11 = 689484600000
+12 = 689571000000
+13 = 689657400000
+14 = 689743800000
+15 = 689830200000
+16 = 689916600000
+17 = 690003000000
+18 = 690089400000
+19 = 690175800000
+20 = 690262200000
+21 = 690348600000
+22 = 690435000000
+23 = 690521400000
+24 = 690607800000
+25 = 690694200000
+26 = 690780600000
+27 = 690867000000
+28 = 690953400000
+29 = 691039800000
+     */
+
     static class TimeUnitRounding extends Rounding {
         static final byte ID = 1;
 
@@ -652,6 +685,11 @@ public abstract class Rounding implements Writeable {
             @Override
             public long round(long utcMillis) {
                 return offset.localToUtcInThisOffset(unit.roundFloor(offset.utcToLocalTime(utcMillis)));
+                /*
+                  LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(utcMillis), timeZone);
+                LocalDateTime localMidnight = truncateLocalDateTime(localDateTime);
+                return firstTimeOnDay(localMidnight);
+                 */
             }
 
             @Override

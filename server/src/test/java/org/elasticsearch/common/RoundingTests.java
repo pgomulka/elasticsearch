@@ -17,13 +17,17 @@ import org.elasticsearch.test.ESTestCase;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
+import org.joda.time.DateTimeZone;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
+import java.time.temporal.TemporalQueries;
 import java.time.zone.ZoneOffsetTransition;
 import java.time.zone.ZoneOffsetTransitionRule;
 import java.time.zone.ZoneRules;
@@ -223,14 +227,25 @@ public class RoundingTests extends ESTestCase {
      * described in
      * {@link #assertInterval(long, long, long, Rounding, ZoneId)}
      */
+//    minUtcMillis = 688531307942
+//    maxUtcMillis = 691123307942
     public void testRandomTimeUnitRounding() {
+        ZoneId nf = ZoneId.of("Canada/Newfoundland"); //randomZone();
+
         for (int i = 0; i < 1000; ++i) {
-            Rounding.DateTimeUnit unit = randomFrom(Rounding.DateTimeUnit.values());
+            Rounding.DateTimeUnit unit = Rounding.DateTimeUnit.DAY_OF_MONTH;//randomFrom(Rounding.DateTimeUnit.values());
             ZoneId tz = randomZone();
             long[] bounds = randomDateBounds(unit);
             assertUnitRoundingSameAsJavaUtilTimeImplementation(unit, tz, bounds[0], bounds[1]);
         }
     }
+    public void testRandomTimeUnitRounding2() {
+            Rounding.DateTimeUnit unit = Rounding.DateTimeUnit.DAY_OF_MONTH;//randomFrom(Rounding.DateTimeUnit.values());
+            ZoneId tz = ZoneId.of("Canada/Newfoundland"); //randomZone();
+            long[] bounds =  new long[]{688617707942L, 691123307942L};//=randomDateBounds(unit);
+            assertUnitRoundingSameAsJavaUtilTimeImplementation(unit, tz, bounds[0], bounds[1]);
+    }
+
 
     private void assertUnitRoundingSameAsJavaUtilTimeImplementation(Rounding.DateTimeUnit unit, ZoneId tz, long start, long end) {
         Rounding rounding = new Rounding.TimeUnitRounding(unit, tz);
@@ -280,6 +295,33 @@ public class RoundingTests extends ESTestCase {
         }
     }
 
+
+/*
+   ZoneId nf =  ZoneId.of("Canada/Newfoundland");
+        // Round a whole bunch of dates and make sure they line up with the known good java time implementation
+        Rounding.Prepared javaTimeRounding = rounding.prepareJavaTime();
+
+//        for (int d = 0; d < 1000; d++) {
+            date = 688618286532L;//dateBetween(start, end);
+
+            long javaRounded = javaTimeRounding.round(date);
+            long esRounded = prepared.round(date);
+
+        final DateTimeZone dateTimeZone = DateTimeZone.forID(nf.getId());
+        final long l = dateTimeZone.convertUTCToLocal(date);
+
+//        final long l1 = dateTimeZone.convertLocalToUTC(instantLocal, false);
+
+Conversion results (688534200)
+688534200 converts to Sunday October 27, 1991 00:00:00 (am) in time zone America/St Johns (NST)
+The offset (difference to Greenwich Time/GMT) is -03:30 or in seconds -12600.
+DST warning: Daylight saving starts or ends within 1 hour of this time.
+
+688530600 converts to Sunday October 27, 1991 00:00:00 (am) in time zone America/St Johns (NDT)
+The offset (difference to Greenwich Time/GMT) is -02:30 or in seconds -9000.
+This date is in daylight saving time.
+DST warning: Daylight saving starts or ends within 1 hour of this time.
+ */
     /**
      * To be even more nasty, go to a transition in the selected time zone.
      * In one third of the cases stay there, otherwise go half a unit back or forth

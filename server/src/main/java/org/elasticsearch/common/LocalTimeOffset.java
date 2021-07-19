@@ -243,7 +243,7 @@ public abstract class LocalTimeOffset {
 
     public abstract static class Transition extends LocalTimeOffset {
         private final LocalTimeOffset previous;
-        private final long startUtcMillis;
+        protected final long startUtcMillis;
 
         private Transition(long millis, LocalTimeOffset previous, long startUtcMillis) {
             super(millis);
@@ -259,7 +259,7 @@ public abstract class LocalTimeOffset {
         }
 
         @Override
-        protected final boolean containsUtcMillis(long utcMillis) {
+        protected  boolean containsUtcMillis(long utcMillis) {
             return utcMillis >= startUtcMillis;
         }
 
@@ -350,6 +350,11 @@ public abstract class LocalTimeOffset {
             return strat.beforeOverlap(localMillis, this);
         }
 
+        @Override
+        protected final boolean containsUtcMillis(long utcMillis) {
+            long diff = Math.abs(firstOverlappingLocalTime - firstNonOverlappingLocalTime);
+            return utcMillis >= startUtcMillis + diff;
+        }
         /**
          * The first local time after the overlap stops.
          */
@@ -548,6 +553,8 @@ public abstract class LocalTimeOffset {
             }
             long firstOverlappingLocalTime = utcStart + offsetAfterMillis;
             long firstNonOverlappingLocalTime = utcStart + offsetBeforeMillis;
+            long diff = Math.abs(offsetAfterMillis - offsetBeforeMillis);
+
             return new Overlap(
                 offsetAfterMillis,
                 previous,
@@ -621,9 +628,17 @@ public abstract class LocalTimeOffset {
         ZoneOffsetTransition t = null;
         Iterator<ZoneOffsetTransition> itr = rules.getTransitions().iterator();
         // Skip all transitions that are before our start time
-        while (itr.hasNext() && (t = itr.next()).toEpochSecond() < minSecond) {}
+        while (itr.hasNext() ){
+            t = itr.next();
+            final int diff = Math.abs(t.getOffsetAfter().getTotalSeconds() - t.getOffsetBefore().getTotalSeconds());
+            if((t.toEpochSecond()+diff) >= minSecond) {
+                break;
+            }
+        }
         if (false == itr.hasNext()) {
-            if (minSecond < t.toEpochSecond() && t.toEpochSecond() < maxSecond) {
+            final int diff = Math.abs(t.getOffsetAfter().getTotalSeconds() - t.getOffsetBefore().getTotalSeconds());
+
+            if (minSecond < (t.toEpochSecond()+diff)  && t.toEpochSecond() < maxSecond) {
                 transitions.add(t);
                 /*
                  * Sometimes the rules duplicate the transitions. And

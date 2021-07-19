@@ -23,6 +23,7 @@ import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -557,7 +558,6 @@ public class TimeZoneRoundingTests extends ESTestCase {
             assertThat(prevFloor, isDate(time("1978-09-30T00:00:00+02:00"), tz));
         }
     }
-
     /**
      * Test for a time zone whose days overlap because the clocks are set back across midnight at the end of DST.
      */
