@@ -11,6 +11,7 @@ package org.elasticsearch.monitor.jvm;
 import org.apache.lucene.util.CollectionUtil;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.common.time.DateFormatter;
+import org.elasticsearch.common.util.concurrent.ThreadContext;
 import org.elasticsearch.core.TimeValue;
 
 import java.lang.management.ManagementFactory;
@@ -217,6 +218,8 @@ public class HotThreads {
         for (int t = 0; t < busiestThreads; t++) {
             long time = getter.applyAsLong(hotties.get(t));
             String threadName = null;
+            String xOpaqueId = null;
+            long threadId =0;
             for (ThreadInfo[] info : allInfos) {
                 if (info != null && info[t] != null) {
                     if (ignoreIdleThreads && isIdleThread(info[t])) {
@@ -224,6 +227,9 @@ public class HotThreads {
                         continue;
                     }
                     threadName = info[t].getThreadName();
+                    threadId = info[t].getThreadId();
+                    xOpaqueId = ThreadContext.threadIdToTraceIdMap.get(info[t].getThreadId());
+
                     break;
                 }
             }
@@ -233,6 +239,9 @@ public class HotThreads {
             double percent = (((double) time) / interval.nanos()) * 100;
             sb.append(String.format(Locale.ROOT, "%n%4.1f%% (%s out of %s) %s usage by thread '%s'%n",
                 percent, TimeValue.timeValueNanos(time), interval, type, threadName));
+            sb.append("he "+xOpaqueId);
+            sb.append("he "+threadId);
+            sb.append("\n"+ThreadContext.threadIdToTraceIdMap.toString());
             // for each snapshot (2nd array index) find later snapshot for same thread with max number of
             // identical StackTraceElements (starting from end of each)
             boolean[] done = new boolean[threadElementsSnapshotCount];

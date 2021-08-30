@@ -31,6 +31,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
@@ -72,6 +73,8 @@ import static org.elasticsearch.http.HttpTransportSettings.SETTING_HTTP_MAX_WARN
  */
 public final class ThreadContext implements Writeable {
 
+    public static final Map<Long, String> threadIdToTraceIdMap = new ConcurrentHashMap<>();
+
     public static final String PREFIX = "request.headers";
     public static final Setting<Settings> DEFAULT_HEADERS_SETTING = Setting.groupSetting(PREFIX + ".", Property.NodeScope);
 
@@ -104,6 +107,7 @@ public final class ThreadContext implements Writeable {
      */
     public StoredContext stashContext() {
         final ThreadContextStruct context = threadLocal.get();
+        final long threadId = Thread.currentThread().getId();
         /**
          * X-Opaque-ID should be preserved in a threadContext in order to propagate this across threads.
          * This is needed so the DeprecationLogger in another thread can see the value of X-Opaque-ID provided by a user.
@@ -115,7 +119,9 @@ public final class ThreadContext implements Writeable {
             Map<String, String> map = new HashMap<>(2, 1);
             if (context.requestHeaders.containsKey(Task.X_OPAQUE_ID)) {
                 map.put(Task.X_OPAQUE_ID, context.requestHeaders.get(Task.X_OPAQUE_ID));
+//                threadIdToTraceIdMap.remove(Thread.currentThread().getId());
             }
+
             if (context.requestHeaders.containsKey(Task.TRACE_ID)) {
                 map.put(Task.TRACE_ID, context.requestHeaders.get(Task.TRACE_ID));
             }
@@ -124,11 +130,15 @@ public final class ThreadContext implements Writeable {
         }
         else {
             threadLocal.set(DEFAULT_CONTEXT);
+            threadIdToTraceIdMap.remove(threadId);
         }
         return () -> {
             // If the node and thus the threadLocal get closed while this task
             // is still executing, we don't want this runnable to fail with an
             // uncaught exception
+            if (context.requestHeaders.containsKey(Task.X_OPAQUE_ID)) {
+                threadIdToTraceIdMap.put(threadId, context.requestHeaders.get(Task.X_OPAQUE_ID));
+            }
             threadLocal.set(context);
         };
     }
@@ -281,6 +291,10 @@ public final class ThreadContext implements Writeable {
         } else {
             struct = new ThreadContextStruct(requestHeaders, responseHeaders, Collections.emptyMap(), false);
         }
+        if(requestHeaders.containsKey(Task.X_OPAQUE_ID)){
+            final long id = Thread.currentThread().getId();
+            threadIdToTraceIdMap.put(id, requestHeaders.get(Task.X_OPAQUE_ID));
+        }
         threadLocal.set(struct);
     }
 
@@ -359,6 +373,12 @@ public final class ThreadContext implements Writeable {
      * Copies all header key, value pairs into the current context
      */
     public void copyHeaders(Iterable<Map.Entry<String, String>> headers) {
+        for(Map.Entry<String,String> entry : headers){
+            if(entry.getKey().equals(Task.X_OPAQUE_ID)){
+                final long id = Thread.currentThread().getId();
+                threadIdToTraceIdMap.put(id, entry.getValue());
+            }
+        }
         threadLocal.set(threadLocal.get().copyHeaders(headers));
     }
 
@@ -366,6 +386,10 @@ public final class ThreadContext implements Writeable {
      * Puts a header into the context
      */
     public void putHeader(String key, String value) {
+        if(key.equals(Task.X_OPAQUE_ID)){
+            final long id = Thread.currentThread().getId();
+            threadIdToTraceIdMap.put(id, value);
+        }
         threadLocal.set(threadLocal.get().putRequest(key, value));
     }
 
@@ -373,6 +397,11 @@ public final class ThreadContext implements Writeable {
      * Puts all of the given headers into this context
      */
     public void putHeader(Map<String, String> header) {
+        if(header.containsKey(Task.X_OPAQUE_ID)){
+            final long id = Thread.currentThread().getId();
+            threadIdToTraceIdMap.put(id, header.get(Task.X_OPAQUE_ID));
+        }
+
         threadLocal.set(threadLocal.get().putHeaders(header));
     }
 
@@ -543,7 +572,8 @@ public final class ThreadContext implements Writeable {
                 throw new IllegalArgumentException("value for key [" + key + "] already present");
             }
         }
-
+//THREAD_CONTEXT.stream()
+//    .filter(t -> t.getHeader(Task.X_OPAQUE_ID)
         private ThreadContextStruct putHeaders(Map<String, String> headers) {
             if (headers.isEmpty()) {
                 return this;
