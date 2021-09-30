@@ -107,32 +107,6 @@ public class DeprecationIndexingComponent extends AbstractLifecycleComponent {
         Loggers.addAppender(LogManager.getLogger("org.elasticsearch.deprecation"), this.appender);
     }
 
-
-    private void createIndexIfNecessary() {
-        ActionListener<Boolean> indexCreatedListener = ActionListener.wrap(
-            created -> {
-
-            },
-            e -> {
-
-            }
-        );
-
-
-        CreateIndexRequestBuilder requestBuilder = originClient.admin()
-            .indices()
-            .prepareCreate(DeprecationIndexingAppender.DEPRECATION_MESSAGES_DATA_STREAM);
-        CreateIndexRequest request = requestBuilder.request();
-
-        executeAsyncWithOrigin(originClient.threadPool().getThreadContext(),
-            DEPRECATION_ORIGIN,
-            request,
-            ActionListener.<CreateIndexResponse>wrap(
-                r -> indexCreatedListener.onResponse(r.isAcknowledged()),
-                indexCreatedListener::onFailure
-            ), originClient.admin().indices()::create);
-    }
-
     @Override
     protected void doStop() {
         Loggers.removeAppender(LogManager.getLogger("org.elasticsearch.deprecation"), this.appender);
