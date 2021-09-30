@@ -13,16 +13,27 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configuration;
+import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.ResourceAlreadyExistsException;
+import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.admin.indices.alias.Alias;
+import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
+import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
+import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.bulk.BackoffPolicy;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkProcessor;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.support.ActiveShardCount;
+import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.OriginSettingClient;
+import org.elasticsearch.cluster.metadata.MetadataCreateDataStreamService;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.component.AbstractLifecycleComponent;
+import org.elasticsearch.common.component.LifecycleListener;
 import org.elasticsearch.common.logging.ECSJsonLayout;
 import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.logging.RateLimitingFilter;
@@ -32,12 +43,19 @@ import org.elasticsearch.common.unit.ByteSizeUnit;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.util.concurrent.EsExecutors;
 import org.elasticsearch.core.TimeValue;
+import org.elasticsearch.rest.action.RestToXContentListener;
 import org.elasticsearch.xpack.core.ClientHelper;
+import org.elasticsearch.xpack.core.action.CreateDataStreamAction;
+import org.elasticsearch.xpack.core.ml.utils.ExceptionsHelper;
 
 import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+
+import static org.elasticsearch.xpack.core.ClientHelper.DEPRECATION_ORIGIN;
+import static org.elasticsearch.xpack.core.ClientHelper.ML_ORIGIN;
+import static org.elasticsearch.xpack.core.ClientHelper.executeAsyncWithOrigin;
 
 /**
  * This component manages the construction and lifecycle of the {@link DeprecationIndexingAppender}.
@@ -63,9 +81,11 @@ public class DeprecationIndexingComponent extends AbstractLifecycleComponent {
     private final DeprecationIndexingAppender appender;
     private final BulkProcessor processor;
     private final RateLimitingFilter filter;
+    private final OriginSettingClient originClient;
 
     public DeprecationIndexingComponent(Client client, Settings settings, ClusterService clusterService) {
-        this.processor = getBulkProcessor(new OriginSettingClient(client, ClientHelper.DEPRECATION_ORIGIN), settings);
+        this.originClient = originClient(client);
+        this.processor = getBulkProcessor(originClient, settings);
         final Consumer<IndexRequest> consumer = this.processor::add;
 
         final LoggerContext context = (LoggerContext) LogManager.getContext(false);
@@ -84,17 +104,66 @@ public class DeprecationIndexingComponent extends AbstractLifecycleComponent {
 
         enableDeprecationLogIndexing(true); // default is true, enable on start.
         clusterService.getClusterSettings().addSettingsUpdateConsumer(WRITE_DEPRECATION_LOGS_TO_INDEX, this::enableDeprecationLogIndexing);
+        clusterService.addLifecycleListener(new LifecycleListener() {
+            @Override
+            public void afterStart() {
+                createIndexIfNecessary2();
+            }
+        });
+    }
+
+    private OriginSettingClient originClient(Client client) {
+        return new OriginSettingClient(client, ClientHelper.DEPRECATION_ORIGIN);
     }
 
     @Override
     protected void doStart() {
-        createIndexIfNecessary();
+//        createIndexIfNecessary();
+//        createIndexIfNecessary2();
         this.appender.start();
         Loggers.addAppender(LogManager.getLogger("org.elasticsearch.deprecation"), this.appender);
     }
 
-    private void createIndexIfNecessary() {
+    private void createIndexIfNecessary2() {
+        CreateDataStreamAction.Request putDataStreamRequest =
+            new CreateDataStreamAction.Request(DeprecationIndexingAppender.DEPRECATION_MESSAGES_DATA_STREAM);
+       originClient.execute(CreateDataStreamAction.INSTANCE, putDataStreamRequest, new ActionListener<AcknowledgedResponse>() {
+           @Override
+           public void onResponse(AcknowledgedResponse acknowledgedResponse) {
+                logger.info("create ds success ");
+           }
 
+           @Override
+           public void onFailure(Exception e) {
+               logger.info("ds failure ",e);
+
+           }
+       });
+    }
+
+    private void createIndexIfNecessary() {
+        ActionListener<Boolean> indexCreatedListener = ActionListener.wrap(
+            created -> {
+
+            },
+            e -> {
+
+            }
+        );
+
+
+        CreateIndexRequestBuilder requestBuilder = originClient.admin()
+            .indices()
+            .prepareCreate(DeprecationIndexingAppender.DEPRECATION_MESSAGES_DATA_STREAM);
+        CreateIndexRequest request = requestBuilder.request();
+
+        executeAsyncWithOrigin(originClient.threadPool().getThreadContext(),
+            DEPRECATION_ORIGIN,
+            request,
+            ActionListener.<CreateIndexResponse>wrap(
+                r -> indexCreatedListener.onResponse(r.isAcknowledged()),
+                indexCreatedListener::onFailure
+            ), originClient.admin().indices()::create);
     }
 
     @Override
