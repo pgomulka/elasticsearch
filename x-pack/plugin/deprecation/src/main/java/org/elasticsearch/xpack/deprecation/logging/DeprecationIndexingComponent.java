@@ -88,8 +88,13 @@ public class DeprecationIndexingComponent extends AbstractLifecycleComponent {
 
     @Override
     protected void doStart() {
+        createIndexIfNecessary();
         this.appender.start();
         Loggers.addAppender(LogManager.getLogger("org.elasticsearch.deprecation"), this.appender);
+    }
+
+    private void createIndexIfNecessary() {
+
     }
 
     @Override
