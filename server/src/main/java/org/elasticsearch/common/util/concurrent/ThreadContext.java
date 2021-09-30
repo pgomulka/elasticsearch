@@ -572,8 +572,7 @@ public final class ThreadContext implements Writeable {
                 throw new IllegalArgumentException("value for key [" + key + "] already present");
             }
         }
-//THREAD_CONTEXT.stream()
-//    .filter(t -> t.getHeader(Task.X_OPAQUE_ID)
+
         private ThreadContextStruct putHeaders(Map<String, String> headers) {
             if (headers.isEmpty()) {
                 return this;
