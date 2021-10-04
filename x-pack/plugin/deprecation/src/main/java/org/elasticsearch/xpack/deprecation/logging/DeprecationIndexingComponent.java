@@ -13,10 +13,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configuration;
-import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
-import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
-import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.bulk.BackoffPolicy;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkProcessor;
@@ -25,26 +21,20 @@ import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.OriginSettingClient;
-import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.component.AbstractLifecycleComponent;
 import org.elasticsearch.common.logging.ECSJsonLayout;
 import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.logging.RateLimitingFilter;
-import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.ByteSizeUnit;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.util.concurrent.EsExecutors;
 import org.elasticsearch.core.TimeValue;
-import org.elasticsearch.xpack.core.ClientHelper;
 
 import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-
-import static org.elasticsearch.xpack.core.ClientHelper.DEPRECATION_ORIGIN;
-import static org.elasticsearch.xpack.core.ClientHelper.executeAsyncWithOrigin;
 
 /**
  * This component manages the construction and lifecycle of the {@link DeprecationIndexingAppender}.
@@ -53,29 +43,17 @@ import static org.elasticsearch.xpack.core.ClientHelper.executeAsyncWithOrigin;
 public class DeprecationIndexingComponent extends AbstractLifecycleComponent {
     private static final Logger logger = LogManager.getLogger(DeprecationIndexingComponent.class);
 
-    public static final Setting<Boolean> WRITE_DEPRECATION_LOGS_TO_INDEX = Setting.boolSetting(
-        "cluster.deprecation_indexing.enabled",
-        true,
-        Setting.Property.NodeScope,
-        Setting.Property.Dynamic
-    );
-
-    public static final Setting<Boolean> USE_X_OPAQUE_ID_IN_FILTERING = Setting.boolSetting(
-        "cluster.deprecation_indexing.x_opaque_id_used.enabled",
-        true,
-        Setting.Property.NodeScope,
-        Setting.Property.Dynamic
-    );
-
     private final DeprecationIndexingAppender appender;
     private final BulkProcessor processor;
-    private final RateLimitingFilter filter;
+    private final RateLimitingFilter rateLimitingFilterForIndexing;
     private final OriginSettingClient originClient;
 
-    public DeprecationIndexingComponent(Client client, Settings settings, ClusterService clusterService) {
-        this.originClient = originClient(client);
-        this.processor = getBulkProcessor(originClient, settings);
+    public DeprecationIndexingComponent(OriginSettingClient client, Settings settings,RateLimitingFilter rateLimitingFilterForIndexing,
+                                        boolean enableDeprecationLogIndexingDefault) {
+        this.originClient = client;
+        this.processor = getBulkProcessor(client, settings);
         final Consumer<IndexRequest> consumer = this.processor::add;
+        this.rateLimitingFilterForIndexing = rateLimitingFilterForIndexing;
 
         final LoggerContext context = (LoggerContext) LogManager.getContext(false);
         final Configuration configuration = context.getConfiguration();
@@ -85,24 +63,13 @@ public class DeprecationIndexingComponent extends AbstractLifecycleComponent {
             .setConfiguration(configuration)
             .build();
 
-        this.filter = new RateLimitingFilter();
-        this.appender = new DeprecationIndexingAppender("deprecation_indexing_appender", filter, ecsLayout, consumer);
-
-        setUseXOpaqueId(true); // default is true, enable on start.
-        clusterService.getClusterSettings().addSettingsUpdateConsumer(USE_X_OPAQUE_ID_IN_FILTERING, this::setUseXOpaqueId);
-
-        enableDeprecationLogIndexing(true); // default is true, enable on start.
-        clusterService.getClusterSettings().addSettingsUpdateConsumer(WRITE_DEPRECATION_LOGS_TO_INDEX, this::enableDeprecationLogIndexing);
-        clusterService.addListener(new DeprecationDataStreamInitializationService(client));
-    }
-
-    private OriginSettingClient originClient(Client client) {
-        return new OriginSettingClient(client, ClientHelper.DEPRECATION_ORIGIN);
+        this.appender = new DeprecationIndexingAppender("deprecation_indexing_appender",
+            rateLimitingFilterForIndexing, ecsLayout, consumer);
+        enableDeprecationLogIndexing(enableDeprecationLogIndexingDefault);
     }
 
     @Override
     protected void doStart() {
-
         this.appender.start();
         Loggers.addAppender(LogManager.getLogger("org.elasticsearch.deprecation"), this.appender);
     }
@@ -119,20 +86,15 @@ public class DeprecationIndexingComponent extends AbstractLifecycleComponent {
     }
 
 
-    private void setUseXOpaqueId(boolean useXOpaqueId) {
-        this.filter.setUseXOpaqueId(useXOpaqueId);
-    }
-
-    private void enableDeprecationLogIndexing(boolean newEnabled) {
+    public void enableDeprecationLogIndexing(boolean newEnabled) {
         if (appender.isEnabled() != newEnabled) {
             // We've flipped from disabled to enabled. Make sure we start with a clean cache of
             // previously-seen keys, otherwise we won't index anything.
-//            if (newEnabled) {
-//                this.filter.reset();
-//            }
+            if (newEnabled) {
+                this.rateLimitingFilterForIndexing.reset();
+            }
             appender.setEnabled(newEnabled);
         }
-        this.filter.reset();
     }
 
     /**
@@ -185,5 +147,4 @@ public class DeprecationIndexingComponent extends AbstractLifecycleComponent {
             logger.error("Bulk write of " + request.numberOfActions() + " deprecation logs failed: " + failure.getMessage(), failure);
         }
     }
-
 }
