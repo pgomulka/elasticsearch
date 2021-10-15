@@ -350,6 +350,7 @@ public abstract class FieldMapper extends Mapper implements Cloneable {
         Conflicts conflicts = new Conflicts(name());
         builder.merge((FieldMapper) mergeWith, conflicts);
         conflicts.check();
+        //don't know index name...
         return builder.build(MapperBuilderContext.forPath(Builder.parentPath(name())));
     }
 
@@ -1110,6 +1111,7 @@ public abstract class FieldMapper extends Mapper implements Cloneable {
                 param.merge(in, conflicts);
             }
             for (FieldMapper newSubField : in.multiFields) {
+                //don't know index name...
                 multiFieldsBuilder.update(newSubField, MapperBuilderContext.forPath(parentPath(newSubField.name())));
             }
             this.copyTo.reset(in.copyTo);
