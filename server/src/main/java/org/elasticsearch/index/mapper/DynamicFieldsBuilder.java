@@ -125,9 +125,11 @@ final class DynamicFieldsBuilder {
      */
     Mapper createDynamicObjectMapper(DocumentParserContext context, String name) {
         Mapper mapper = createObjectMapperFromTemplate(context, name);
+        final MapperBuilderContext mapperBuilderContext =
+            MapperBuilderContext.forPath(context.path(), context.indexSettings().getIndex().getName());
         return mapper != null
             ? mapper
-            : new ObjectMapper.Builder(name).enabled(true).build(MapperBuilderContext.forPath(context.path()));
+            : new ObjectMapper.Builder(name).enabled(true).build(mapperBuilderContext);
     }
 
     /**
@@ -135,7 +137,13 @@ final class DynamicFieldsBuilder {
      */
     Mapper createObjectMapperFromTemplate(DocumentParserContext context, String name) {
         Mapper.Builder templateBuilder = findTemplateBuilderForObject(context, name);
-        return templateBuilder == null ? null : templateBuilder.build(MapperBuilderContext.forPath(context.path()));
+        if (templateBuilder == null) {
+            return null;
+        } else {
+            final MapperBuilderContext mapperBuilderContext =
+                MapperBuilderContext.forPath(context.path(), context.indexSettings().getIndex().getName());
+            return templateBuilder.build(mapperBuilderContext);
+        }
     }
 
     /**
@@ -256,7 +264,7 @@ final class DynamicFieldsBuilder {
         }
 
         void createDynamicField(Mapper.Builder builder, DocumentParserContext context) throws IOException {
-            Mapper mapper = builder.build(MapperBuilderContext.forPath(context.path()));
+            Mapper mapper = builder.build(MapperBuilderContext.forPath(context.path(), context.indexSettings().getIndex().getName()));
             context.addDynamicMapper(mapper);
             parseField.accept(context, mapper);
         }
@@ -300,7 +308,8 @@ final class DynamicFieldsBuilder {
             Settings settings = context.indexSettings().getSettings();
             boolean ignoreMalformed = FieldMapper.IGNORE_MALFORMED_SETTING.get(settings);
             createDynamicField(new DateFieldMapper.Builder(name, DateFieldMapper.Resolution.MILLISECONDS,
-                dateTimeFormatter, ScriptCompiler.NONE, ignoreMalformed, context.indexSettings().getIndexVersionCreated()), context);
+                dateTimeFormatter, ScriptCompiler.NONE, ignoreMalformed, context.indexSettings().getIndexVersionCreated()
+            ), context);
         }
 
         void newDynamicBinaryField(DocumentParserContext context, String name) throws IOException {

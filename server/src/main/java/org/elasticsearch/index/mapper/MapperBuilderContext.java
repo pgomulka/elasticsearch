@@ -18,21 +18,27 @@ public class MapperBuilderContext {
     /**
      * The root context, to be used when building a tree of mappers
      */
-    public static final MapperBuilderContext ROOT = new MapperBuilderContext(null);
+    public static final MapperBuilderContext ROOT = new MapperBuilderContext(null, null);
 
     // TODO remove this
     public static MapperBuilderContext forPath(ContentPath path) {
+        return forPath(path,null);
+    }
+    // TODO remove this
+    public static MapperBuilderContext forPath(ContentPath path, String indexName) {
         String p = path.pathAsText("");
         if (p.endsWith(".")) {
             p = p.substring(0, p.length() - 1);
         }
-        return new MapperBuilderContext(p);
+        return new MapperBuilderContext(p, indexName);
     }
 
     private final String path;
+    private final String indexName;
 
-    private MapperBuilderContext(String path) {
+    private MapperBuilderContext(String path, String indexName) {
         this.path = path;
+        this.indexName = indexName;
     }
 
     /**
@@ -41,7 +47,7 @@ public class MapperBuilderContext {
      * @return a new MapperBuilderContext with this context as its parent
      */
     public MapperBuilderContext createChildContext(String name) {
-        return new MapperBuilderContext(buildFullName(name));
+        return new MapperBuilderContext(buildFullName(name), this.indexName);
     }
 
     /**
@@ -52,5 +58,13 @@ public class MapperBuilderContext {
             return name;
         }
         return path + "." + name;
+    }
+
+    public String getIndexName() {
+        return indexName;
+    }
+
+    public MapperBuilderContext withIndexName(String indexName) {
+        return new MapperBuilderContext(this.path, indexName);
     }
 }
