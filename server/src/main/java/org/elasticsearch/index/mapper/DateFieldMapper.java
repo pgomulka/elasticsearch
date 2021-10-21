@@ -403,7 +403,8 @@ public final class DateFieldMapper extends FieldMapper {
         public long parseNullValueWithDeprecation(String value, String fieldName, String indexName) {
             final Instant instant = getInstant(value);
             if (resolution == Resolution.MILLISECONDS && instant.getNano() % 1000000 != 0) {
-                DEPRECATION_LOGGER.warn(DeprecationCategory.MAPPINGS, "date_field_with_nanos",
+                final String key = "date_field_with_nanos_" + indexName + "_" + fieldName;
+                DEPRECATION_LOGGER.warn(DeprecationCategory.MAPPINGS, key,
                     "You are attempting to set null_value with a nanosecond resolution on a field [{}] of type date on index [{}]. " +
                         "The nanosecond part was lost. Use date_nanos field type.", fieldName, indexName);
             }
