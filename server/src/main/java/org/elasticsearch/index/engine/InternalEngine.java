@@ -992,17 +992,9 @@ public class InternalEngine extends Engine {
 
                     assert index.seqNo() >= 0 : "ops should have an assigned seq no.; origin: " + index.origin();
 
-                    if (plan.indexIntoLucene || plan.addStaleOpToLucene) {
-                        indexResult = indexIntoLucene(index, plan);
-                    } else {
-                        indexResult = new IndexResult(
-                            plan.versionForIndexing,
-                            index.primaryTerm(),
-                            index.seqNo(),
-                            plan.currentNotFoundOrDeleted
-                        );
-                    }
+                    indexResult = new IndexResult(plan.versionForIndexing, index.primaryTerm(), index.seqNo(), plan.currentNotFoundOrDeleted);
                 }
+
                 if (index.origin().isFromTranslog() == false) {
                     final Translog.Location location;
                     if (indexResult.getResultType() == Result.Type.SUCCESS) {
