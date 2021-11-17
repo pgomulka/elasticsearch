@@ -132,7 +132,8 @@ public class RecoveryDuringReplicationTests extends ESIndexLevelReplicationTestC
                 1,
                 randomNonNegativeLong(),
                 false,
-                new SourceToParse("replica", new BytesArray("{}"), XContentType.JSON)
+                new SourceToParse("replica", new BytesArray("{}"), XContentType.JSON),
+                IndexShard.NO_TRANSACTION_ID
             );
             shards.promoteReplicaToPrimary(promotedReplica).get();
             oldPrimary.close("demoted", randomBoolean());
@@ -150,7 +151,8 @@ public class RecoveryDuringReplicationTests extends ESIndexLevelReplicationTestC
                     SequenceNumbers.UNASSIGNED_SEQ_NO,
                     0,
                     IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
-                    false
+                    false,
+                    IndexShard.NO_TRANSACTION_ID
                 );
             }
             final IndexShard recoveredReplica = shards.addReplicaWithExistingPath(

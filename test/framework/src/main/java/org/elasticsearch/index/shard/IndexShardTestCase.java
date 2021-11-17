@@ -877,7 +877,8 @@ public abstract class IndexShardTestCase extends ESTestCase {
                 SequenceNumbers.UNASSIGNED_SEQ_NO,
                 0,
                 IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
-                false
+                false,
+                IndexShard.NO_TRANSACTION_ID
             );
             if (result.getResultType() == Engine.Result.Type.MAPPING_UPDATE_REQUIRED) {
                 updateMappings(
@@ -893,7 +894,8 @@ public abstract class IndexShardTestCase extends ESTestCase {
                     SequenceNumbers.UNASSIGNED_SEQ_NO,
                     0,
                     IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
-                    false
+                    false,
+                    IndexShard.NO_TRANSACTION_ID
                 );
             }
             shard.sync(); // advance local checkpoint
@@ -907,7 +909,8 @@ public abstract class IndexShardTestCase extends ESTestCase {
                 0,
                 IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
                 false,
-                sourceToParse
+                sourceToParse,
+                IndexShard.NO_TRANSACTION_ID
             );
             shard.sync(); // advance local checkpoint
             if (result.getResultType() == Engine.Result.Type.MAPPING_UPDATE_REQUIRED) {
@@ -936,14 +939,15 @@ public abstract class IndexShardTestCase extends ESTestCase {
                 id,
                 VersionType.INTERNAL,
                 SequenceNumbers.UNASSIGNED_SEQ_NO,
-                0
+                0,
+                IndexShard.NO_TRANSACTION_ID
             );
             shard.sync(); // advance local checkpoint
             shard.updateLocalCheckpointForShard(shard.routingEntry().allocationId().getId(), shard.getLocalCheckpoint());
         } else {
             final long seqNo = shard.seqNoStats().getMaxSeqNo() + 1;
             shard.advanceMaxSeqNoOfUpdatesOrDeletes(seqNo); // manually replicate max_seq_no_of_updates
-            result = shard.applyDeleteOperationOnReplica(seqNo, shard.getOperationPrimaryTerm(), 0L, id);
+            result = shard.applyDeleteOperationOnReplica(seqNo, shard.getOperationPrimaryTerm(), 0L, id, IndexShard.NO_TRANSACTION_ID);
             shard.sync(); // advance local checkpoint
         }
         return result;

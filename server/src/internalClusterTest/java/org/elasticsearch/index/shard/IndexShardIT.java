@@ -362,7 +362,8 @@ public class IndexShardIT extends ESSingleNodeTestCase {
             SequenceNumbers.UNASSIGNED_SEQ_NO,
             0,
             IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
-            false
+            false,
+            IndexShard.NO_TRANSACTION_ID
         );
         assertTrue(shard.shouldPeriodicallyFlush());
         final Translog translog = getTranslog(shard);
@@ -447,7 +448,8 @@ public class IndexShardIT extends ESSingleNodeTestCase {
                 SequenceNumbers.UNASSIGNED_SEQ_NO,
                 0,
                 IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
-                false
+                false,
+                IndexShard.NO_TRANSACTION_ID
             );
             final Translog.Location location = result.getTranslogLocation();
             shard.afterWriteOperation();
