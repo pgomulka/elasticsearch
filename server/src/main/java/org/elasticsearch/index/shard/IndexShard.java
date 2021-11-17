@@ -878,6 +878,22 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
         return previousState;
     }
 
+    public long startTransaction(String id) throws IOException {
+        return getEngine().startTransaction(id);
+    }
+
+    public boolean commitTransaction(String id, long transactionId) throws IOException {
+        return getEngine().commitTransaction(id, transactionId);
+    }
+
+    public boolean rollbackTransaction(String id, long transactionId) throws IOException {
+        return getEngine().rollbackTransaction(id, transactionId);
+    }
+
+    public boolean closeTransaction(String id, long transactionId) throws IOException {
+        return getEngine().closeTransaction(id, transactionId);
+    }
+
     public Engine.IndexResult applyIndexOperationOnPrimary(
         long version,
         VersionType versionType,

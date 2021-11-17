@@ -1062,7 +1062,12 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
             CREATE((byte) 1),
             INDEX((byte) 2),
             DELETE((byte) 3),
-            NO_OP((byte) 4);
+            NO_OP((byte) 4),
+            TX_START((byte) 5),
+            TX_PREPARE((byte) 6),
+            TX_COMMIT((byte) 7),
+            TX_ROLLBACK((byte) 8),
+            TX_CLOSE((byte) 9);
 
             private final byte id;
 
@@ -1084,6 +1089,16 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
                         return DELETE;
                     case 4:
                         return NO_OP;
+                    case 5:
+                        return TX_START;
+                    case 6:
+                        return TX_PREPARE;
+                    case 7:
+                        return TX_COMMIT;
+                    case 8:
+                        return TX_ROLLBACK;
+                    case 9:
+                        return TX_CLOSE;
                     default:
                         throw new IllegalArgumentException("no type mapped for [" + id + "]");
                 }
@@ -1115,6 +1130,16 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
                     return new Delete(input);
                 case NO_OP:
                     return new NoOp(input);
+                case TX_START:
+                    return new TxStart(input);
+                case TX_PREPARE:
+                    return new TxPrepare(input);
+                case TX_COMMIT:
+                    return new TxCommit(input);
+                case TX_ROLLBACK:
+                    return new TxRollback(input);
+                case TX_CLOSE:
+                    return new TxClose(input);
                 default:
                     throw new AssertionError("no case for [" + type + "]");
             }
@@ -1137,11 +1162,25 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
                 case NO_OP:
                     ((NoOp) operation).write(output);
                     break;
+                case TX_START:
+                    ((TxStart) operation).write(output);
+                    break;
+                case TX_PREPARE:
+                    ((TxPrepare) operation).write(output);
+                    break;
+                case TX_COMMIT:
+                    ((TxCommit) operation).write(output);
+                    break;
+                case TX_ROLLBACK:
+                    ((TxRollback) operation).write(output);
+                    break;
+                case TX_CLOSE:
+                    ((TxClose) operation).write(output);
+                    break;
                 default:
                     throw new AssertionError("no case for [" + operation.opType() + "]");
             }
         }
-
     }
 
     public static class Source {
@@ -1154,6 +1193,215 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
             this.routing = routing;
         }
 
+    }
+
+    abstract static class TransactionBase implements Operation {
+        private final String id;
+        private final long seqNo;
+
+        private TransactionBase(final StreamInput in) throws IOException {
+            in.readVInt(); // SERIALIZATION_FORMAT
+            this.id = in.readString();
+            this.seqNo = in.readLong();
+        }
+
+        protected void write(final StreamOutput out) throws IOException {
+            out.writeVInt(1);
+            out.writeString(id);
+            out.writeLong(seqNo);
+        }
+
+        TransactionBase(String id, Long seqNo) {
+            this.id = id;
+            this.seqNo = seqNo;
+        }
+
+        @Override
+        public long estimateSize() {
+            return 2 * id.length() + Long.BYTES;
+        }
+
+        @Override
+        public Source getSource() {
+            throw new UnsupportedOperationException("source does not exist for a no-op");
+        }
+
+        @Override
+        public long seqNo() {
+            return seqNo;
+        }
+
+        @Override
+        public long primaryTerm() {
+            return 0;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            TransactionBase tb = (TransactionBase) o;
+
+            return id.equals(tb.id);
+        }
+
+        @Override
+        public int hashCode() {
+            return id.hashCode();
+        }
+
+        @Override
+        public String toString() {
+            return "{" + "id='" + id + '}';
+        }
+    }
+
+    public static class TxStart extends TransactionBase {
+        private TxStart(final StreamInput in) throws IOException {
+            super(in);
+        }
+
+        public TxStart(String id, long seqNo) {
+            super(id, seqNo);
+        }
+
+        @Override
+        public Type opType() {
+            return Type.TX_START;
+        }
+
+        @Override
+        public String toString() {
+            return "TxStart" + super.toString();
+        }
+    }
+
+    abstract static class WithTransaction extends TransactionBase {
+        private final long transactionId;
+
+        private WithTransaction(final StreamInput in) throws IOException {
+            super(in);
+            this.transactionId = in.readLong();
+        }
+
+        WithTransaction(String id, long seqNo, long transactionId) {
+            super(id, seqNo);
+            this.transactionId = transactionId;
+        }
+
+        protected void write(final StreamOutput out) throws IOException {
+            super.write(out);
+            out.writeLong(transactionId);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            return super.equals(o) && ((WithTransaction) o).transactionId == this.transactionId;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = super.hashCode();
+            result = 31 * result + Long.hashCode(transactionId);
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            return super.toString() + "[tx_id = " + transactionId + "]";
+        }
+    }
+
+    public static class TxPrepare extends WithTransaction {
+        private TxPrepare(final StreamInput in) throws IOException {
+            super(in);
+        }
+
+        public TxPrepare(String id, long seqNo, long transactionId) {
+            super(id, seqNo, transactionId);
+        }
+
+        @Override
+        public Type opType() {
+            return Type.TX_PREPARE;
+        }
+
+        @Override
+        public String toString() {
+            return "TxPrepare" + super.toString();
+        }
+    }
+
+    public static class TxCommit extends WithTransaction {
+        private TxCommit(final StreamInput in) throws IOException {
+            super(in);
+        }
+
+        public TxCommit(String id, long seqNo, long transactionId) {
+            super(id, seqNo, transactionId);
+        }
+
+        @Override
+        public Type opType() {
+            return Type.TX_COMMIT;
+        }
+
+        @Override
+        public String toString() {
+            return "TxCommit" + super.toString();
+        }
+    }
+
+    public static class TxRollback extends WithTransaction {
+        private TxRollback(final StreamInput in) throws IOException {
+            super(in);
+        }
+
+        public TxRollback(String id, long seqNo, long transactionId) {
+            super(id, seqNo, transactionId);
+        }
+
+        @Override
+        public Type opType() {
+            return Type.TX_ROLLBACK;
+        }
+
+        @Override
+        public String toString() {
+            return "TxRollback" + super.toString();
+        }
+    }
+
+    public static class TxClose extends WithTransaction {
+        private TxClose(final StreamInput in) throws IOException {
+            super(in);
+        }
+
+        public TxClose(String id, long seqNo, long transactionId) {
+            super(id, seqNo, transactionId);
+        }
+
+        @Override
+        public Type opType() {
+            return Type.TX_CLOSE;
+        }
+
+        @Override
+        public String toString() {
+            return "TxClose" + super.toString();
+        }
     }
 
     public static class Index implements Operation {

@@ -321,6 +321,14 @@ public abstract class Engine implements Closeable {
         }
     }
 
+    public abstract long startTransaction(String id) throws IOException;
+
+    public abstract boolean commitTransaction(String id, long transactionId) throws IOException;
+
+    public abstract boolean rollbackTransaction(String id, long transactionId) throws IOException;
+
+    public abstract boolean closeTransaction(String id, long transactionId) throws IOException;
+
     /**
      * Perform document index operation on the engine
      * @param index operation to perform
@@ -1271,7 +1279,8 @@ public abstract class Engine implements Closeable {
         public enum TYPE {
             INDEX,
             DELETE,
-            NO_OP;
+            NO_OP,
+            TX_OP;
 
             private final String lowercase;
 
@@ -1593,6 +1602,43 @@ public abstract class Engine implements Closeable {
         @Override
         public int estimatedSizeInBytes() {
             return 2 * reason.length() + 2 * Long.BYTES;
+        }
+
+    }
+
+    public static class TxOp extends Operation {
+        public TxOp(final long startTime) {
+            super(null, UNASSIGNED_SEQ_NO, UNASSIGNED_PRIMARY_TERM, Versions.NOT_FOUND, null, null, startTime);
+        }
+
+        @Override
+        public Term uid() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public long version() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public VersionType versionType() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        String id() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public TYPE operationType() {
+            return TYPE.TX_OP;
+        }
+
+        @Override
+        public int estimatedSizeInBytes() {
+            return 2 * Long.BYTES;
         }
 
     }

@@ -33,6 +33,7 @@ import org.elasticsearch.cluster.ClusterStateObserver;
 import org.elasticsearch.cluster.action.index.MappingUpdatedAction;
 import org.elasticsearch.cluster.action.shard.ShardStateAction;
 import org.elasticsearch.cluster.service.ClusterService;
+import org.elasticsearch.common.UUIDs;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.compress.CompressedXContent;
 import org.elasticsearch.common.inject.Inject;
@@ -181,20 +182,32 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
 
             @Override
             protected void doRun() throws Exception {
-                while (context.hasMoreOperationsToExecute()) {
-                    if (executeBulkItemRequest(
-                        context,
-                        updateHelper,
-                        nowInMillisSupplier,
-                        mappingUpdater,
-                        waitForMappingUpdate,
-                        ActionListener.wrap(v -> executor.execute(this), this::onRejection)
-                    ) == false) {
-                        // We are waiting for a mapping update on another thread, that will invoke this action again once its done
-                        // so we just break out here.
-                        return;
+                String uid = UUIDs.base64UUID();
+                long transactionId = -1L;
+                try {
+                    transactionId = primary.startTransaction(uid);
+                    while (context.hasMoreOperationsToExecute()) {
+                        if (executeBulkItemRequest(
+                            context,
+                            updateHelper,
+                            nowInMillisSupplier,
+                            mappingUpdater,
+                            waitForMappingUpdate,
+                            ActionListener.wrap(v -> executor.execute(this), this::onRejection)
+                        ) == false) {
+                            // We are waiting for a mapping update on another thread, that will invoke this action again once its done
+                            // so we just break out here.
+                            return;
+                        }
+                        assert context.isInitial(); // either completed and moved to next or reset
                     }
-                    assert context.isInitial(); // either completed and moved to next or reset
+
+                    primary.commitTransaction(uid, transactionId);
+                } catch (Exception x) {
+                    logger.warn("Encountered an error while executing bulk transaction", x);
+                    primary.rollbackTransaction(uid, transactionId);
+                } finally {
+                    primary.closeTransaction(uid, transactionId);
                 }
                 primary.getBulkOperationListener().afterBulk(request.totalSizeInBytes(), System.nanoTime() - startBulkTime);
                 // We're done, there's no more operations to execute so we resolve the wrapped listener
@@ -206,7 +219,6 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
                 // We must finish the outstanding request. Finishing the outstanding request can include
                 // refreshing and fsyncing. Therefore, we must force execution on the WRITE thread.
                 executor.execute(new ActionRunnable<>(listener) {
-
                     @Override
                     protected void doRun() {
                         // Fail all operations after a bulk rejection hit an action that waited for a mapping update and finish the request
