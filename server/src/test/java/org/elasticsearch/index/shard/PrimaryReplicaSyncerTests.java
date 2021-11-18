@@ -83,7 +83,8 @@ public class PrimaryReplicaSyncerTests extends IndexShardTestCase {
                 SequenceNumbers.UNASSIGNED_SEQ_NO,
                 0,
                 IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
-                true
+                true,
+                IndexShard.NO_TRANSACTION_ID
             );
         }
 
@@ -173,7 +174,8 @@ public class PrimaryReplicaSyncerTests extends IndexShardTestCase {
                 SequenceNumbers.UNASSIGNED_SEQ_NO,
                 0,
                 IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
-                false
+                false,
+                IndexShard.NO_TRANSACTION_ID
             );
         }
 

@@ -467,7 +467,8 @@ public class SourceOnlySnapshotShardTests extends IndexShardTestCase {
                             SequenceNumbers.UNASSIGNED_SEQ_NO,
                             0,
                             IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
-                            false
+                            false,
+                            IndexShard.NO_TRANSACTION_ID
                         );
                         if (result.getResultType() != Engine.Result.Type.SUCCESS) {
                             throw new IllegalStateException(

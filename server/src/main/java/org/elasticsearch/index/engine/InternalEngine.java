@@ -2053,6 +2053,30 @@ public class InternalEngine extends Engine {
         }
     }
 
+    @Override
+    public long startTransaction(String id) throws IOException {
+        Translog.Location location = translog.add(new Translog.TxStart(id, doGenerateSeqNoForOperation(new TxOp(System.nanoTime()))));
+        return location.translogLocation;
+    }
+
+    @Override
+    public boolean commitTransaction(String id, long transactionId) throws IOException {
+        translog.add(new Translog.TxCommit(id, doGenerateSeqNoForOperation(new TxOp(System.nanoTime())), transactionId));
+        return true;
+    }
+
+    @Override
+    public boolean rollbackTransaction(String id, long transactionId) throws IOException {
+        translog.add(new Translog.TxRollback(id, doGenerateSeqNoForOperation(new TxOp(System.nanoTime())), transactionId));
+        return true;
+    }
+
+    @Override
+    public boolean closeTransaction(String id, long transactionId) throws IOException {
+        translog.add(new Translog.TxClose(id, doGenerateSeqNoForOperation(new TxOp(System.nanoTime())), transactionId));
+        return true;
+    }
+
     private void pruneDeletedTombstones() {
         /*
          * We need to deploy two different trimming strategies for GC deletes on primary and replicas. Delete operations on primary

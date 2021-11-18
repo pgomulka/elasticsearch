@@ -317,7 +317,8 @@ public class FollowingEngineTests extends ESTestCase {
             VersionType.EXTERNAL,
             origin,
             SequenceNumbers.UNASSIGNED_SEQ_NO,
-            SequenceNumbers.UNASSIGNED_PRIMARY_TERM
+            SequenceNumbers.UNASSIGNED_PRIMARY_TERM,
+            IndexShard.NO_TRANSACTION_ID
         );
     }
 
