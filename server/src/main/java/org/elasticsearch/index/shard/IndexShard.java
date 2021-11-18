@@ -226,6 +226,7 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
     private final GlobalCheckpointListeners globalCheckpointListeners;
     private final PendingReplicationActions pendingReplicationActions;
     private final ReplicationTracker replicationTracker;
+    private final ShardTransactionRegistry transactionRegistry = new ShardTransactionRegistry();
     private final IndexStorePlugin.SnapshotCommitSupplier snapshotCommitSupplier;
 
     protected volatile ShardRouting shardRouting;
@@ -1562,11 +1563,6 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
                 fieldUsageStatsTrackingSession
             )
         ); // completes stats recording
-    }
-
-    public Map<TxID, Boolean> prepareCommit(TxID txID) {
-        // todo: lookup in transaction table
-        return Collections.EMPTY_MAP;
     }
 
     private static final class NonClosingReaderWrapper extends FilterDirectoryReader {
@@ -4087,6 +4083,17 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
     RetentionLeaseSyncer getRetentionLeaseSyncer() {
         return retentionLeaseSyncer;
     }
+
+    public void registerTransaction(TxID id, Set<String> keys) {
+        transactionRegistry.registerTransaction(id, keys);
+    }
+
+    public Map<TxID, Boolean> prepareCommit(TxID txID) {
+        // todo: lookup in transaction table
+        transactionRegistry.prepare(txID);
+        return Collections.EMPTY_MAP;
+    }
+
 
     @Override
     public String toString() {
