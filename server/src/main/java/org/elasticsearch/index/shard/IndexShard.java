@@ -37,6 +37,7 @@ import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ActionRunnable;
 import org.elasticsearch.action.admin.indices.flush.FlushRequest;
 import org.elasticsearch.action.admin.indices.forcemerge.ForceMergeRequest;
+import org.elasticsearch.action.bulk.TxID;
 import org.elasticsearch.action.support.replication.PendingReplicationActions;
 import org.elasticsearch.action.support.replication.ReplicationResponse;
 import org.elasticsearch.cluster.metadata.DataStream;
@@ -1561,6 +1562,11 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
                 fieldUsageStatsTrackingSession
             )
         ); // completes stats recording
+    }
+
+    public Map<TxID, Boolean> prepareCommit(TxID txID) {
+        // todo: lookup in transaction table
+        return Collections.EMPTY_MAP;
     }
 
     private static final class NonClosingReaderWrapper extends FilterDirectoryReader {
