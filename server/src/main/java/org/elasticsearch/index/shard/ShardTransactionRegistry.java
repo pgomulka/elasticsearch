@@ -14,12 +14,14 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class ShardTransactionRegistry {
     private final Map<String, Set<TxID>> byKey = new HashMap<>();
     private final Map<TxID, Set<String>> byTxID = new HashMap<>();
-    private final Map<TxID, Set<String>> conflictingKeys = new HashMap<>();
-
+    private final Map<TxID, Set<String>> conflictingKeysByTxID = new HashMap<>();
+    private final Set<TxID> prepared = new HashSet<>();
     // todo: less locking and perhaps totally different content...
     public synchronized void registerTransaction(TxID txID, Set<String> ids) {
         Set<String> previous = byTxID.put(txID, ids);
@@ -28,19 +30,35 @@ public class ShardTransactionRegistry {
             Set<TxID> txIDSet = byKey.computeIfAbsent(id, k -> new HashSet<>());
             txIDSet.add(txID);
             if (txIDSet.size() > 1) {
-                txIDSet.forEach(conflict -> conflictingKeys.computeIfAbsent(conflict, k-> new HashSet<>()).add(id));
+                txIDSet.forEach(conflict -> conflictingKeysByTxID.computeIfAbsent(conflict, k-> new HashSet<>()).add(id));
             }
         }
+
+        assert invariant();
     }
 
     public synchronized void releaseTransaction(TxID txID) {
-        byTxID.get(txID).forEach(id -> cleanByKey(id, txID));
+        byTxID.remove(txID).forEach(id -> cleanByKey(id, txID));
+        prepared.remove(txID);
+        conflictingKeysByTxID.remove(txID);
+        assert invariant();
     }
 
-    public synchronized boolean prepare(TxID txID) {
-        // todo: detect conflicts.
+    public synchronized Map<TxID, Boolean> prepare(TxID txID) {
         assert byTxID.containsKey(txID);
-        return true;
+        assert prepared.contains(txID) == false;
+        prepared.add(txID);
+        Set<String> conflictingKeys = conflictingKeysByTxID.get(txID);
+        if (conflictingKeys != null) {
+            return conflictingKeys.stream().flatMap(id -> byKey.get(id).stream()).filter(conflict -> conflict.equals(txID) == false).collect(Collectors.toMap(Function.identity(),
+                this::winConflict));
+        } else {
+            return Map.of();
+        }
+    }
+
+    private boolean winConflict(TxID conflict) {
+        return prepared.contains(conflict) == false;
     }
 
     private void cleanByKey(String id, TxID txID) {
@@ -50,8 +68,34 @@ public class ShardTransactionRegistry {
         if (txIDs.isEmpty()) {
             byKey.remove(id);
         } else if (txIDs.size() == 1) {
-            conflictingKeys.remove(id);
+            conflictingKeysByTxID.get(txIDs.iterator().next()).remove(id);
         }
     }
 
+    private boolean invariant() {
+        byTxID.forEach((txID, keys) -> {
+            keys.forEach(key -> {
+                assert byKey.containsKey(key);
+                assert byKey.get(key).contains(txID);
+            });
+        });
+        byKey.forEach((key, txs) -> {
+            txs.forEach(txID -> {
+                assert byTxID.containsKey(txID);
+                assert byTxID.get(txID).contains(key);
+            });
+        });
+        prepared.forEach(txID -> {
+            assert byTxID.containsKey(txID);
+        });
+        return true;
+    }
+
+    Set<String> keys(TxID txID) {
+        return byTxID.get(txID);
+    }
+
+    public int size() {
+        return byTxID.size();
+    }
 }
