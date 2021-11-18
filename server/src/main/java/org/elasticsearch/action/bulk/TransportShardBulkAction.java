@@ -62,10 +62,12 @@ import org.elasticsearch.transport.TransportService;
 import org.elasticsearch.xcontent.XContentType;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
+import java.util.stream.Collectors;
 
 /** Performs shard-level bulk (index, delete or update) operations */
 public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequest, BulkShardRequest, BulkShardResponse> {
@@ -172,6 +174,8 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
         ThreadPool threadPool,
         String executorName
     ) {
+        primary.registerTransaction(request.txID(),
+            Arrays.stream(request.items()).map(BulkItemRequest::request).map(DocWriteRequest::id).collect(Collectors.toSet()));
         new ActionRunnable<>(listener) {
 
             private final Executor executor = threadPool.executor(executorName);

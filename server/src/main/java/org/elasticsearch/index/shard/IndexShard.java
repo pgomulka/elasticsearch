@@ -37,6 +37,7 @@ import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ActionRunnable;
 import org.elasticsearch.action.admin.indices.flush.FlushRequest;
 import org.elasticsearch.action.admin.indices.forcemerge.ForceMergeRequest;
+import org.elasticsearch.action.bulk.TxID;
 import org.elasticsearch.action.support.replication.PendingReplicationActions;
 import org.elasticsearch.action.support.replication.ReplicationResponse;
 import org.elasticsearch.cluster.metadata.DataStream;
@@ -225,6 +226,7 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
     private final GlobalCheckpointListeners globalCheckpointListeners;
     private final PendingReplicationActions pendingReplicationActions;
     private final ReplicationTracker replicationTracker;
+    private final ShardTransactionRegistry transactionRegistry = new ShardTransactionRegistry();
     private final IndexStorePlugin.SnapshotCommitSupplier snapshotCommitSupplier;
 
     protected volatile ShardRouting shardRouting;
@@ -4125,6 +4127,17 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
     RetentionLeaseSyncer getRetentionLeaseSyncer() {
         return retentionLeaseSyncer;
     }
+
+    public void registerTransaction(TxID id, Set<String> keys) {
+        transactionRegistry.registerTransaction(id, keys);
+    }
+
+    public Map<TxID, Boolean> prepareCommit(TxID txID) {
+        // todo: lookup in transaction table
+        transactionRegistry.prepare(txID);
+        return Collections.EMPTY_MAP;
+    }
+
 
     @Override
     public String toString() {

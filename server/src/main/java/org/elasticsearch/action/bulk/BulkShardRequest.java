@@ -30,15 +30,23 @@ public class BulkShardRequest extends ReplicatedWriteRequest<BulkShardRequest> i
     private static final long SHALLOW_SIZE = RamUsageEstimator.shallowSizeOfInstance(BulkShardRequest.class);
 
     private final BulkItemRequest[] items;
+    private final TxID txID;
 
     public BulkShardRequest(StreamInput in) throws IOException {
         super(in);
         items = in.readArray(i -> i.readOptionalWriteable(inpt -> new BulkItemRequest(shardId, inpt)), BulkItemRequest[]::new);
+        this.txID = new TxID(in);
     }
 
     public BulkShardRequest(ShardId shardId, RefreshPolicy refreshPolicy, BulkItemRequest[] items) {
+        // todo: remove this constructor.
+        this(shardId, refreshPolicy, items, null);
+    }
+
+    public BulkShardRequest(ShardId shardId, RefreshPolicy refreshPolicy, BulkItemRequest[] items, TxID txID) {
         super(shardId);
         this.items = items;
+        this.txID = txID;
         setRefreshPolicy(refreshPolicy);
     }
 
@@ -62,6 +70,10 @@ public class BulkShardRequest extends ReplicatedWriteRequest<BulkShardRequest> i
 
     public BulkItemRequest[] items() {
         return items;
+    }
+
+    public TxID txID() {
+        return txID;
     }
 
     @Override
@@ -92,6 +104,7 @@ public class BulkShardRequest extends ReplicatedWriteRequest<BulkShardRequest> i
                 o.writeBoolean(false);
             }
         }, items);
+        txID.writeTo(out);
     }
 
     @Override
