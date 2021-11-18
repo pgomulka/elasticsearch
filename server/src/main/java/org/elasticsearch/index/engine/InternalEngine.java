@@ -2078,27 +2078,26 @@ public class InternalEngine extends Engine {
     }
 
     @Override
-    public long startTransaction(String id) throws IOException {
-        Translog.Location location = translog.add(new Translog.TxStart(id, doGenerateSeqNoForOperation(new TxOp(System.nanoTime()))));
-        return location.translogLocation;
+    public Translog.Location startTransaction(String id) throws IOException {
+        return translog.add(new Translog.TxStart(id, doGenerateSeqNoForOperation(new TxOp(System.nanoTime()))));
     }
 
     @Override
-    public boolean commitTransaction(String id, long transactionId) throws IOException {
-        translog.add(new Translog.TxCommit(id, doGenerateSeqNoForOperation(new TxOp(System.nanoTime())), transactionId));
-        return true;
+    public Translog.Location commitTransaction(Translog.Location prevId) throws IOException {
+        return translog.add(
+            new Translog.TxCommit(doGenerateSeqNoForOperation(new TxOp(System.nanoTime())), prevId));
     }
 
     @Override
-    public boolean rollbackTransaction(String id, long transactionId) throws IOException {
-        translog.add(new Translog.TxRollback(id, doGenerateSeqNoForOperation(new TxOp(System.nanoTime())), transactionId));
-        return true;
+    public Translog.Location rollbackTransaction(Translog.Location prevId) throws IOException {
+        return translog.add(
+            new Translog.TxRollback(doGenerateSeqNoForOperation(new TxOp(System.nanoTime())), prevId));
     }
 
     @Override
-    public boolean closeTransaction(String id, long transactionId) throws IOException {
-        translog.add(new Translog.TxClose(id, doGenerateSeqNoForOperation(new TxOp(System.nanoTime())), transactionId));
-        return true;
+    public Translog.Location closeTransaction(Translog.Location prevId) throws IOException {
+        return translog.add(
+            new Translog.TxClose(doGenerateSeqNoForOperation(new TxOp(System.nanoTime())), prevId));
     }
 
     private void pruneDeletedTombstones() {
