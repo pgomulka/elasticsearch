@@ -50,7 +50,8 @@ public class ShardTransactionRegistry {
         prepared.add(txID);
         Set<String> conflictingKeys = conflictingKeysByTxID.get(txID);
         if (conflictingKeys != null) {
-            return conflictingKeys.stream().flatMap(id -> byKey.get(id).stream()).filter(conflict -> conflict.equals(txID) == false).collect(Collectors.toMap(Function.identity(),
+            return conflictingKeys.stream().flatMap(id -> byKey.get(id).stream())
+                .filter(conflict -> conflict.equals(txID) == false).collect(Collectors.toMap(Function.identity(),
                 this::winConflict));
         } else {
             return Map.of();

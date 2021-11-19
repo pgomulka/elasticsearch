@@ -59,4 +59,8 @@ public final class TxID implements Writeable, Comparable<TxID> {
     public String toString() {
         return "[tx=" + id + "]";
     }
+
+    public String id() {
+        return id;
+    }
 }

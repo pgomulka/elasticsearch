@@ -321,13 +321,13 @@ public abstract class Engine implements Closeable {
         }
     }
 
-    public abstract long startTransaction(String id) throws IOException;
+    public abstract Translog.Location startTransaction(String id) throws IOException;
 
-    public abstract boolean commitTransaction(String id, long transactionId) throws IOException;
+    public abstract Translog.Location commitTransaction(Translog.Location prevId) throws IOException;
 
-    public abstract boolean rollbackTransaction(String id, long transactionId) throws IOException;
+    public abstract Translog.Location rollbackTransaction(Translog.Location prevId) throws IOException;
 
-    public abstract boolean closeTransaction(String id, long transactionId) throws IOException;
+    public abstract Translog.Location closeTransaction(Translog.Location prevId) throws IOException;
 
     /**
      * Perform document index operation on the engine
@@ -1372,7 +1372,7 @@ public abstract class Engine implements Closeable {
         private final boolean isRetry;
         private final long ifSeqNo;
         private final long ifPrimaryTerm;
-        private final long transactionId;
+        private final Translog.Location transactionId;
 
         public Index(
             Term uid,
@@ -1401,7 +1401,7 @@ public abstract class Engine implements Closeable {
                 isRetry,
                 ifSeqNo,
                 ifPrimaryTerm,
-                -1L
+                new Translog.Location(0, 0, 0)
             );
         }
 
@@ -1418,7 +1418,7 @@ public abstract class Engine implements Closeable {
             boolean isRetry,
             long ifSeqNo,
             long ifPrimaryTerm,
-            long transactionId
+            Translog.Location transactionId
         ) {
             super(uid, seqNo, primaryTerm, version, versionType, origin, startTime);
             assert (origin == Origin.PRIMARY) == (versionType != null) : "invalid version_type=" + versionType + " for origin=" + origin;
@@ -1511,7 +1511,7 @@ public abstract class Engine implements Closeable {
             return ifPrimaryTerm;
         }
 
-        public long getTransactionId() {
+        public Translog.Location getTransactionId() {
             return transactionId;
         }
     }
@@ -1521,7 +1521,7 @@ public abstract class Engine implements Closeable {
         private final String id;
         private final long ifSeqNo;
         private final long ifPrimaryTerm;
-        private final long transactionId;
+        private final Translog.Location transactionId;
 
         public Delete(
             String id,
@@ -1535,7 +1535,8 @@ public abstract class Engine implements Closeable {
             long ifSeqNo,
             long ifPrimaryTerm
         ) {
-            this(id, uid, seqNo, primaryTerm, version, versionType, origin, startTime, ifSeqNo, ifPrimaryTerm, -1L);
+            this(id, uid, seqNo, primaryTerm, version, versionType, origin,
+                startTime, ifSeqNo, ifPrimaryTerm, new Translog.Location(0, 0, 0));
         }
 
         public Delete(
@@ -1549,7 +1550,7 @@ public abstract class Engine implements Closeable {
             long startTime,
             long ifSeqNo,
             long ifPrimaryTerm,
-            long transactionId
+            Translog.Location transactionId
         ) {
             super(uid, seqNo, primaryTerm, version, versionType, origin, startTime);
             assert (origin == Origin.PRIMARY) == (versionType != null) : "invalid version_type=" + versionType + " for origin=" + origin;
@@ -1616,7 +1617,7 @@ public abstract class Engine implements Closeable {
             return ifPrimaryTerm;
         }
 
-        public long getTransactionId() {
+        public Translog.Location getTransactionId() {
             return transactionId;
         }
     }
