@@ -254,7 +254,7 @@ public class TransportShardBulkActionTests extends IndexShardTestCase {
 
         IndexShard shard = mock(IndexShard.class);
         when(shard.shardId()).thenReturn(shardId);
-        when(shard.applyIndexOperationOnPrimary(anyLong(), any(), any(), anyLong(), anyLong(), anyLong(), anyBoolean(), anyLong()))
+        when(shard.applyIndexOperationOnPrimary(anyLong(), any(), any(), anyLong(), anyLong(), anyLong(), anyBoolean(), any()))
             .thenReturn(mappingUpdate);
         when(shard.mapperService()).thenReturn(mock(MapperService.class));
 
@@ -283,10 +283,10 @@ public class TransportShardBulkActionTests extends IndexShardTestCase {
             anyLong(),
             anyLong(),
             anyBoolean(),
-            anyLong()
+            any()
         );
 
-        when(shard.applyIndexOperationOnPrimary(anyLong(), any(), any(), anyLong(), anyLong(), anyLong(), anyBoolean(), anyLong()))
+        when(shard.applyIndexOperationOnPrimary(anyLong(), any(), any(), anyLong(), anyLong(), anyLong(), anyBoolean(), any()))
             .thenReturn(success);
 
         TransportShardBulkAction.executeBulkItemRequest(
@@ -308,7 +308,7 @@ public class TransportShardBulkActionTests extends IndexShardTestCase {
             anyLong(),
             anyLong(),
             anyBoolean(),
-            anyLong()
+            any()
         );
 
         BulkItemResponse primaryResponse = bulkShardRequest.items()[0].getPrimaryResponse();
@@ -534,7 +534,7 @@ public class TransportShardBulkActionTests extends IndexShardTestCase {
         Exception err = new ElasticsearchException("I'm dead <(x.x)>");
         Engine.IndexResult indexResult = new Engine.IndexResult(err, 0, 0, 0);
         IndexShard shard = mock(IndexShard.class);
-        when(shard.applyIndexOperationOnPrimary(anyLong(), any(), any(), anyLong(), anyLong(), anyLong(), anyBoolean(), anyLong()))
+        when(shard.applyIndexOperationOnPrimary(anyLong(), any(), any(), anyLong(), anyLong(), anyLong(), anyBoolean(), any()))
             .thenReturn(indexResult);
         when(shard.indexSettings()).thenReturn(indexSettings);
 
@@ -590,7 +590,7 @@ public class TransportShardBulkActionTests extends IndexShardTestCase {
         Exception err = new VersionConflictEngineException(shardId, "id", "I'm conflicted <(;_;)>");
         Engine.IndexResult indexResult = new Engine.IndexResult(err, 0, 0, 0);
         IndexShard shard = mock(IndexShard.class);
-        when(shard.applyIndexOperationOnPrimary(anyLong(), any(), any(), anyLong(), anyLong(), anyLong(), anyBoolean(), anyLong()))
+        when(shard.applyIndexOperationOnPrimary(anyLong(), any(), any(), anyLong(), anyLong(), anyLong(), anyBoolean(), any()))
             .thenReturn(indexResult);
         when(shard.indexSettings()).thenReturn(indexSettings);
 
@@ -645,7 +645,7 @@ public class TransportShardBulkActionTests extends IndexShardTestCase {
         Translog.Location resultLocation = new Translog.Location(42, 42, 42);
         Engine.IndexResult indexResult = new FakeIndexResult(1, 1, 13, created, resultLocation);
         IndexShard shard = mock(IndexShard.class);
-        when(shard.applyIndexOperationOnPrimary(anyLong(), any(), any(), anyLong(), anyLong(), anyLong(), anyBoolean(), anyLong()))
+        when(shard.applyIndexOperationOnPrimary(anyLong(), any(), any(), anyLong(), anyLong(), anyLong(), anyBoolean(), any()))
             .thenReturn(indexResult);
         when(shard.indexSettings()).thenReturn(indexSettings);
         when(shard.shardId()).thenReturn(shardId);
@@ -702,7 +702,7 @@ public class TransportShardBulkActionTests extends IndexShardTestCase {
         final long resultSeqNo = 13;
         Engine.DeleteResult deleteResult = new FakeDeleteResult(1, 1, resultSeqNo, found, resultLocation);
         IndexShard shard = mock(IndexShard.class);
-        when(shard.applyDeleteOperationOnPrimary(anyLong(), any(), any(), anyLong(), anyLong(), anyLong())).thenReturn(deleteResult);
+        when(shard.applyDeleteOperationOnPrimary(anyLong(), any(), any(), anyLong(), anyLong(), any())).thenReturn(deleteResult);
         when(shard.indexSettings()).thenReturn(indexSettings);
         when(shard.shardId()).thenReturn(shardId);
 
@@ -862,7 +862,7 @@ public class TransportShardBulkActionTests extends IndexShardTestCase {
         Engine.IndexResult success = new FakeIndexResult(1, 1, 13, true, resultLocation);
 
         IndexShard shard = mock(IndexShard.class);
-        when(shard.applyIndexOperationOnPrimary(anyLong(), any(), any(), anyLong(), anyLong(), anyLong(), anyBoolean(), anyLong()))
+        when(shard.applyIndexOperationOnPrimary(anyLong(), any(), any(), anyLong(), anyLong(), anyLong(), anyBoolean(), any()))
             .thenAnswer(ir -> {
                 if (randomBoolean()) {
                     return conflictedResult;
@@ -957,7 +957,7 @@ public class TransportShardBulkActionTests extends IndexShardTestCase {
 
             IndexShard shard = mock(IndexShard.class);
             when(shard.shardId()).thenReturn(shardId);
-            when(shard.applyIndexOperationOnPrimary(anyLong(), any(), any(), anyLong(), anyLong(), anyLong(), anyBoolean(), anyLong()))
+            when(shard.applyIndexOperationOnPrimary(anyLong(), any(), any(), anyLong(), anyLong(), anyLong(), anyBoolean(), any()))
                 .thenReturn(success1, mappingUpdate, success2);
             when(shard.getFailedIndexResult(any(EsRejectedExecutionException.class), anyLong())).thenCallRealMethod();
             when(shard.mapperService()).thenReturn(mock(MapperService.class));
@@ -1004,7 +1004,7 @@ public class TransportShardBulkActionTests extends IndexShardTestCase {
                 anyLong(),
                 anyLong(),
                 anyBoolean(),
-                anyLong()
+                any()
             );
 
             BulkItemResponse primaryResponse1 = bulkShardRequest.items()[0].getPrimaryResponse();
