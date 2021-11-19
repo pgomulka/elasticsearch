@@ -12,6 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.util.SparseFixedBitSet;
 import org.elasticsearch.Assertions;
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.ResourceAlreadyExistsException;
@@ -28,6 +29,7 @@ import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.ingest.IngestActionForwarder;
 import org.elasticsearch.action.support.ActionFilters;
+import org.elasticsearch.action.support.GroupedActionListener;
 import org.elasticsearch.action.support.HandledTransportAction;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.action.update.UpdateResponse;
@@ -63,6 +65,7 @@ import org.elasticsearch.threadpool.ThreadPool.Names;
 import org.elasticsearch.transport.TransportService;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -465,6 +468,8 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
         private final ClusterStateObserver observer;
         private final Map<String, IndexNotFoundException> indicesThatCannotBeCreated;
         private final String executorName;
+        private final TxID txID = TxID.create();
+        private Map<ShardId, List<BulkItemRequest>> requestsByShard;
 
         BulkOperation(
             Task task,
@@ -478,7 +483,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
             super(listener);
             this.task = task;
             this.bulkRequest = bulkRequest;
-            this.listener = listener;
+            this.listener = commitOrRollbackListener(listener);
             this.responses = responses;
             this.startTimeNanos = startTimeNanos;
             this.indicesThatCannotBeCreated = indicesThatCannotBeCreated;
@@ -496,7 +501,8 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
             final ConcreteIndices concreteIndices = new ConcreteIndices(clusterState, indexNameExpressionResolver);
             Metadata metadata = clusterState.metadata();
             // Group the requests by ShardId -> Operations mapping
-            Map<ShardId, List<BulkItemRequest>> requestsByShard = new HashMap<>();
+            assert requestsByShard == null;
+            requestsByShard = new HashMap<>();
 
             for (int i = 0; i < bulkRequest.requests.size(); i++) {
                 DocWriteRequest<?> docWriteRequest = bulkRequest.requests.get(i);
@@ -562,7 +568,8 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                 BulkShardRequest bulkShardRequest = new BulkShardRequest(
                     shardId,
                     bulkRequest.getRefreshPolicy(),
-                    requests.toArray(new BulkItemRequest[requests.size()])
+                    requests.toArray(new BulkItemRequest[requests.size()]),
+                    txID
                 );
                 bulkShardRequest.waitForActiveShards(bulkRequest.waitForActiveShards());
                 bulkShardRequest.timeout(bulkRequest.timeout());
@@ -710,6 +717,74 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
             responses.set(idx, bulkItemResponse);
             // make sure the request gets never processed again
             bulkRequest.requests.set(idx, null);
+        }
+
+        private ActionListener<BulkResponse> commitOrRollbackListener(ActionListener<BulkResponse> listener) {
+            return new ActionListener<>() {
+                @Override
+                public void onResponse(BulkResponse bulkResponse) {
+                    commitOrRollback(bulkResponse, listener);
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    rollback(e, listener);
+                }
+            };
+        }
+
+        private void rollback(Exception e, ActionListener<BulkResponse> listener) {
+            // todo: actual rollback.
+            listener.onFailure(e);
+        }
+
+        private void commit(BulkResponse bulkResponse, ActionListener<BulkResponse> listener) {
+            ActionListener<Void> markAndCommitListener = new ActionListener<Void>() {
+                @Override
+                public void onResponse(Void ignored) {
+                    // todo: mark and commit
+                    listener.onResponse(bulkResponse);
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    rollback(e, listener);
+                }
+            };
+            GroupedActionListener<ShardPrepareCommitResponse> prepareCommitResponseListener = new GroupedActionListener<>(
+                markAndCommitListener.map(this::commitOrFail),
+                requestsByShard.size()
+            );
+            requestsByShard.keySet()
+                .forEach(
+                    shardId -> client.executeLocally(
+                        ShardPrepareCommitAction.INSTANCE,
+                        new ShardPrepareCommitRequest(shardId, txID),
+                        prepareCommitResponseListener
+                    )
+                );
+        }
+
+        private void commitOrRollback(BulkResponse bulkResponse, ActionListener<BulkResponse> listener) {
+            for (BulkItemResponse bulkItemResponse : bulkResponse) {
+                if (bulkItemResponse.isFailed()) {
+                    rollback(new ElasticsearchException("failed op"), listener);
+                    return;
+                }
+            }
+            commit(bulkResponse, listener);
+        }
+
+        private Void commitOrFail(Collection<ShardPrepareCommitResponse> responses) {
+            for (ShardPrepareCommitResponse response : responses) {
+                for (Map.Entry<TxID, Boolean> conflict : response.conflicts().entrySet()) {
+                    if (conflict.getValue() == false) {
+                        throw new ElasticsearchException("conflicting transaction [{}] on shard", conflict.getKey());
+                    }
+                }
+            }
+
+            return null;
         }
     }
 

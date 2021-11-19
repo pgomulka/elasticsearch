@@ -528,6 +528,26 @@ public class ReadOnlyEngine extends Engine {
     public void trimOperationsFromTranslog(long belowTerm, long aboveSeqNo) {}
 
     @Override
+    public Translog.Location startTransaction(String id) throws IOException {
+        return null;
+    }
+
+    @Override
+    public Translog.Location commitTransaction(Translog.Location transactionId) throws IOException {
+        return null;
+    }
+
+    @Override
+    public Translog.Location rollbackTransaction(Translog.Location transactionId) throws IOException {
+        return null;
+    }
+
+    @Override
+    public Translog.Location closeTransaction(Translog.Location transactionId) throws IOException {
+        return null;
+    }
+
+    @Override
     public void maybePruneDeletes() {}
 
     @Override

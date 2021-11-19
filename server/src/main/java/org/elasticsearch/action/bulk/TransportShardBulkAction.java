@@ -33,6 +33,7 @@ import org.elasticsearch.cluster.ClusterStateObserver;
 import org.elasticsearch.cluster.action.index.MappingUpdatedAction;
 import org.elasticsearch.cluster.action.shard.ShardStateAction;
 import org.elasticsearch.cluster.service.ClusterService;
+import org.elasticsearch.common.UUIDs;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.compress.CompressedXContent;
 import org.elasticsearch.common.inject.Inject;
@@ -50,6 +51,7 @@ import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.index.mapper.SourceToParse;
 import org.elasticsearch.index.seqno.SequenceNumbers;
 import org.elasticsearch.index.shard.IndexShard;
+import org.elasticsearch.index.shard.ShardTransactionRegistry;
 import org.elasticsearch.index.translog.Translog;
 import org.elasticsearch.indices.ExecutorSelector;
 import org.elasticsearch.indices.IndicesService;
@@ -61,10 +63,13 @@ import org.elasticsearch.transport.TransportService;
 import org.elasticsearch.xcontent.XContentType;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
+import java.util.stream.Collectors;
 
 /** Performs shard-level bulk (index, delete or update) operations */
 public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequest, BulkShardRequest, BulkShardResponse> {
@@ -76,6 +81,7 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
 
     private final UpdateHelper updateHelper;
     private final MappingUpdatedAction mappingUpdatedAction;
+    private static final ShardTransactionRegistry transactionRegistry = new ShardTransactionRegistry();
 
     @Inject
     public TransportShardBulkAction(
@@ -171,6 +177,8 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
         ThreadPool threadPool,
         String executorName
     ) {
+        primary.registerTransaction(request.txID(),
+            Arrays.stream(request.items()).map(BulkItemRequest::request).map(DocWriteRequest::id).collect(Collectors.toSet()));
         new ActionRunnable<>(listener) {
 
             private final Executor executor = threadPool.executor(executorName);
@@ -181,20 +189,35 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
 
             @Override
             protected void doRun() throws Exception {
-                while (context.hasMoreOperationsToExecute()) {
-                    if (executeBulkItemRequest(
-                        context,
-                        updateHelper,
-                        nowInMillisSupplier,
-                        mappingUpdater,
-                        waitForMappingUpdate,
-                        ActionListener.wrap(v -> executor.execute(this), this::onRejection)
-                    ) == false) {
-                        // We are waiting for a mapping update on another thread, that will invoke this action again once its done
-                        // so we just break out here.
-                        return;
+                TxID txID1 = TxID.create();
+                Translog.Location[] transactionId = new Translog.Location[1];
+                try {
+                    transactionId[0] = primary.startTransaction(txID1.id());
+                    transactionRegistry.registerTransaction(txID1, Set.of(transactionId[0].id()));
+
+                    while (context.hasMoreOperationsToExecute()) {
+                        if (executeBulkItemRequest(
+                            context,
+                            updateHelper,
+                            nowInMillisSupplier,
+                            mappingUpdater,
+                            waitForMappingUpdate,
+                            ActionListener.wrap(v -> executor.execute(this), this::onRejection),
+                            transactionId
+                        ) == false) {
+                            // We are waiting for a mapping update on another thread, that will invoke this action again once its done
+                            // so we just break out here.
+                            return;
+                        }
+                        assert context.isInitial(); // either completed and moved to next or reset
                     }
-                    assert context.isInitial(); // either completed and moved to next or reset
+
+                    primary.commitTransaction(transactionId);
+                } catch (Exception x) {
+                    logger.warn("Encountered an error while executing bulk transaction", x);
+                    primary.rollbackTransaction(transactionId);
+                } finally {
+                    primary.closeTransaction(transactionId);
                 }
                 primary.getBulkOperationListener().afterBulk(request.totalSizeInBytes(), System.nanoTime() - startBulkTime);
                 // We're done, there's no more operations to execute so we resolve the wrapped listener
@@ -206,7 +229,6 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
                 // We must finish the outstanding request. Finishing the outstanding request can include
                 // refreshing and fsyncing. Therefore, we must force execution on the WRITE thread.
                 executor.execute(new ActionRunnable<>(listener) {
-
                     @Override
                     protected void doRun() {
                         // Fail all operations after a bulk rejection hit an action that waited for a mapping update and finish the request
@@ -250,6 +272,25 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
         }.run();
     }
 
+    static boolean executeBulkItemRequest(
+        BulkPrimaryExecutionContext context,
+        UpdateHelper updateHelper,
+        LongSupplier nowInMillisSupplier,
+        MappingUpdatePerformer mappingUpdater,
+        Consumer<ActionListener<Void>> waitForMappingUpdate,
+        ActionListener<Void> itemDoneListener
+    ) throws Exception {
+        return executeBulkItemRequest(
+            context,
+            updateHelper,
+            nowInMillisSupplier,
+            mappingUpdater,
+            waitForMappingUpdate,
+            itemDoneListener,
+            new Translog.Location[] {IndexShard.NO_TRANSACTION_ID}
+        );
+    }
+
     /**
      * Executes bulk item requests and handles request execution exceptions.
      * @return {@code true} if request completed on this thread and the listener was invoked, {@code false} if the request triggered
@@ -261,7 +302,8 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
         LongSupplier nowInMillisSupplier,
         MappingUpdatePerformer mappingUpdater,
         Consumer<ActionListener<Void>> waitForMappingUpdate,
-        ActionListener<Void> itemDoneListener
+        ActionListener<Void> itemDoneListener,
+        Translog.Location[] transactionId
     ) throws Exception {
         final DocWriteRequest.OpType opType = context.getCurrent().opType();
 
@@ -306,7 +348,8 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
                 request.id(),
                 request.versionType(),
                 request.ifSeqNo(),
-                request.ifPrimaryTerm()
+                request.ifPrimaryTerm(),
+                transactionId[0]
             );
         } else {
             final IndexRequest request = context.getRequestToExecute();
@@ -324,9 +367,15 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
                 request.ifSeqNo(),
                 request.ifPrimaryTerm(),
                 request.getAutoGeneratedTimestamp(),
-                request.isRetry()
+                request.isRetry(),
+                transactionId[0]
             );
         }
+
+        if (result.getTranslogLocation() != null) {
+            transactionId[0] = result.getTranslogLocation();
+        }
+
         if (result.getResultType() == Engine.Result.Type.MAPPING_UPDATE_REQUIRED) {
 
             try {
@@ -509,7 +558,7 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
     protected void dispatchedShardOperationOnReplica(BulkShardRequest request, IndexShard replica, ActionListener<ReplicaResult> listener) {
         ActionListener.completeWith(listener, () -> {
             final long startBulkTime = System.nanoTime();
-            final Translog.Location location = performOnReplica(request, replica);
+            final Translog.Location location = performOnReplica(request, replica, IndexShard.NO_TRANSACTION_ID);
             replica.getBulkOperationListener().afterBulk(request.totalSizeInBytes(), System.nanoTime() - startBulkTime);
             return new WriteReplicaResult<>(request, location, null, replica, logger);
         });
@@ -525,7 +574,8 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
         return request.items().length;
     }
 
-    public static Translog.Location performOnReplica(BulkShardRequest request, IndexShard replica) throws Exception {
+    public static Translog.Location performOnReplica(BulkShardRequest request, IndexShard replica, Translog.Location transactionId)
+        throws Exception {
         Translog.Location location = null;
         for (int i = 0; i < request.items().length; i++) {
             final BulkItemRequest item = request.items()[i];
@@ -553,7 +603,7 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
                     continue; // ignore replication as it's a noop
                 }
                 assert response.getResponse().getSeqNo() != SequenceNumbers.UNASSIGNED_SEQ_NO;
-                operationResult = performOpOnReplica(response.getResponse(), item.request(), replica);
+                operationResult = performOpOnReplica(response.getResponse(), item.request(), replica, transactionId);
             }
             assert operationResult != null : "operation result must never be null when primary response has no failure";
             location = syncOperationResultOrThrow(operationResult, location);
@@ -564,7 +614,8 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
     private static Engine.Result performOpOnReplica(
         DocWriteResponse primaryResponse,
         DocWriteRequest<?> docWriteRequest,
-        IndexShard replica
+        IndexShard replica,
+        Translog.Location transactionId
     ) throws Exception {
         final Engine.Result result;
         switch (docWriteRequest.opType()) {
@@ -584,7 +635,8 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
                     primaryResponse.getVersion(),
                     indexRequest.getAutoGeneratedTimestamp(),
                     indexRequest.isRetry(),
-                    sourceToParse
+                    sourceToParse,
+                    transactionId
                 );
                 break;
             case DELETE:
@@ -593,7 +645,8 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
                     primaryResponse.getSeqNo(),
                     primaryResponse.getPrimaryTerm(),
                     primaryResponse.getVersion(),
-                    deleteRequest.id()
+                    deleteRequest.id(),
+                    transactionId
                 );
                 break;
             default:

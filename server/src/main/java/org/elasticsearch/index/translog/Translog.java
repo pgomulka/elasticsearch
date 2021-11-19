@@ -927,6 +927,8 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
 
     public static class Location implements Comparable<Location> {
 
+        public static Location NO_LOCATION = new Location(-1L, -1L, 0);
+
         public final long generation;
         public final long translogLocation;
         public final int size;
@@ -977,6 +979,16 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
             result = 31 * result + Long.hashCode(translogLocation);
             result = 31 * result + size;
             return result;
+        }
+
+        public String id() {
+            return new StringBuilder()
+                .append(generation)
+                .append('.')
+                .append(translogLocation)
+                .append('.')
+                .append(size)
+                .toString();
         }
     }
 
@@ -1062,7 +1074,12 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
             CREATE((byte) 1),
             INDEX((byte) 2),
             DELETE((byte) 3),
-            NO_OP((byte) 4);
+            NO_OP((byte) 4),
+            TX_START((byte) 5),
+            TX_PREPARE((byte) 6),
+            TX_COMMIT((byte) 7),
+            TX_ROLLBACK((byte) 8),
+            TX_CLOSE((byte) 9);
 
             private final byte id;
 
@@ -1084,6 +1101,16 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
                         return DELETE;
                     case 4:
                         return NO_OP;
+                    case 5:
+                        return TX_START;
+                    case 6:
+                        return TX_PREPARE;
+                    case 7:
+                        return TX_COMMIT;
+                    case 8:
+                        return TX_ROLLBACK;
+                    case 9:
+                        return TX_CLOSE;
                     default:
                         throw new IllegalArgumentException("no type mapped for [" + id + "]");
                 }
@@ -1115,6 +1142,16 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
                     return new Delete(input);
                 case NO_OP:
                     return new NoOp(input);
+                case TX_START:
+                    return new TxStart(input);
+                case TX_PREPARE:
+                    return new TxPrepare(input);
+                case TX_COMMIT:
+                    return new TxCommit(input);
+                case TX_ROLLBACK:
+                    return new TxRollback(input);
+                case TX_CLOSE:
+                    return new TxClose(input);
                 default:
                     throw new AssertionError("no case for [" + type + "]");
             }
@@ -1137,11 +1174,25 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
                 case NO_OP:
                     ((NoOp) operation).write(output);
                     break;
+                case TX_START:
+                    ((TxStart) operation).write(output);
+                    break;
+                case TX_PREPARE:
+                    ((TxPrepare) operation).write(output);
+                    break;
+                case TX_COMMIT:
+                    ((TxCommit) operation).write(output);
+                    break;
+                case TX_ROLLBACK:
+                    ((TxRollback) operation).write(output);
+                    break;
+                case TX_CLOSE:
+                    ((TxClose) operation).write(output);
+                    break;
                 default:
                     throw new AssertionError("no case for [" + operation.opType() + "]");
             }
         }
-
     }
 
     public static class Source {
@@ -1156,7 +1207,241 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
 
     }
 
-    public static class Index implements Operation {
+    public interface TransactionMember {
+        Location getTransactionId();
+    }
+
+    abstract static class TransactionBase implements Operation {
+        private final long seqNo;
+
+        private TransactionBase(final StreamInput in) throws IOException {
+            in.readVInt(); // SERIALIZATION_FORMAT
+            this.seqNo = in.readLong();
+        }
+
+        protected void write(final StreamOutput out) throws IOException {
+            out.writeVInt(1);
+            out.writeLong(seqNo);
+        }
+
+        TransactionBase(Long seqNo) {
+            this.seqNo = seqNo;
+        }
+
+        @Override
+        public long estimateSize() {
+            return Long.BYTES;
+        }
+
+        @Override
+        public Source getSource() {
+            throw new UnsupportedOperationException("source does not exist for a no-op");
+        }
+
+        @Override
+        public long seqNo() {
+            return seqNo;
+        }
+
+        @Override
+        public long primaryTerm() {
+            return 0;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            TransactionBase tb = (TransactionBase) o;
+            return seqNo == tb.seqNo;
+        }
+
+        @Override
+        public int hashCode() {
+            return (int)seqNo;
+        }
+
+        @Override
+        public String toString() {
+            return "{" + "seqNo='" + seqNo + '}';
+        }
+    }
+
+    public static class TxStart extends TransactionBase {
+        private final String id;
+
+        private TxStart(final StreamInput in) throws IOException {
+            super(in);
+            this.id = in.readString();
+        }
+
+        public TxStart(String id, long seqNo) {
+            super(seqNo);
+            this.id = id;
+        }
+
+        protected void write(final StreamOutput out) throws IOException {
+            super.write(out);
+            out.writeString(id);
+        }
+
+        @Override
+        public Type opType() {
+            return Type.TX_START;
+        }
+
+        @Override
+        public String toString() {
+            return "TxStart" + super.toString() + "[id=" + this.id + "]";
+        }
+    }
+
+    abstract static class WithTransaction extends TransactionBase implements TransactionMember {
+        public final long generation;
+        public final long translogLocation;
+        public final int size;
+
+        private WithTransaction(final StreamInput in) throws IOException {
+            super(in);
+            this.translogLocation = in.readLong();
+            this.generation = in.readLong();
+            this.size = in.readInt();
+        }
+
+        WithTransaction(long seqNo, long translogLocation, long generation, int size) {
+            super(seqNo);
+            this.translogLocation = translogLocation;
+            this.generation = generation;
+            this.size = size;
+        }
+
+        protected void write(final StreamOutput out) throws IOException {
+            super.write(out);
+            out.writeLong(translogLocation);
+            out.writeLong(generation);
+            out.writeInt(size);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            return super.equals(o) &&
+                ((WithTransaction) o).translogLocation == this.translogLocation &&
+                ((WithTransaction) o).generation == this.generation &&
+                ((WithTransaction) o).size == this.size;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = super.hashCode();
+            result = 31 * result + Long.hashCode(translogLocation);
+            result = 31 * result + Long.hashCode(generation);
+            result = 31 * result + Long.hashCode(size);
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            return super.toString() + "[tx_id = " + translogLocation + "]";
+        }
+
+        public Location getTransactionId() {
+            return new Location(generation, translogLocation, size);
+        }
+    }
+
+    public static class TxPrepare extends WithTransaction {
+        private TxPrepare(final StreamInput in) throws IOException {
+            super(in);
+        }
+
+        public TxPrepare(long seqNo, Location prevLoc) {
+            super(seqNo, prevLoc.translogLocation, prevLoc.generation, prevLoc.size);
+        }
+
+        @Override
+        public Type opType() {
+            return Type.TX_PREPARE;
+        }
+
+        @Override
+        public String toString() {
+            return "TxPrepare" + super.toString();
+        }
+    }
+
+    public static class TxCommit extends WithTransaction {
+        private TxCommit(final StreamInput in) throws IOException {
+            super(in);
+        }
+
+        public TxCommit(long seqNo, Location prevLoc) {
+            super(seqNo, prevLoc.translogLocation, prevLoc.generation, prevLoc.size);
+        }
+
+        @Override
+        public Type opType() {
+            return Type.TX_COMMIT;
+        }
+
+        @Override
+        public String toString() {
+            return "TxCommit" + super.toString();
+        }
+    }
+
+    public static class TxRollback extends WithTransaction {
+        private TxRollback(final StreamInput in) throws IOException {
+            super(in);
+        }
+
+        public TxRollback(long seqNo, Location prevLoc) {
+            super(seqNo, prevLoc.translogLocation, prevLoc.generation, prevLoc.size);
+        }
+
+        @Override
+        public Type opType() {
+            return Type.TX_ROLLBACK;
+        }
+
+        @Override
+        public String toString() {
+            return "TxRollback" + super.toString();
+        }
+    }
+
+    public static class TxClose extends WithTransaction {
+        private TxClose(final StreamInput in) throws IOException {
+            super(in);
+        }
+
+        public TxClose(long seqNo, Location prevLoc) {
+            super(seqNo, prevLoc.translogLocation, prevLoc.generation, prevLoc.size);
+        }
+
+        @Override
+        public Type opType() {
+            return Type.TX_CLOSE;
+        }
+
+        @Override
+        public String toString() {
+            return "TxClose" + super.toString();
+        }
+    }
+
+    public static class Index implements Operation, TransactionMember {
 
         public static final int FORMAT_NO_PARENT = 9; // since 7.0
         public static final int FORMAT_NO_VERSION_TYPE = FORMAT_NO_PARENT + 1;
@@ -1170,6 +1455,9 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
         private final long version;
         private final BytesReference source;
         private final String routing;
+        private final long translogLocation;
+        private final long txGeneration;
+        private final int txSize;
 
         private Index(final StreamInput in) throws IOException {
             final int format = in.readVInt(); // SERIALIZATION_FORMAT
@@ -1191,6 +1479,9 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
             this.autoGeneratedIdTimestamp = in.readLong();
             seqNo = in.readLong();
             primaryTerm = in.readLong();
+            translogLocation = in.readLong();
+            txGeneration = in.readLong();
+            txSize = in.readInt();
         }
 
         public Index(Engine.Index index, Engine.IndexResult indexResult) {
@@ -1201,13 +1492,30 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
             this.primaryTerm = index.primaryTerm();
             this.version = indexResult.getVersion();
             this.autoGeneratedIdTimestamp = index.getAutoGeneratedIdTimestamp();
+            Location loc = index.getTransactionId();
+            this.translogLocation = loc.translogLocation;
+            this.txGeneration = loc.generation;
+            this.txSize = loc.size;
         }
 
         public Index(String id, long seqNo, long primaryTerm, byte[] source) {
-            this(id, seqNo, primaryTerm, Versions.MATCH_ANY, source, null, -1);
+            this(id, seqNo, primaryTerm, Versions.MATCH_ANY, source, null, -1, Location.NO_LOCATION);
         }
 
         public Index(String id, long seqNo, long primaryTerm, long version, byte[] source, String routing, long autoGeneratedIdTimestamp) {
+            this(id, seqNo, primaryTerm, version, source, routing, autoGeneratedIdTimestamp, Location.NO_LOCATION);
+        }
+
+        public Index(
+            String id,
+            long seqNo,
+            long primaryTerm,
+            long version,
+            byte[] source,
+            String routing,
+            long autoGeneratedIdTimestamp,
+            Translog.Location transactionId
+        ) {
             this.id = id;
             this.source = new BytesArray(source);
             this.seqNo = seqNo;
@@ -1215,6 +1523,9 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
             this.version = version;
             this.routing = routing;
             this.autoGeneratedIdTimestamp = autoGeneratedIdTimestamp;
+            this.translogLocation = transactionId.translogLocation;
+            this.txGeneration = transactionId.generation;
+            this.txSize = transactionId.size;
         }
 
         @Override
@@ -1224,10 +1535,11 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
 
         @Override
         public long estimateSize() {
-            return (2 * id.length()) + source.length() + (routing != null ? 2 * routing.length() : 0) + (4 * Long.BYTES); // timestamp,
+            return (2 * id.length()) + source.length() + (routing != null ? 2 * routing.length() : 0) + (7 * Long.BYTES); // timestamp,
                                                                                                                           // seq_no,
                                                                                                                           // primary_term,
-                                                                                                                          // and version
+                                                                                                                          // version
+                                                                                                                          // transactionId
         }
 
         public String id() {
@@ -1280,6 +1592,9 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
             out.writeLong(autoGeneratedIdTimestamp);
             out.writeLong(seqNo);
             out.writeLong(primaryTerm);
+            out.writeLong(translogLocation);
+            out.writeLong(txGeneration);
+            out.writeInt(txSize);
         }
 
         @Override
@@ -1298,6 +1613,8 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
                 || primaryTerm != index.primaryTerm
                 || id.equals(index.id) == false
                 || autoGeneratedIdTimestamp != index.autoGeneratedIdTimestamp
+                || translogLocation != index.translogLocation
+                || txGeneration != index.txGeneration
                 || source.equals(index.source) == false) {
                 return false;
             }
@@ -1310,6 +1627,8 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
             result = 31 * result + Long.hashCode(seqNo);
             result = 31 * result + Long.hashCode(primaryTerm);
             result = 31 * result + Long.hashCode(version);
+            result = 31 * result + Long.hashCode(translogLocation);
+            result = 31 * result + Long.hashCode(txGeneration);
             result = 31 * result + source.hashCode();
             result = 31 * result + (routing != null ? routing.hashCode() : 0);
             result = 31 * result + Long.hashCode(autoGeneratedIdTimestamp);
@@ -1330,6 +1649,8 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
                 + version
                 + ", autoGeneratedIdTimestamp="
                 + autoGeneratedIdTimestamp
+                + ", transactionId="
+                + translogLocation
                 + '}';
         }
 
@@ -1337,9 +1658,12 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
             return autoGeneratedIdTimestamp;
         }
 
+        public Location getTransactionId() {
+            return new Location(txGeneration, translogLocation, txSize);
+        }
     }
 
-    public static class Delete implements Operation {
+    public static class Delete implements Operation, TransactionMember {
 
         private static final int FORMAT_6_0 = 4; // 6.0 - *
         public static final int FORMAT_NO_PARENT = FORMAT_6_0 + 1; // since 7.0
@@ -1351,6 +1675,9 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
         private final long seqNo;
         private final long primaryTerm;
         private final long version;
+        private final long translogLocation;
+        private final long txGeneration;
+        private final int txSize;
 
         private Delete(final StreamInput in) throws IOException {
             final int format = in.readVInt();// SERIALIZATION_FORMAT
@@ -1371,22 +1698,32 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
             }
             seqNo = in.readLong();
             primaryTerm = in.readLong();
+            translogLocation = in.readLong();
+            txGeneration = in.readLong();
+            txSize = in.readInt();
         }
 
         public Delete(Engine.Delete delete, Engine.DeleteResult deleteResult) {
-            this(delete.id(), deleteResult.getSeqNo(), delete.primaryTerm(), deleteResult.getVersion());
+            this(delete.id(), deleteResult.getSeqNo(), delete.primaryTerm(), deleteResult.getVersion(), delete.getTransactionId());
         }
 
         /** utility for testing */
         public Delete(String id, long seqNo, long primaryTerm) {
-            this(id, seqNo, primaryTerm, Versions.MATCH_ANY);
+            this(id, seqNo, primaryTerm, Versions.MATCH_ANY, Location.NO_LOCATION);
         }
 
         public Delete(String id, long seqNo, long primaryTerm, long version) {
+            this(id, seqNo, primaryTerm, version, Location.NO_LOCATION);
+        }
+
+        public Delete(String id, long seqNo, long primaryTerm, long version, Location transactionId) {
             this.id = Objects.requireNonNull(id);
             this.seqNo = seqNo;
             this.primaryTerm = primaryTerm;
             this.version = version;
+            this.translogLocation = transactionId.translogLocation;
+            this.txGeneration = transactionId.generation;
+            this.txSize = transactionId.size;
         }
 
         @Override
@@ -1396,7 +1733,7 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
 
         @Override
         public long estimateSize() {
-            return (2 * id.length()) + (3 * Long.BYTES); // seq_no, primary_term, and version;
+            return (2 * id.length()) + (6 * Long.BYTES); // seq_no, primary_term, v1ersion, transactionId;
         }
 
         public String id() {
@@ -1415,6 +1752,10 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
 
         public long version() {
             return this.version;
+        }
+
+        public Location getTransactionId() {
+            return new Location(txGeneration, translogLocation, txSize);
         }
 
         @Override
@@ -1439,6 +1780,9 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
             }
             out.writeLong(seqNo);
             out.writeLong(primaryTerm);
+            out.writeLong(translogLocation);
+            out.writeLong(txGeneration);
+            out.writeInt(txSize);
         }
 
         @Override
@@ -1452,7 +1796,12 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
 
             Delete delete = (Delete) o;
 
-            return id.equals(delete.id) && seqNo == delete.seqNo && primaryTerm == delete.primaryTerm && version == delete.version;
+            return id.equals(delete.id)
+                && seqNo == delete.seqNo
+                && primaryTerm == delete.primaryTerm
+                && version == delete.version
+                && translogLocation == delete.translogLocation
+                && txGeneration == delete.txGeneration;
         }
 
         @Override
@@ -1461,12 +1810,25 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
             result += 31 * Long.hashCode(seqNo);
             result = 31 * result + Long.hashCode(primaryTerm);
             result = 31 * result + Long.hashCode(version);
+            result = 31 * result + Long.hashCode(translogLocation);
+            result = 31 * result + Long.hashCode(txGeneration);
             return result;
         }
 
         @Override
         public String toString() {
-            return "Delete{" + "id='" + id + "', seqNo=" + seqNo + ", primaryTerm=" + primaryTerm + ", version=" + version + '}';
+            return "Delete{"
+                + "id='"
+                + id
+                + "', seqNo="
+                + seqNo
+                + ", primaryTerm="
+                + primaryTerm
+                + ", version="
+                + version
+                + ", transactionId="
+                + translogLocation
+                + '}';
         }
     }
 

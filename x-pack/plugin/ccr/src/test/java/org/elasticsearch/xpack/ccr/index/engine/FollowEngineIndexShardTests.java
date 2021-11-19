@@ -63,7 +63,8 @@ public class FollowEngineIndexShardTests extends IndexShardTestCase {
                 1,
                 IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
                 false,
-                sourceToParse
+                sourceToParse,
+                IndexShard.NO_TRANSACTION_ID
             );
         }
         long seqNoBeforeGap = seqNo;
@@ -75,7 +76,8 @@ public class FollowEngineIndexShardTests extends IndexShardTestCase {
             1,
             IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
             false,
-            sourceToParse
+            sourceToParse,
+            IndexShard.NO_TRANSACTION_ID
         );
 
         // promote the replica to primary:

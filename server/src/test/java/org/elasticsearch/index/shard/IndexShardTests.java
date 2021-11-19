@@ -2131,7 +2131,7 @@ public class IndexShardTests extends IndexShardTestCase {
         final IndexShard shard = newStartedShard(false);
         long primaryTerm = shard.getOperationPrimaryTerm();
         shard.advanceMaxSeqNoOfUpdatesOrDeletes(1); // manually advance msu for this delete
-        shard.applyDeleteOperationOnReplica(1, primaryTerm, 2, "id");
+        shard.applyDeleteOperationOnReplica(1, primaryTerm, 2, "id", IndexShard.NO_TRANSACTION_ID);
         shard.getEngine().rollTranslogGeneration(); // isolate the delete in it's own generation
         shard.applyIndexOperationOnReplica(
             0,
@@ -2139,7 +2139,8 @@ public class IndexShardTests extends IndexShardTestCase {
             1,
             IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
             false,
-            new SourceToParse("id", new BytesArray("{}"), XContentType.JSON)
+            new SourceToParse("id", new BytesArray("{}"), XContentType.JSON),
+            IndexShard.NO_TRANSACTION_ID
         );
         shard.applyIndexOperationOnReplica(
             3,
@@ -2147,7 +2148,8 @@ public class IndexShardTests extends IndexShardTestCase {
             3,
             IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
             false,
-            new SourceToParse("id-3", new BytesArray("{}"), XContentType.JSON)
+            new SourceToParse("id-3", new BytesArray("{}"), XContentType.JSON),
+            IndexShard.NO_TRANSACTION_ID
         );
         // Flushing a new commit with local checkpoint=1 allows to skip the translog gen #1 in recovery.
         shard.flush(new FlushRequest().force(true).waitIfOngoing(true));
@@ -2157,7 +2159,8 @@ public class IndexShardTests extends IndexShardTestCase {
             3,
             IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
             false,
-            new SourceToParse("id-2", new BytesArray("{}"), XContentType.JSON)
+            new SourceToParse("id-2", new BytesArray("{}"), XContentType.JSON),
+            IndexShard.NO_TRANSACTION_ID
         );
         shard.applyIndexOperationOnReplica(
             5,
@@ -2165,7 +2168,8 @@ public class IndexShardTests extends IndexShardTestCase {
             1,
             IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
             false,
-            new SourceToParse("id-5", new BytesArray("{}"), XContentType.JSON)
+            new SourceToParse("id-5", new BytesArray("{}"), XContentType.JSON),
+            IndexShard.NO_TRANSACTION_ID
         );
         shard.sync(); // advance local checkpoint
 
@@ -2312,7 +2316,8 @@ public class IndexShardTests extends IndexShardTestCase {
             1,
             IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
             false,
-            sourceToParse
+            sourceToParse,
+            IndexShard.NO_TRANSACTION_ID
         );
 
         final ShardRouting primaryShardRouting = shard.routingEntry();
@@ -2439,7 +2444,8 @@ public class IndexShardTests extends IndexShardTestCase {
             1,
             IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
             false,
-            new SourceToParse("doc-0", new BytesArray("{}"), XContentType.JSON)
+            new SourceToParse("doc-0", new BytesArray("{}"), XContentType.JSON),
+            IndexShard.NO_TRANSACTION_ID
         );
         flushShard(shard);
         shard.updateGlobalCheckpointOnReplica(0, "test"); // stick the global checkpoint here.
@@ -2449,7 +2455,8 @@ public class IndexShardTests extends IndexShardTestCase {
             1,
             IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
             false,
-            new SourceToParse("doc-1", new BytesArray("{}"), XContentType.JSON)
+            new SourceToParse("doc-1", new BytesArray("{}"), XContentType.JSON),
+            IndexShard.NO_TRANSACTION_ID
         );
         flushShard(shard);
         assertThat(getShardDocUIDs(shard), containsInAnyOrder("doc-0", "doc-1"));
@@ -2461,7 +2468,8 @@ public class IndexShardTests extends IndexShardTestCase {
             1,
             IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
             false,
-            new SourceToParse("doc-2", new BytesArray("{}"), XContentType.JSON)
+            new SourceToParse("doc-2", new BytesArray("{}"), XContentType.JSON),
+            IndexShard.NO_TRANSACTION_ID
         );
         flushShard(shard);
         assertThat(getShardDocUIDs(shard), containsInAnyOrder("doc-0", "doc-1", "doc-2"));
@@ -2846,7 +2854,8 @@ public class IndexShardTests extends IndexShardTestCase {
                         1,
                         "{\"foo\" : \"bar\"}".getBytes(Charset.forName("UTF-8")),
                         null,
-                        -1
+                        -1,
+                        IndexShard.NO_TRANSACTION_ID
                     )
                 );
             } else {
@@ -2859,7 +2868,8 @@ public class IndexShardTests extends IndexShardTestCase {
                         1,
                         "{\"foo\" : \"bar}".getBytes(Charset.forName("UTF-8")),
                         null,
-                        -1
+                        -1,
+                        IndexShard.NO_TRANSACTION_ID
                     )
                 );
                 numCorruptEntries++;
@@ -3676,7 +3686,8 @@ public class IndexShardTests extends IndexShardTestCase {
                     1,
                     IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
                     false,
-                    sourceToParse
+                    sourceToParse,
+                    IndexShard.NO_TRANSACTION_ID
                 );
                 if (gap == false && i == localCheckpoint + 1) {
                     localCheckpoint++;
@@ -4197,7 +4208,8 @@ public class IndexShardTests extends IndexShardTestCase {
                         1,
                         "{\"foo\" : \"bar\"}".getBytes(Charset.forName("UTF-8")),
                         null,
-                        -1
+                        -1,
+                        IndexShard.NO_TRANSACTION_ID
                     )
                 ),
             // entries with corrupted source
@@ -4210,7 +4222,8 @@ public class IndexShardTests extends IndexShardTestCase {
                         1,
                         "{\"foo\" : \"bar}".getBytes(Charset.forName("UTF-8")),
                         null,
-                        -1
+                        -1,
+                        IndexShard.NO_TRANSACTION_ID
                     )
                 )
         ).collect(Collectors.toList());
@@ -4364,7 +4377,8 @@ public class IndexShardTests extends IndexShardTestCase {
                 1,
                 IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
                 false,
-                new SourceToParse(Long.toString(i), new BytesArray("{}"), XContentType.JSON)
+                new SourceToParse(Long.toString(i), new BytesArray("{}"), XContentType.JSON),
+                IndexShard.NO_TRANSACTION_ID
             );
             shard.updateGlobalCheckpointOnReplica(shard.getLocalCheckpoint(), "test");
             if (randomInt(100) < 10) {

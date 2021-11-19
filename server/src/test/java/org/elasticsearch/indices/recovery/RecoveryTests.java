@@ -137,7 +137,7 @@ public class RecoveryTests extends ESIndexLevelReplicationTestCase {
 
             // delete #1
             orgReplica.advanceMaxSeqNoOfUpdatesOrDeletes(1); // manually advance msu for this delete
-            orgReplica.applyDeleteOperationOnReplica(1, primaryTerm, 2, "id");
+            orgReplica.applyDeleteOperationOnReplica(1, primaryTerm, 2, "id", IndexShard.NO_TRANSACTION_ID);
             orgReplica.flush(new FlushRequest().force(true)); // isolate delete#1 in its own translog generation and lucene segment
             // index #0
             orgReplica.applyIndexOperationOnReplica(
@@ -146,7 +146,8 @@ public class RecoveryTests extends ESIndexLevelReplicationTestCase {
                 1,
                 IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
                 false,
-                new SourceToParse("id", new BytesArray("{}"), XContentType.JSON)
+                new SourceToParse("id", new BytesArray("{}"), XContentType.JSON),
+                IndexShard.NO_TRANSACTION_ID
             );
             // index #3
             orgReplica.applyIndexOperationOnReplica(
@@ -155,7 +156,8 @@ public class RecoveryTests extends ESIndexLevelReplicationTestCase {
                 1,
                 IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
                 false,
-                new SourceToParse("id-3", new BytesArray("{}"), XContentType.JSON)
+                new SourceToParse("id-3", new BytesArray("{}"), XContentType.JSON),
+                IndexShard.NO_TRANSACTION_ID
             );
             // Flushing a new commit with local checkpoint=1 allows to delete the translog gen #1.
             orgReplica.flush(new FlushRequest().force(true).waitIfOngoing(true));
@@ -166,7 +168,8 @@ public class RecoveryTests extends ESIndexLevelReplicationTestCase {
                 1,
                 IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
                 false,
-                new SourceToParse("id-2", new BytesArray("{}"), XContentType.JSON)
+                new SourceToParse("id-2", new BytesArray("{}"), XContentType.JSON),
+                IndexShard.NO_TRANSACTION_ID
             );
             orgReplica.sync(); // advance local checkpoint
             orgReplica.updateGlobalCheckpointOnReplica(3L, "test");
@@ -177,7 +180,8 @@ public class RecoveryTests extends ESIndexLevelReplicationTestCase {
                 1,
                 IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
                 false,
-                new SourceToParse("id-5", new BytesArray("{}"), XContentType.JSON)
+                new SourceToParse("id-5", new BytesArray("{}"), XContentType.JSON),
+                IndexShard.NO_TRANSACTION_ID
             );
 
             if (randomBoolean()) {
@@ -299,7 +303,8 @@ public class RecoveryTests extends ESIndexLevelReplicationTestCase {
                 SequenceNumbers.UNASSIGNED_SEQ_NO,
                 0,
                 IndexRequest.UNSET_AUTO_GENERATED_TIMESTAMP,
-                false
+                false,
+                IndexShard.NO_TRANSACTION_ID
             );
             assertThat(result.getResultType(), equalTo(Engine.Result.Type.SUCCESS));
             if (randomBoolean()) {
