@@ -189,11 +189,10 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
 
             @Override
             protected void doRun() throws Exception {
-                String uid = UUIDs.base64UUID();
                 TxID txID1 = TxID.create();
                 Translog.Location[] transactionId = new Translog.Location[1];
                 try {
-                    transactionId[0] = primary.startTransaction(uid);
+                    transactionId[0] = primary.startTransaction(txID1.id());
                     transactionRegistry.registerTransaction(txID1, Set.of(transactionId[0].id()));
 
                     while (context.hasMoreOperationsToExecute()) {

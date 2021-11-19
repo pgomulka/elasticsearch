@@ -162,6 +162,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -4140,7 +4141,7 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
     public Map<TxID, Boolean> prepareCommit(TxID txID) {
         // todo: lookup in transaction table
         transactionRegistry.prepare(txID);
-        return (Map<TxID, Boolean>)Collections.EMPTY_MAP;
+        return new HashMap<TxID, Boolean>();
     }
 
 
