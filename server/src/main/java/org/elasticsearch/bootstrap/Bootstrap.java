@@ -302,6 +302,7 @@ final class Bootstrap {
         final Runnable sysErrorCloser = getSysErrorCloser();
 
         LogConfigurator.setNodeName(Node.NODE_NAME_SETTING.get(environment.settings()));
+        LogConfigurator.setESProductDeprecationLogEnabled(environment.settings());
         try {
             LogConfigurator.configure(environment);
         } catch (IOException e) {

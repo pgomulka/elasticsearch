@@ -80,3 +80,4 @@
 # Allow wildcard deletion of indices:
 #
 #action.destructive_requires_name: false
+cluster.deprecation_indexing.es_product.enabled: true

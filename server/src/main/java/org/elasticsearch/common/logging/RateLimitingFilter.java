@@ -19,6 +19,7 @@ import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
 import org.apache.logging.log4j.core.filter.AbstractFilter;
 import org.apache.logging.log4j.message.Message;
+import org.elasticsearch.common.settings.Setting;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -41,6 +42,7 @@ import static org.elasticsearch.common.logging.DeprecatedMessage.X_OPAQUE_ID_FIE
 @Plugin(name = "RateLimitingFilter", category = Node.CATEGORY, elementType = Filter.ELEMENT_TYPE)
 public class RateLimitingFilter extends AbstractFilter {
 
+    private final boolean esSProductDeprecationLogEnabled;
     private volatile boolean useXOpaqueId = true;
 
     private final Set<String> lruKeyCache = Collections.newSetFromMap(Collections.synchronizedMap(new LinkedHashMap<>() {
@@ -56,6 +58,8 @@ public class RateLimitingFilter extends AbstractFilter {
 
     public RateLimitingFilter(Result onMatch, Result onMismatch) {
         super(onMatch, onMismatch);
+        esSProductDeprecationLogEnabled = LogConfigurator.esSProductDeprecationLogEnabled;
+        System.out.println("hehe " +esSProductDeprecationLogEnabled);
     }
 
     /**

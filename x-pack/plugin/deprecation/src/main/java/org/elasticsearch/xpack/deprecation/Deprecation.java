@@ -46,6 +46,11 @@ import static org.elasticsearch.xpack.deprecation.DeprecationChecks.SKIP_DEPRECA
  * The plugin class for the Deprecation API
  */
 public class Deprecation extends Plugin implements ActionPlugin {
+    public static final Setting<Boolean> ES_PRODUCT_ENABLED = Setting.boolSetting(
+        "cluster.deprecation_indexing.es_product.enabled",
+        false,
+        Setting.Property.Final
+    );
 
     public static final Setting<Boolean> WRITE_DEPRECATION_LOGS_TO_INDEX = Setting.boolSetting(
         "cluster.deprecation_indexing.enabled",

@@ -30,6 +30,7 @@ import org.apache.logging.log4j.status.StatusLogger;
 import org.elasticsearch.cli.ExitCodes;
 import org.elasticsearch.cli.UserException;
 import org.elasticsearch.cluster.ClusterName;
+import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.core.SuppressForbidden;
 import org.elasticsearch.env.Environment;
@@ -57,6 +58,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.StreamSupport;
 
 public class LogConfigurator {
+    public static final Setting<Boolean> ES_PRODUCT_ENABLED = Setting.boolSetting(
+        "cluster.deprecation_indexing.es_product.enabled",
+        false,
+        Setting.Property.NodeScope,
+        Setting.Property.Final
+    );
+    public static boolean esSProductDeprecationLogEnabled;
+
 
     /*
      * We want to detect situations where we touch logging before the configuration is loaded. If we do this, Log4j will status log an error
@@ -292,4 +301,7 @@ public class LogConfigurator {
         System.setProperty("es.logs.node_name", Node.NODE_NAME_SETTING.get(settings));
     }
 
+    public static void setESProductDeprecationLogEnabled(Settings settings) {
+        esSProductDeprecationLogEnabled = ES_PRODUCT_ENABLED.get(settings);
+    }
 }

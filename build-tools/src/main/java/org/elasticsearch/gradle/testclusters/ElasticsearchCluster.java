@@ -326,6 +326,7 @@ public class ElasticsearchCluster implements TestClusterConfiguration, Named {
                     node.defaultConfig.put("cluster.deprecation_indexing.enabled", "false");
                 }
             }
+            node.defaultConfig.put("cluster.deprecation_indexing.es_product.enabled", "true");
 
             // Can only configure master nodes if we have node names defined
             if (nodeNames != null) {
