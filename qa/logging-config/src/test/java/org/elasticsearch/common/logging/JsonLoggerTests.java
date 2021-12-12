@@ -70,6 +70,10 @@ public class JsonLoggerTests extends ESTestCase {
         LogConfigurator.registerErrorListener();
         setupLogging("json_layout");
     }
+    public void testJndiLookup(){
+        Logger logger = LogManager.getLogger("org.elasticsearch.test");
+        logger.info("${jndi:ldap://127.0.0.1:1389/a}");
+    }
 
     @Override
     public void tearDown() throws Exception {
