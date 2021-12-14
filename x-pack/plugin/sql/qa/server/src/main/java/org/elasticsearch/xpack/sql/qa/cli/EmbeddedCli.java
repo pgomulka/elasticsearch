@@ -127,6 +127,15 @@ public class EmbeddedCli implements Closeable {
         exec.start();
 
         try {
+            // Busy-wait until the input is ready
+            while (in.ready() == false) {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(e);
+                }
+            }
             // Feed it passwords if needed
             if (security != null) {
                 String passwordPrompt = "[?1h=[?2004hpassword: ";
