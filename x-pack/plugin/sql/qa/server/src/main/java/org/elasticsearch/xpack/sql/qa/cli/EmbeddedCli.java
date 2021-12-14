@@ -215,7 +215,7 @@ public class EmbeddedCli implements Closeable {
             out.flush();
             List<String> nonQuit = new ArrayList<>();
             String line;
-            while (true) {
+            while (in.ready()) {
                 line = readLine();
                 if (line == null) {
                     fail("got EOF before [Bye!]. Extras " + nonQuit);
@@ -297,6 +297,9 @@ public class EmbeddedCli implements Closeable {
          *
          * `null` means EOF so we should just pass that back through.
          */
+        if (in.ready() == false) {
+            return "";
+        }
         String line = in.readLine();
         line = line == null ? null : line.replace("\u001B", "");
         logger.info("in : {}", line);
@@ -305,8 +308,8 @@ public class EmbeddedCli implements Closeable {
 
     private String readUntil(Predicate<String> end) throws IOException {
         StringBuilder b = new StringBuilder();
-        String result;
-        while (true) {
+        String result = "";
+        while (in.ready()) {
             int c = in.read();
             if (c == -1) {
                 throw new IOException("got eof before end");
