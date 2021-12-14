@@ -127,15 +127,6 @@ public class EmbeddedCli implements Closeable {
         exec.start();
 
         try {
-            // Busy-wait until the input is ready
-            while (in.ready() == false) {
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new IllegalStateException(e);
-                }
-            }
             // Feed it passwords if needed
             if (security != null) {
                 String passwordPrompt = "[?1h=[?2004hpassword: ";
@@ -224,7 +215,7 @@ public class EmbeddedCli implements Closeable {
             out.flush();
             List<String> nonQuit = new ArrayList<>();
             String line;
-            while (in.ready()) {
+            while (true) {
                 line = readLine();
                 if (line == null) {
                     fail("got EOF before [Bye!]. Extras " + nonQuit);
@@ -306,8 +297,14 @@ public class EmbeddedCli implements Closeable {
          *
          * `null` means EOF so we should just pass that back through.
          */
-        if (in.ready() == false) {
-            return "";
+        // Busy-wait until the input is ready
+        while (in.ready() == false) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(e);
+            }
         }
         String line = in.readLine();
         line = line == null ? null : line.replace("\u001B", "");
@@ -316,9 +313,18 @@ public class EmbeddedCli implements Closeable {
     }
 
     private String readUntil(Predicate<String> end) throws IOException {
+        // Busy-wait until the input is ready
+        while (in.ready() == false) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(e);
+            }
+        }
         StringBuilder b = new StringBuilder();
         String result = "";
-        while (in.ready()) {
+        while (true) {
             int c = in.read();
             if (c == -1) {
                 throw new IOException("got eof before end");
