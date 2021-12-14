@@ -11,6 +11,5 @@ apply plugin: 'elasticsearch.standalone-test'
 tasks.named("test").configure {
   systemProperty 'tests.security.manager', 'false'
   systemProperty 'log4j2.formatMsgNoLookups', 'true'
-  systemProperty 'tests.log4j2.formatMsgNoLookups', 'true'
 
 }

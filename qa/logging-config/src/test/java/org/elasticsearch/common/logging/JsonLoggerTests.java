@@ -13,6 +13,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configurator;
+import org.apache.logging.log4j.core.util.Constants;
 import org.elasticsearch.cli.UserException;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
@@ -61,6 +62,7 @@ public class JsonLoggerTests extends ESTestCase {
     @BeforeClass
     public static void initNodeName() {
         assert "false".equals(System.getProperty("tests.security.manager")) : "-Dtests.security.manager=false has to be set";
+        assert Constants.FORMAT_MESSAGES_PATTERN_DISABLE_LOOKUPS : "-Dlog4j2.formatMsgNoLookups=true has to be set";
         JsonLogsTestSetup.init();
     }
 
@@ -69,10 +71,6 @@ public class JsonLoggerTests extends ESTestCase {
         super.setUp();
         LogConfigurator.registerErrorListener();
         setupLogging("json_layout");
-    }
-    public void testJndiLookup(){
-        Logger logger = LogManager.getLogger("org.elasticsearch.test");
-        logger.info("${jndi:ldap://127.0.0.1:1389/a}");
     }
 
     @Override
