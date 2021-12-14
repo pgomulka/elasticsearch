@@ -9,7 +9,6 @@
 package org.elasticsearch.common.cli;
 
 import org.apache.logging.log4j.Level;
-import org.elasticsearch.common.logging.LogConfigurator;
 import org.elasticsearch.common.settings.Settings;
 
 /**
@@ -26,7 +25,9 @@ public final class CommandLoggingConfigurator {
         // initialize default for es.logger.level because we will not read the log4j2.properties
         final String loggerLevel = System.getProperty("es.logger.level", Level.INFO.name());
         final Settings settings = Settings.builder().put("logger.level", loggerLevel).build();
-        LogConfigurator.configureWithoutConfig(settings);
+        // TODO Fails because the CLI command doesn't have permission to call `getClassLoader`
+        // which log4j does in LoaderUtil.getClassLoaders
+        // LogConfigurator.configureWithoutConfig(settings);
     }
 
 }
