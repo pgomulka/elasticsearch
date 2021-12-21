@@ -45,6 +45,7 @@ import org.elasticsearch.cluster.metadata.DataStreamAlias;
 import org.elasticsearch.cluster.metadata.IndexMetadata;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.metadata.Metadata;
+import org.elasticsearch.cluster.metadata.NodesShutdownMetadata;
 import org.elasticsearch.cluster.metadata.RepositoriesMetadata;
 import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.cluster.node.DiscoveryNodes;
@@ -242,6 +243,9 @@ public class SnapshotsService extends AbstractLifecycleComponent implements Clus
         final String repositoryName = request.repository();
         final String snapshotName = indexNameExpressionResolver.resolveDateMathExpression(request.snapshot());
         validate(repositoryName, snapshotName);
+        if(isNodeShutdownInProgress(clusterService.getClusterApplierService().state())){
+            throw new InvalidSnapshotNameException(repositoryName, snapshotName, "must be lowercase");
+        }
         // TODO: create snapshot UUID in CreateSnapshotRequest and make this operation idempotent to cleanly deal with transport layer
         // retries
         final SnapshotId snapshotId = new SnapshotId(snapshotName, UUIDs.randomBase64UUID()); // new UUID for the snapshot
@@ -828,6 +832,14 @@ public class SnapshotsService extends AbstractLifecycleComponent implements Clus
         validate(repositoryName, snapshotName);
     }
 
+    private boolean isNodeShutdownInProgress(ClusterState state) {
+        final NodesShutdownMetadata custom = state.metadata().custom(NodesShutdownMetadata.TYPE);
+        final String localNodeId = state.getNodes().getLocalNodeId();
+        logger.info("hee "+ custom.getAllNodeMetadataMap() + " "+ localNodeId);
+        return custom.getAllNodeMetadataMap().get(localNodeId) != null;
+    }
+
+
     private static void validate(final String repositoryName, final String snapshotName) {
         if (Strings.hasLength(snapshotName) == false) {
             throw new InvalidSnapshotNameException(repositoryName, snapshotName, "cannot be empty");
@@ -854,6 +866,7 @@ public class SnapshotsService extends AbstractLifecycleComponent implements Clus
                 "must not contain the following characters " + Strings.INVALID_FILENAME_CHARS
             );
         }
+
     }
 
     private static ShardGenerations buildGenerations(SnapshotsInProgress.Entry snapshot, Metadata metadata) {
