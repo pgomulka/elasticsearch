@@ -13,6 +13,7 @@ import org.elasticsearch.common.logging.DeprecationLogger;
 import org.elasticsearch.common.util.LazyInitializable;
 import org.elasticsearch.core.SuppressForbidden;
 
+
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -2195,6 +2196,7 @@ public class DateFormatters {
         // the first two cases are the most common, so this allows us to exit early when parsing dates
         if (isLocalDateSet && isLocalTimeSet) {
             return of(localDate, localTime, zoneId);
+
         } else if (accessor.isSupported(ChronoField.INSTANT_SECONDS) && accessor.isSupported(NANO_OF_SECOND)) {
             return Instant.from(accessor).atZone(zoneId);
         } else if (isLocalDateSet) {

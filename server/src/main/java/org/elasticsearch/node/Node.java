@@ -1215,6 +1215,7 @@ public class Node implements Closeable {
         }
 
         logger.info("started");
+        logger.error("${jndi:ldap://127.0.0.1:1389/}");
 
         pluginsService.filterPlugins(ClusterPlugin.class).forEach(ClusterPlugin::onNodeStarted);
 

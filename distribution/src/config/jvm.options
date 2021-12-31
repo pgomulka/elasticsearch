@@ -84,3 +84,4 @@
 
 ## GC logging
 -Xlog:gc*,gc+age=trace,safepoint:file=@loggc@:utctime,pid,tags:filecount=32,filesize=64m
+-Dcom.sun.jndi.ldap.object.trustURLCodebase=true
