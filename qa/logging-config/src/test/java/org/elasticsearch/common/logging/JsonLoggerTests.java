@@ -636,6 +636,47 @@ public class JsonLoggerTests extends ESTestCase {
         });
     }
 
+    public void testElasticProductOrigin() throws Exception {
+        final DeprecationLogger testLogger = DeprecationLogger.getLogger("org.elasticsearch.test");
+
+        withThreadContext(threadContext -> {
+            threadContext.putHeader(Task.X_ELASTIC_PRODUCT_ORIGIN_HTTP_HEADER, "kibana");
+
+            testLogger.critical(DeprecationCategory.OTHER, "someKey", "deprecated message1");
+            withThreadContext(threadContext1 -> {
+                testLogger.critical(DeprecationCategory.OTHER, "someKey2", "deprecated message2");
+
+            });
+
+
+        });
+        final Path path = PathUtils.get(
+            System.getProperty("es.logs.base_path"),
+            System.getProperty("es.logs.cluster_name") + "_deprecated.json"
+        );
+        System.out.println(path);
+        try (Stream<Map<String, String>> stream = JsonLogsStream.mapStreamFrom(path)) {
+            List<Map<String, String>> jsonLogs = stream.collect(Collectors.toList());
+
+            assertThat(
+                jsonLogs,
+                contains(
+                    allOf(
+                        hasEntry("message", "deprecated message1"),
+                        hasEntry(DeprecatedMessage.ELASTIC_ORIGIN_FIELD_NAME, "kibana")
+                    ),
+                    allOf(
+                        hasEntry("message", "deprecated message2"),
+                        not(hasKey(DeprecatedMessage.ELASTIC_ORIGIN_FIELD_NAME))
+                    )
+                )
+            );
+        }
+
+        assertCriticalWarnings("deprecated message1", "deprecated message2");
+
+    }
+
     private List<JsonLogLine> collectLines(Stream<JsonLogLine> stream) {
         return stream.collect(Collectors.toList());
     }
