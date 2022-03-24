@@ -12,8 +12,8 @@ module org.elasticsearch.logging {
     requires org.elasticsearch.xcontent;
     requires log4j2.ecs.layout;
     requires ecs.logging.core;
-    requires org.apache.logging.log4j;
-    requires org.apache.logging.log4j.core;
+//    requires org.apache.logging.log4j;
+//    requires org.apache.logging.log4j.core;
     requires org.hamcrest;
 
     exports org.elasticsearch.logging;

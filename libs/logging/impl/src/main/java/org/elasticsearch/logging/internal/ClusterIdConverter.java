@@ -13,7 +13,6 @@ import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.pattern.ConverterKeys;
 import org.apache.logging.log4j.core.pattern.LogEventPatternConverter;
 import org.apache.logging.log4j.core.pattern.PatternConverter;
-import org.elasticsearch.core.Tuple;
 
 /**
  * Pattern converter to format the cluster_id variable into JSON fields <code>cluster.id</code>.

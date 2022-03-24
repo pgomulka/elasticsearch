@@ -5,14 +5,26 @@
  * in compliance with, at your election, the Elastic License 2.0 or the Server
  * Side Public License, v 1.
  */
+import org.elasticsearch.gradle.transform.UnzipTransform
+import org.gradle.api.internal.artifacts.ArtifactAttributes
 
+import java.util.stream.Collectors
+apply plugin: 'elasticsearch.build'
 apply plugin: 'elasticsearch.publish'
+def isImplAttr = Attribute.of("is.impl", Boolean)
+
+configurations {
+  providerImpl {
+    attributes.attribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, ArtifactTypeDefinition.DIRECTORY_TYPE)
+    attributes.attribute(isImplAttr, true)
+  }
+}
 
 dependencies {
   compileOnly  project(':libs:elasticsearch-x-content')  // TODO: for JsonStringEncoder
   compileOnly  project(':libs:elasticsearch-cli')  // TODO: prob remove this, if just for exception types
-  api "org.apache.logging.log4j:log4j-api:${versions.log4j}" //TODO PG should we change compileOnly to something else?
-  api "org.apache.logging.log4j:log4j-core:${versions.log4j}"
+//  api "org.apache.logging.log4j:log4j-api:${versions.log4j}" //TODO PG should we change compileOnly to something else?
+//  api "org.apache.logging.log4j:log4j-core:${versions.log4j}"
 
   api "co.elastic.logging:log4j2-ecs-layout:${versions.ecsLogging}"
   api "co.elastic.logging:ecs-logging-core:${versions.ecsLogging}"
@@ -39,7 +51,7 @@ dependencies {
     })
   })
 
-  providerImpl project(':libs:elasticsearch-x-content:impl')
+  providerImpl project(':libs:elasticsearch-logging:impl')
 
 }
 
@@ -146,3 +158,24 @@ tasks.named("thirdPartyAudit").configure {
   )
 }
 
+
+File generatedResourcesDir = new File(buildDir, 'generated-resources')
+def generateProviderManifest = tasks.register("generateProviderManifest") {
+  File manifestFile = new File(generatedResourcesDir, "LISTING.TXT")
+  inputs.property('jars', configurations.providerImpl)
+  outputs.file(manifestFile)
+  doLast {
+    manifestFile.parentFile.mkdirs()
+    manifestFile.setText(configurations.providerImpl.files.stream()
+      .map(f -> f.name).collect(Collectors.joining('\n')), 'UTF-8')
+  }
+}
+
+def generateProviderImpl = tasks.register("generateProviderImpl", Copy) {
+  destinationDir = new File(generatedResourcesDir, "impl")
+  into("IMPL-JARS/logging") {
+    from(configurations.providerImpl)
+    from(generateProviderManifest)
+  }
+}
+sourceSets.main.output.dir(generateProviderImpl)

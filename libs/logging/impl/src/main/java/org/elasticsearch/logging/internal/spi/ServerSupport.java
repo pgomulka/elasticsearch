@@ -8,11 +8,12 @@
 
 package org.elasticsearch.logging.internal.spi;
 
-import org.elasticsearch.core.Tuple;
 
 public interface ServerSupport {
 
-    /** Return a tuple, where the first element is the node name, and second is the cluster Id (in string form). */
+    /**
+     * Return a tuple, where the first element is the node name, and second is the cluster Id (in string form).
+     */
     Tuple<String, String> nodeAndClusterId();
 
     // Header Warning support
@@ -31,4 +32,13 @@ public interface ServerSupport {
 
     String getNodeNameSettingValue();
 
+     class Tuple<V1, V2> {
+        private final V1 v1;
+        private final V2 v2;
+
+        public Tuple(V1 v1, V2 v2) {
+            this.v1 = v1;
+            this.v2 = v2;
+        }
+    }
 }
