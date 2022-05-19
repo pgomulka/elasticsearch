@@ -18,6 +18,8 @@ import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 
+import static java.lang.String.format;
+import static java.util.Locale.ROOT;
 import static org.hamcrest.Matchers.arrayContaining;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.nullValue;
@@ -45,7 +47,7 @@ public class LoggersTests extends ESTestCase {
         assertThat(appender.lastParameterizedMessage().getFormattedMessage(), equalTo("a warn message: [long gc]"));
         assertThat(appender.lastParameterizedMessage().getParameters(), arrayContaining("long gc"));
 
-        testLogger.info(() -> new ParameterizedMessage("an info message a=[{}], b=[{}], c=[{}]", 1, 2, 3));
+        testLogger.info(() -> format(ROOT, "an info message a=[%s], b=[%s], c=[%s]", 1, 2, 3));
         assertThat(appender.lastEvent.getLevel(), equalTo(Level.INFO));
         assertThat(appender.lastEvent.getThrown(), nullValue());
         assertThat(appender.lastParameterizedMessage().getFormattedMessage(), equalTo("an info message a=[1], b=[2], c=[3]"));
