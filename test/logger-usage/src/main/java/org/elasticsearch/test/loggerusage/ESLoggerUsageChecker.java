@@ -15,11 +15,13 @@ import org.apache.logging.log4j.util.Supplier;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.IntInsnNode;
+import org.objectweb.asm.tree.InvokeDynamicInsnNode;
 import org.objectweb.asm.tree.LdcInsnNode;
 import org.objectweb.asm.tree.LineNumberNode;
 import org.objectweb.asm.tree.MethodInsnNode;
@@ -39,11 +41,19 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class ESLoggerUsageChecker {
     public static final Type LOGGER_CLASS = Type.getType(Logger.class);
@@ -175,6 +185,8 @@ public class ESLoggerUsageChecker {
         }
     }
 
+    static Set<String> previouslyInvokedLambdas = new HashSet<>();
+
     private static class MethodChecker extends MethodVisitor {
         private final String className;
         private final Consumer<WrongLoggerUsage> wrongUsageCallback;
@@ -220,13 +232,46 @@ public class ESLoggerUsageChecker {
                 if (insn instanceof LineNumberNode lineNumberNode) {
                     lineNumber = lineNumberNode.line;
                 }
-                if (insn.getOpcode() == Opcodes.INVOKEINTERFACE) {
+                if (insn.getOpcode() == Opcodes.INVOKESTATIC) {
+                    MethodInsnNode methodInsn = (MethodInsnNode) insn;
+                    // check for String.format usages inside previously called lambda
+                    if (Type.getObjectType(methodInsn.owner).equals(Type.getType(String.class))
+                        && methodInsn.name.equals("format")
+                        && previouslyInvokedLambdas.contains(methodNode.name)) {
+
+                        previouslyInvokedLambdas.remove(methodNode.name);
+                        Type[] argumentTypes = Type.getArgumentTypes(methodInsn.desc);
+                        int lengthWithoutLocale = argumentTypes.length - 1;
+                        int localeRootOffset = 1;
+                        checkArrayArgs(
+                            methodNode,
+                            logMessageFrames[i],
+                            arraySizeFrames[i],
+                            lineNumber,
+                            methodInsn,
+                            localeRootOffset + 0,
+                            localeRootOffset + 1
+                        );
+
+                    }
+                } else if (insn.getOpcode() == Opcodes.INVOKEINTERFACE) {
                     MethodInsnNode methodInsn = (MethodInsnNode) insn;
                     if (Type.getObjectType(methodInsn.owner).equals(LOGGER_CLASS)) {
                         if (LOGGER_METHODS.contains(methodInsn.name) == false) {
                             continue;
                         }
-
+                        if (methodInsn.desc.equals("(Lorg/apache/logging/log4j/util/Supplier;)V")
+                            || methodInsn.desc.equals("(Lorg/apache/logging/log4j/util/Supplier;Ljava/lang/Throwable;)V")) {
+                            AbstractInsnNode n = insn;
+                            while ((n = n.getPrevious()) != null) {
+                                if (n.getOpcode() == Opcodes.INVOKEDYNAMIC) {
+                                    InvokeDynamicInsnNode invokeDynamicInsnNode = (InvokeDynamicInsnNode) n;
+                                    Handle bsmArg = (Handle) invokeDynamicInsnNode.bsmArgs[1];
+                                    previouslyInvokedLambdas.add(bsmArg.getName());
+                                    break;
+                                }
+                            }
+                        }
                         Type[] argumentTypes = Type.getArgumentTypes(methodInsn.desc);
                         int markerOffset = 0;
                         if (argumentTypes[0].equals(MARKER_CLASS)) {
@@ -530,7 +575,73 @@ public class ESLoggerUsageChecker {
                 count++;
                 i += 1;
             }
+
         }
+        return count;
+    }
+
+    // %[argument_index$][flags][width][.precision][t]conversion
+    private static final String formatSpecifier = "%(\\d+\\$)?([-#+ 0,(\\<]*)?(\\d+)?(\\.\\d+)?([tT])?([a-zA-Z%])";
+
+    private static final Pattern fsPattern = Pattern.compile(formatSpecifier);
+
+    /**
+     * Finds format specifiers in the format string.
+     */
+    private static List<String> parse(String s) {
+        ArrayList<String> al = new ArrayList<>();
+        int i = 0;
+        int max = s.length();
+        Matcher m = fsPattern.matcher(s); // create if needed
+        while (i < max) {
+            int n = s.indexOf('%', i);
+            if (n < 0) {
+                break;
+            }
+            i = n + 1;
+            if (i >= max) {
+                // Trailing %
+                return Collections.emptyList();
+            }
+
+            // We have already parsed a '%' at n, so we either have a
+            // match or the specifier at n is invalid
+            if (m.find(n) && m.start() == n) {
+                i = m.end();
+                al.add(s.substring(n, i));
+            } else {
+                // throw new UnknownFormatConversionException(s+" "+String.valueOf(c));
+                return Collections.emptyList();
+            }
+        }
+        return al;
+    }
+
+    private static int calculateNumberOfPlaceHoldersInStringFormat(String message) {
+        Map<String, Long> collect = parse(message).stream().collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+        collect.remove("%%");
+        collect.remove("%n");
+
+        int count = 0;
+        String pattern = ".*(\\d+)\\$.*";
+        for (Map.Entry<String, Long> pair : collect.entrySet()) {
+            if (pair.getKey().matches(pattern) == false) { // counting %s
+                count += pair.getValue();
+            }
+        }
+        Pattern compile = Pattern.compile(pattern);
+
+        for (Map.Entry<String, Long> pair : collect.entrySet()) { // if we find %5$s that means we should have at least 5 arguments
+            Matcher matcher = compile.matcher(pair.getKey());
+            if (matcher.find()) { // counting %1$s
+                String group = matcher.group(1);
+                Integer argNum = Integer.valueOf(group);
+                if (argNum > count) {
+                    count = argNum;
+                }
+            }
+        }
+
         return count;
     }
 
@@ -622,7 +733,12 @@ public class ESLoggerUsageChecker {
             if (insnNode.getOpcode() == Opcodes.LDC) {
                 Object constant = ((LdcInsnNode) insnNode).cst;
                 if (constant instanceof String s) {
-                    return new PlaceHolderStringBasicValue(calculateNumberOfPlaceHolders(s));
+                    if (((String) constant).contains("{}")) {
+                        return new PlaceHolderStringBasicValue(calculateNumberOfPlaceHolders(s));
+
+                    } else {
+                        return new PlaceHolderStringBasicValue(calculateNumberOfPlaceHoldersInStringFormat(s));
+                    }
                 }
             }
             return super.newOperation(insnNode);
@@ -637,6 +753,7 @@ public class ESLoggerUsageChecker {
             }
             return super.merge(value1, value2);
         }
+
     }
 
     private static final class ArraySizeInterpreter extends BasicInterpreter {

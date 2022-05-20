@@ -11,6 +11,7 @@ import org.apache.http.util.EntityUtils;
 import org.elasticsearch.Version;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.Response;
+import org.elasticsearch.common.SuppressLoggerChecks;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.xpack.test.rest.XPackRestTestConstants;
 
@@ -237,6 +238,7 @@ public class MlTrainedModelsUpgradeIT extends AbstractUpgradeTestCase {
         createIndex(index, Settings.EMPTY, mapping);
     }
 
+    @SuppressLoggerChecks(reason = "combination of {} and %s not implemented")
     void indexData(String sourceIndex, int numTrainingRows) throws IOException {
         List<String> bulkRequests = new ArrayList<>();
         for (int i = 0; i < numTrainingRows; i++) {

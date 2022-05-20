@@ -29,6 +29,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
+import static java.util.Locale.ROOT;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
@@ -115,6 +117,17 @@ public class ESLoggerUsageTests extends ESTestCase {
         assertEquals(5, ParameterizedMessage.class.getConstructors().length);
     }
 
+    public void checkStringFormatPlaceHolders() {
+        logger.info(() -> format(ROOT, "Hello %1$s %1$s", 1.1));
+        logger.info(() -> format(ROOT, "Hello %1$s %2$d", 1.1, 1));
+        logger.info(() -> format(ROOT, "Hello %s ", "x"));
+        logger.info(() -> format(ROOT, "Hello %s %2$s", "x", "1"));
+    }
+
+    public void checkStringFormatOutsideLoggerIsIgnored() {
+        Supplier<String> s = () -> format(ROOT, "Hello %s %2$s", 1.1);
+    }
+
     public void checkArgumentsProvidedInConstructor() {
         logger.debug(new ESLogMessage("message {}", "some-arg").field("x-opaque-id", "some-value"));
     }
@@ -139,6 +152,10 @@ public class ESLoggerUsageTests extends ESTestCase {
 
     public void checkFailArraySize(String... arr) {
         logger.debug(new ParameterizedMessage("text {}", (Object[]) arr));
+    }
+
+    public void checkFailArraySizeWithStringSupplier(String... arr) {
+        logger.debug(() -> format(ROOT, "text %s", (Object[]) arr));
     }
 
     public void checkNumberOfArguments1() {
@@ -194,6 +211,41 @@ public class ESLoggerUsageTests extends ESTestCase {
         logger.info((Supplier<?>) () -> new ParameterizedMessage("Hello {}, {}", "world", 2, "third argument"));
     }
 
+    public void checkNumberOfArgumentsWithDoublePercentage() {
+        logger.info(() -> format(ROOT, "Hello %1.1f%%", 1.1));
+        logger.info(() -> format(ROOT, "Hello %%"));
+        logger.info(() -> format(ROOT, "Hello %%d"));
+    }
+
+    public void checkNumberOfArgumentsParameterizedMessageAndNewLineWithStringSupplier() {
+        logger.info(() -> format(ROOT, "Hello %n"));
+        logger.info(() -> format(ROOT, "Hello %s %n", " world"));
+    }
+
+    public void checkNumberOfArgumentsParameterizedMessage1WithStringSupplier() {
+        logger.info(() -> format(ROOT, "Hello %s, %s, %s", "world", 2, "third argument"));
+    }
+
+    public void checkFailNumberOfArgumentsParameterizedMessage1WithStringSupplier() {
+        logger.info(() -> format(ROOT, "Hello %s, %s", "world", 2, "third argument"));
+    }
+
+    public void checkNumberOfArgumentsParameterizedMessage2WithStringSupplier() {
+        logger.info(() -> format(ROOT, "Hello %s, %s", "world", 2));
+    }
+
+    public void checkFailNumberOfArgumentsParameterizedMessage2WithStringSupplier() {
+        logger.info(() -> format(ROOT, "Hello %s, %s, %s", "world", 2));
+    }
+
+    public void checkNumberOfArgumentsParameterizedMessage3WithStringSupplier() {
+        logger.info(() -> format(ROOT, "Hello %s, %s, %s", "world", 2, "third argument"));
+    }
+
+    public void checkFailNumberOfArgumentsParameterizedMessage3WithStringSupplier() {
+        logger.info(() -> format(ROOT, "Hello %s, %s", "world", 2, "third argument"));
+    }
+
     public void checkOrderOfExceptionArgument() {
         logger.info("Hello", new Exception());
     }
@@ -202,12 +254,20 @@ public class ESLoggerUsageTests extends ESTestCase {
         logger.info((Supplier<?>) () -> new ParameterizedMessage("Hello {}", "world"), new Exception());
     }
 
+    public void checkOrderOfExceptionArgument1WithStringSupplier() {
+        logger.info(() -> format(ROOT, "Hello %s", "world"), new Exception());
+    }
+
     public void checkFailOrderOfExceptionArgument1() {
         logger.info("Hello {}", "world", new Exception());
     }
 
     public void checkOrderOfExceptionArgument2() {
         logger.info((Supplier<?>) () -> new ParameterizedMessage("Hello {}, {}", "world", 42), new Exception());
+    }
+
+    public void checkOrderOfExceptionArgument2WithStringSupplier() {
+        logger.info(() -> format(ROOT, "Hello %s, %s", "world", 42), new Exception());
     }
 
     public void checkFailOrderOfExceptionArgument2() {
@@ -220,6 +280,10 @@ public class ESLoggerUsageTests extends ESTestCase {
 
     public void checkFailNonConstantMessageWithArguments(boolean b) {
         logger.info((Supplier<?>) () -> new ParameterizedMessage(Boolean.toString(b), 42), new Exception());
+    }
+
+    public void checkFailNonConstantMessageWithArgumentsWithStringSupplier(boolean b) {
+        logger.info(() -> format(ROOT, Boolean.toString(b), 42), new Exception());
     }
 
     public void checkComplexUsage(boolean b) {
