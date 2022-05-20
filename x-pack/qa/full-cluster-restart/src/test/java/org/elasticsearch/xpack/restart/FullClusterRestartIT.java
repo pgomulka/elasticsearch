@@ -17,7 +17,6 @@ import org.elasticsearch.client.ResponseException;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.cluster.metadata.DataStreamTestHelper;
 import org.elasticsearch.common.Strings;
-import org.elasticsearch.common.SuppressLoggerChecks;
 import org.elasticsearch.common.settings.SecureString;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
@@ -992,7 +991,6 @@ public class FullClusterRestartIT extends AbstractFullClusterRestartTestCase {
         assertNumHits("ds", 1, 1);
     }
 
-    @SuppressLoggerChecks(reason = "combination of {} and %s not implemented")
     private static void createComposableTemplate(RestClient client, String templateName, String indexPattern) throws IOException {
         StringEntity templateJSON = new StringEntity(String.format(Locale.ROOT, """
             {

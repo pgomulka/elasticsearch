@@ -10,7 +10,6 @@ import org.apache.http.util.EntityUtils;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.Response;
 import org.elasticsearch.client.ResponseException;
-import org.elasticsearch.common.SuppressLoggerChecks;
 import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.xcontent.json.JsonXContent;
 import org.junit.After;
@@ -37,23 +36,26 @@ public abstract class EqlRestTestCase extends RemoteClusterAwareEqlRestTestCase 
         assertNoSearchContexts(client());
     }
 
-    private static final String[][] testBadRequests = badRequests();
-
-    @SuppressLoggerChecks(reason = "combination of {} and %s not implemented")
-    private static String[][] badRequests() {
-        return new String[][] { { null, "request body or source parameter is required" }, { "{}", "query is null or empty" }, { """
-            {"query": ""}""", "query is null or empty" }, { String.format(Locale.ROOT, """
+    private static final String[][] testBadRequests = {
+        { null, "request body or source parameter is required" },
+        { "{}", "query is null or empty" },
+        { """
+            {"query": ""}""", "query is null or empty" },
+        { String.format(Locale.ROOT, """
             {"query": "%s", "timestamp_field": ""}
-            """, validQuery), "timestamp field is null or empty" }, { String.format(Locale.ROOT, """
+            """, validQuery), "timestamp field is null or empty" },
+        { String.format(Locale.ROOT, """
             {"query": "%s", "event_category_field": ""}
-            """, validQuery), "event category field is null or empty" }, { String.format(Locale.ROOT, """
+            """, validQuery), "event category field is null or empty" },
+        { String.format(Locale.ROOT, """
             {"query": "%s", "size": -1}
-            """, validQuery), "size must be greater than or equal to 0" }, { String.format(Locale.ROOT, """
+            """, validQuery), "size must be greater than or equal to 0" },
+        { String.format(Locale.ROOT, """
             {"query": "%s", "filter": null}
-            """, validQuery), "filter doesn't support values of type: VALUE_NULL" }, { String.format(Locale.ROOT, """
+            """, validQuery), "filter doesn't support values of type: VALUE_NULL" },
+        { String.format(Locale.ROOT, """
             {"query": "%s", "filter": {}}
             """, validQuery), "query malformed, empty clause found" } };
-    }
 
     public void testBadRequests() throws Exception {
         createIndex(defaultValidationIndexName, (String) null);

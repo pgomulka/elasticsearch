@@ -16,7 +16,6 @@ import org.elasticsearch.client.Response;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.cluster.metadata.Template;
 import org.elasticsearch.common.Strings;
-import org.elasticsearch.common.SuppressLoggerChecks;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.core.Nullable;
@@ -146,7 +145,6 @@ public final class TimeSeriesRestDriver {
         client.performRequest(request);
     }
 
-    @SuppressLoggerChecks(reason = "combination of {} and %s not implemented")
     public static void createComposableTemplate(RestClient client, String templateName, String indexPattern, Template template)
         throws IOException {
         XContentBuilder builder = jsonBuilder();
