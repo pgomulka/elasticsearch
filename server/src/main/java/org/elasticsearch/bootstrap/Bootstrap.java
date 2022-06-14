@@ -19,6 +19,7 @@ import org.elasticsearch.Version;
 import org.elasticsearch.cli.UserException;
 import org.elasticsearch.common.filesystem.FileSystemNatives;
 import org.elasticsearch.common.inject.CreationException;
+import org.elasticsearch.common.inject.internal.Errors;
 import org.elasticsearch.common.logging.LogConfigurator;
 import org.elasticsearch.common.network.IfConfig;
 import org.elasticsearch.common.settings.SecureSettings;
@@ -299,11 +300,11 @@ final class Bootstrap {
                 // HACK, it sucks to do this, but we will run users out of disk space otherwise
                 if (e instanceof CreationException) {
                     // guice: log the shortened exc to the log file
-                    ByteArrayOutputStream os = new ByteArrayOutputStream();
-                    PrintStream ps = new PrintStream(os, false, StandardCharsets.UTF_8);
-                    StartupException.printStackTrace(e, ps);
-                    ps.flush();
-                    logger.error("Guice Exception: {}", os.toString(StandardCharsets.UTF_8));
+//                    ByteArrayOutputStream os = new ByteArrayOutputStream();
+//                    PrintStream ps = new PrintStream(os, false, StandardCharsets.UTF_8);
+//                    StartupException.printStackTrace(e, ps);
+//                    ps.flush();
+                    logger.error("Guice Exception: {}", e);
                 } else if (e instanceof NodeValidationException) {
                     logger.error("node validation exception\n{}", e.getMessage());
                 } else {

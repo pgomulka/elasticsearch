@@ -74,7 +74,7 @@ class Elasticsearch {
         err.println(e.getMessage());
         gracefullyExit(err, exitCode);
     }
-
+static Logger logger = LogManager.getLogger(Elasticsearch.class);
     private static void exitWithUnknownException(PrintStream err, Exception e) {
         if (System.getProperty("es.logs.base_path") != null) {
             // this is a horrible hack to see if logging has been initialized
@@ -83,7 +83,8 @@ class Elasticsearch {
             logger.error("fatal exception while booting Elasticsearch", e);
         }
         // format exceptions to the console in a special way to avoid 2MB stacktraces from guice, etc.
-        StartupException.printStackTrace(e, err);
+//        StartupException.printStackTrace(e, err);
+        logger.error("err ", e);
         gracefullyExit(err, 1); // mimic JDK exit code on exception
     }
 

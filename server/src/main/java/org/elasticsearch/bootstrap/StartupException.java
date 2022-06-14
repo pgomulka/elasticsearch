@@ -21,7 +21,7 @@ import java.io.PrintStream;
  */
 // TODO: remove this when guice is removed, and exceptions are cleaned up
 // this is horrible, but its what we must do
-final class StartupException {
+public final class StartupException {
 
     /** maximum length of a stacktrace, before we truncate it */
     static final int STACKTRACE_LIMIT = 30;
@@ -34,8 +34,12 @@ final class StartupException {
      * @param e The exception, which may have a long stack trace
      * @param err The error stream to print the stacktrace to
      */
-    static void printStackTrace(Exception e, PrintStream err) {
+   public static void printStackTrace(Exception e, PrintStream err) {
+
         Throwable originalCause = e.getCause();
+        if(e instanceof CreationException) {
+            originalCause = e;
+        }
         Throwable cause = originalCause;
         if (cause instanceof CreationException) {
             cause = getFirstGuiceCause((CreationException) cause);

@@ -895,7 +895,7 @@ public class Node implements Closeable {
                 b.bind(Node.class).toInstance(this);
                 b.bind(NodeService.class).toInstance(nodeService);
                 b.bind(NamedXContentRegistry.class).toInstance(xContentRegistry);
-                b.bind(PluginsService.class).toInstance(pluginsService);
+//                b.bind(PluginsService.class).toInstance(pluginsService);
                 b.bind(Client.class).toInstance(client);
                 b.bind(NodeClient.class).toInstance(client);
                 b.bind(Environment.class).toInstance(this.environment);
