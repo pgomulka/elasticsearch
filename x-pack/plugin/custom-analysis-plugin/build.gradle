@@ -1,0 +1,16 @@
+apply plugin: 'elasticsearch.internal-es-plugin'
+
+esplugin {
+  name 'x-pack-custom-analysis-plugin'
+  description 'Elasticsearch Expanded Pack Plugin - Custom'
+  classname 'org.elasticsearch.xpack.custom.CustomAnalysisPlugin'
+  extendedPlugins = ['x-pack-core']
+}
+archivesBaseName = 'x-pack-custom-analysis-plugin'
+
+addQaCheckDependencies(project)
+
+dependencies {
+  compileOnly project(":x-pack:plugin:core")
+}
+
