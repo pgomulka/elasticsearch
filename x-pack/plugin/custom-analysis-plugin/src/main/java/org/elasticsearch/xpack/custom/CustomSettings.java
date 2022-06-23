@@ -7,16 +7,13 @@
 
 package org.elasticsearch.xpack.custom;
 
-import org.elasticsearch.common.settings.LongSetting;
-import org.elasticsearch.common.settings.NodeSettings;
+import org.elasticsearch.common.settings.annotations.AnalysisSettings;
+import org.elasticsearch.common.settings.annotations.LongSetting;
 
-public class CustomSettings implements NodeSettings {
-
-    @LongSetting(path = "decompound_max_cache_size", defaultValue = 123L, max = 5678L)
-    long decompoundMaxCacheSize;
+@AnalysisSettings(prefix="myplugin")
+public interface CustomSettings {
 
 
-    public long getDecompoundMaxCacheSize() {
-        return decompoundMaxCacheSize;
-    }
+    @LongSetting(path = "number_increase", defaultValue = 1L, max = 5678L)
+    long getNumberIncrease();
 }

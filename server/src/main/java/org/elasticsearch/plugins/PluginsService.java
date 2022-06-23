@@ -16,9 +16,11 @@ import org.apache.lucene.codecs.PostingsFormat;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.admin.cluster.node.info.PluginsAndModules;
 import org.elasticsearch.common.io.Streams;
+import org.elasticsearch.common.settings.annotations.AnalysisSettings;
 import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Setting.Property;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.settings.annotations.SettingsProxy;
 import org.elasticsearch.common.util.set.Sets;
 import org.elasticsearch.core.PathUtils;
 import org.elasticsearch.core.SuppressForbidden;
@@ -31,6 +33,7 @@ import org.elasticsearch.plugins.spi.SPIClassIterator;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.ModuleLayer.Controller;
+import java.lang.annotation.Annotation;
 import java.lang.module.Configuration;
 import java.lang.module.ModuleDescriptor;
 import java.lang.module.ModuleFinder;
@@ -43,6 +46,7 @@ import java.nio.file.Path;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -494,6 +498,7 @@ public class PluginsService implements ReportingService<PluginsAndModules> {
         }
     }
 
+   static final  Set<Class<? extends Annotation>> knownAnnotations = Set.of(AnalysisSettings.class);
     // package-private for testing
     static Plugin loadPlugin(Class<? extends Plugin> pluginClass, Settings settings, Path configPath) {
         final Constructor<?>[] constructors = pluginClass.getConstructors();
@@ -518,6 +523,10 @@ public class PluginsService implements ReportingService<PluginsAndModules> {
                 return (Plugin) constructor.newInstance(settings);
             } else if (constructor.getParameterCount() == 0) {
                 return (Plugin) constructor.newInstance();
+            } else if (constructor.getParameterCount() == 1 &&
+                knownAnnotations.containsAll(Arrays.stream(parameterTypes[0].getAnnotations()).map(Annotation::annotationType).toList())) {
+                Object settingsProxy =  SettingsProxy.create(settings, parameterTypes[0]);
+                return (Plugin)constructor.newInstance(settingsProxy);
             } else {
                 throw new IllegalStateException(signatureMessage(pluginClass));
             }
