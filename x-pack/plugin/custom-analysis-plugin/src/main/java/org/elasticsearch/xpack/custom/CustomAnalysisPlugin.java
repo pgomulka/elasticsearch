@@ -14,31 +14,16 @@ import java.util.Map;
 
 public class CustomAnalysisPlugin extends Plugin implements AnalysisPlugin {
 
-    private final long maxCacheSize;
-    private CustomSettings analysisSettings;
+    private CustomNodeSettings nodeSettings;
 
-    public CustomAnalysisPlugin(CustomSettings analysisSettings) {
-        maxCacheSize = analysisSettings.getNumberIncrease();
-        this.analysisSettings = analysisSettings;
+    public CustomAnalysisPlugin(CustomNodeSettings nodeSettings) {
+//        maxCacheSize = analysisSettings.getNumberIncrease();
+        this.nodeSettings = nodeSettings;
+        System.out.println(nodeSettings.getMlSetting());
     }
 
     @Override
     public Map<String, AnalysisModule.AnalysisProvider<CharFilterFactory>> getCharFilters() {
-        return Map.of("custom_replace", new AnalysisModule.AnalysisProvider<CharFilterFactory>() {
-            @Override
-            public CharFilterFactory get(IndexSettings indexSettings, Environment environment, String name, Settings settings) throws IOException {
-                return new CharFilterFactory() {
-                    @Override
-                    public String name() {
-                        return "custom_replace";
-                    }
-
-                    @Override
-                    public Reader create(Reader reader) {
-                        return new CustomAnalysisCharFilter(analysisSettings, reader);
-                    }
-                };
-            }
-        });
+        return Map.of("custom_replace", new MyCustomAnalysisProvider<CharFilterFactory>());
     }
 }

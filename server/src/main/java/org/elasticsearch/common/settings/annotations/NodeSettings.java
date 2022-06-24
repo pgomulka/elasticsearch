@@ -18,7 +18,6 @@ import java.util.function.Function;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-public @interface AnalysisSettings {
-    String prefix();
+public @interface NodeSettings {
 
 }

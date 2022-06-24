@@ -14,10 +14,10 @@ import java.io.Reader;
 import java.io.StringReader;
 
 public class CustomAnalysisCharFilter extends BaseCharFilter {
-    private CustomSettings analysisSettings;
+    private CustomAnalysisSettings analysisSettings;
     private Reader transformedInput;
 
-    public CustomAnalysisCharFilter(CustomSettings analysisSettings, Reader reader) {
+    public CustomAnalysisCharFilter(CustomAnalysisSettings analysisSettings, Reader reader) {
         super(reader);
         this.analysisSettings = analysisSettings;
     }

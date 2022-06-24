@@ -20,6 +20,7 @@ import org.elasticsearch.common.settings.annotations.AnalysisSettings;
 import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Setting.Property;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.settings.annotations.NodeSettings;
 import org.elasticsearch.common.settings.annotations.SettingsProxy;
 import org.elasticsearch.common.util.set.Sets;
 import org.elasticsearch.core.PathUtils;
@@ -498,7 +499,7 @@ public class PluginsService implements ReportingService<PluginsAndModules> {
         }
     }
 
-   static final  Set<Class<? extends Annotation>> knownAnnotations = Set.of(AnalysisSettings.class);
+   static final  Set<Class<? extends Annotation>> knownAnnotations = Set.of(NodeSettings.class);
     // package-private for testing
     static Plugin loadPlugin(Class<? extends Plugin> pluginClass, Settings settings, Path configPath) {
         final Constructor<?>[] constructors = pluginClass.getConstructors();

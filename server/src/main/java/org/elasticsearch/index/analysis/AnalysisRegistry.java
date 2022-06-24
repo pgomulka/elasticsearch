@@ -15,6 +15,8 @@ import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.Version;
 import org.elasticsearch.cluster.metadata.IndexMetadata;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.settings.annotations.AnalysisSettingsFactory;
+import org.elasticsearch.common.settings.annotations.SettingsProxy;
 import org.elasticsearch.core.IOUtils;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.index.IndexSettings;
@@ -484,7 +486,18 @@ public final class AnalysisRegistry implements Closeable {
             if (type == null) {
                 throw new IllegalArgumentException("Unknown " + component + " type [" + typeName + "] for [" + name + "]");
             }
-            final T factory = type.get(settings, environment, name, currentSettings);
+
+
+            AnalysisSettingsFactory analysisSettings = new AnalysisSettingsFactory() {
+                @Override
+                public <T> T create(Class<T> customAnalysisSettingsClass) {
+                    return SettingsProxy.create(currentSettings, customAnalysisSettingsClass);
+                }
+            };
+            T factory = type.get(analysisSettings);
+            if (factory == null) {
+                factory = type.get(settings, environment, name, currentSettings);
+            }
             factories.put(name, factory);
 
         }

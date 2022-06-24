@@ -10,10 +10,11 @@ package org.elasticsearch.xpack.custom;
 import org.elasticsearch.common.settings.annotations.AnalysisSettings;
 import org.elasticsearch.common.settings.annotations.LongSetting;
 
-@AnalysisSettings(prefix="myplugin")
-public interface CustomSettings {
+@AnalysisSettings(prefix="myplugin")//prefix not working yet
+public interface CustomAnalysisSettings {
 
 
-    @LongSetting(path = "number_increase", defaultValue = 1L, max = 5678L)
+    @LongSetting(path = "myplugin.number_increase", defaultValue = 1L, max = 5678L)
     long getNumberIncrease();
+
 }

@@ -16,6 +16,7 @@ import org.elasticsearch.common.NamedRegistry;
 import org.elasticsearch.common.logging.DeprecationCategory;
 import org.elasticsearch.common.logging.DeprecationLogger;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.settings.annotations.AnalysisSettingsFactory;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.index.IndexSettings;
 import org.elasticsearch.index.analysis.AbstractTokenFilterFactory;
@@ -271,17 +272,19 @@ public final class AnalysisModule {
      * The basic factory interface for analysis components.
      */
     public interface AnalysisProvider<T> {
-
-        /**
-         * Creates a new analysis provider.
-         *
-         * @param indexSettings the index settings for the index this provider is created for
-         * @param environment   the nodes environment to load resources from persistent storage
-         * @param name          the name of the analysis component
-         * @param settings      the component specific settings without context prefixes
-         * @return a new provider instance
-         * @throws IOException if an {@link IOException} occurs
-         */
+        default  T get(AnalysisSettingsFactory analysisSettings) throws IOException {
+            return null;
+        }
+    /**
+     * Creates a new analysis provider.
+     *
+     * @param indexSettings the index settings for the index this provider is created for
+     * @param environment   the nodes environment to load resources from persistent storage
+     * @param name          the name of the analysis component
+     * @param settings      the component specific settings without context prefixes
+     * @return a new provider instance
+     * @throws IOException if an {@link IOException} occurs
+     */
         T get(IndexSettings indexSettings, Environment environment, String name, Settings settings) throws IOException;
 
         /**
