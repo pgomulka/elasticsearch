@@ -63,7 +63,7 @@ public class CompoundAnalysisTests extends ESTestCase {
     private List<String> analyze(Settings settings, String analyzerName, String text) throws IOException {
         IndexSettings idxSettings = IndexSettingsModule.newIndexSettings("test", settings);
         AnalysisModule analysisModule = createAnalysisModule(settings);
-        IndexAnalyzers indexAnalyzers = analysisModule.getAnalysisRegistry().build(idxSettings);
+        IndexAnalyzers indexAnalyzers = analysisModule.getAnalysisRegistry().build(idxSettings, clusterService);
         Analyzer analyzer = indexAnalyzers.get(analyzerName).analyzer();
 
         TokenStream stream = analyzer.tokenStream("", text);
@@ -85,7 +85,7 @@ public class CompoundAnalysisTests extends ESTestCase {
             public Map<String, AnalysisProvider<TokenFilterFactory>> getTokenFilters() {
                 return singletonMap("myfilter", MyFilterTokenFilterFactory::new);
             }
-        }));
+        }), null);
     }
 
     private Settings getJsonSettings() throws IOException {

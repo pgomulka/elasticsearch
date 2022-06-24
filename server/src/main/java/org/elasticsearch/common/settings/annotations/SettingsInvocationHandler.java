@@ -11,24 +11,23 @@ package org.elasticsearch.common.settings.annotations;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.index.IndexSettings;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.function.Function;
 
-public class DynamicInvocationHandler implements InvocationHandler {
+public class SettingsInvocationHandler implements InvocationHandler {
 
-    private static Logger LOGGER = LogManager.getLogger(DynamicInvocationHandler.class);
+    private static Logger LOGGER = LogManager.getLogger(SettingsInvocationHandler.class);
     private String prefix = "";
     private Settings settings;
 
-    public DynamicInvocationHandler(Settings settings) {
+    public SettingsInvocationHandler(Settings settings) {
         this.settings = settings;
     }
 
-    public DynamicInvocationHandler(String prefix, Settings settings) {
+    public SettingsInvocationHandler(String prefix, Settings settings) {
         this.prefix = prefix;
         this.settings = settings;
     }

@@ -56,8 +56,8 @@ public class WatcherPluginTests extends ESTestCase {
             emptyMap(),
             emptyMap(),
             emptyMap(),
-            emptyMap()
-        );
+            emptyMap(),
+            null);
         IndexModule indexModule = new IndexModule(
             indexSettings,
             registry,
@@ -65,8 +65,8 @@ public class WatcherPluginTests extends ESTestCase {
             Collections.emptyMap(),
             () -> true,
             TestIndexNameExpressionResolver.newInstance(),
-            Collections.emptyMap()
-        );
+            Collections.emptyMap(),
+                null);
         // this will trip an assertion if the watcher indexing operation listener is null (which it is) but we try to add it
         watcher.onIndexModule(indexModule);
 

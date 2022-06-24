@@ -12,15 +12,9 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.util.function.Function;
 
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
-public @interface LongSetting {
-    String path();
-
-    long defaultValue();
-
-    long max();
+@Target(ElementType.TYPE)
+public @interface IndexSettings {
 
 }

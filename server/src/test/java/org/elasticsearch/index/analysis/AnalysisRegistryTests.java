@@ -68,8 +68,8 @@ public class AnalysisRegistryTests extends ESTestCase {
             emptyMap(),
             emptyMap(),
             emptyMap(),
-            emptyMap()
-        );
+            emptyMap(),
+            null);
     }
 
     /**
@@ -92,7 +92,7 @@ public class AnalysisRegistryTests extends ESTestCase {
         Settings settings = Settings.builder().put(Environment.PATH_HOME_SETTING.getKey(), createTempDir().toString()).build();
         emptyRegistry = emptyAnalysisRegistry(settings);
         // Module loaded to register in-built normalizers for testing
-        AnalysisModule module = new AnalysisModule(TestEnvironment.newEnvironment(settings), singletonList(new MockAnalysisPlugin()));
+        AnalysisModule module = new AnalysisModule(TestEnvironment.newEnvironment(settings), singletonList(new MockAnalysisPlugin()), null);
         nonEmptyRegistry = module.getAnalysisRegistry();
     }
 
@@ -103,7 +103,7 @@ public class AnalysisRegistryTests extends ESTestCase {
             .put(Environment.PATH_HOME_SETTING.getKey(), createTempDir().toString())
             .build();
         IndexSettings idxSettings = IndexSettingsModule.newIndexSettings("index", settings);
-        IndexAnalyzers indexAnalyzers = emptyRegistry.build(idxSettings);
+        IndexAnalyzers indexAnalyzers = emptyRegistry.build(idxSettings, clusterService);
         assertThat(indexAnalyzers.getDefaultIndexAnalyzer().analyzer(), instanceOf(StandardAnalyzer.class));
         assertThat(indexAnalyzers.getDefaultSearchAnalyzer().analyzer(), instanceOf(StandardAnalyzer.class));
         assertThat(indexAnalyzers.getDefaultSearchQuoteAnalyzer().analyzer(), instanceOf(StandardAnalyzer.class));
@@ -164,7 +164,7 @@ public class AnalysisRegistryTests extends ESTestCase {
     public void testNameClashNormalizer() throws IOException {
 
         // Test out-of-the-box normalizer works OK.
-        IndexAnalyzers indexAnalyzers = nonEmptyRegistry.build(IndexSettingsModule.newIndexSettings("index", Settings.EMPTY));
+        IndexAnalyzers indexAnalyzers = nonEmptyRegistry.build(IndexSettingsModule.newIndexSettings("index", Settings.EMPTY), clusterService);
         assertNotNull(indexAnalyzers.getNormalizer("lowercase"));
         assertThat(indexAnalyzers.getNormalizer("lowercase").normalize("field", "AbC").utf8ToString(), equalTo("abc"));
 
@@ -176,7 +176,7 @@ public class AnalysisRegistryTests extends ESTestCase {
             .putList("index.analysis.normalizer.lowercase.filter", "reverse")
             .build();
 
-        indexAnalyzers = nonEmptyRegistry.build(IndexSettingsModule.newIndexSettings("index", settings));
+        indexAnalyzers = nonEmptyRegistry.build(IndexSettingsModule.newIndexSettings("index", settings), clusterService);
         assertNotNull(indexAnalyzers.getNormalizer("lowercase"));
         assertThat(indexAnalyzers.getNormalizer("lowercase").normalize("field", "AbC").utf8ToString(), equalTo("CbA"));
     }
@@ -254,9 +254,9 @@ public class AnalysisRegistryTests extends ESTestCase {
                 return singletonMap("mock", MockFactory::new);
             }
         };
-        IndexAnalyzers indexAnalyzers = new AnalysisModule(TestEnvironment.newEnvironment(settings), singletonList(plugin))
+        IndexAnalyzers indexAnalyzers = new AnalysisModule(TestEnvironment.newEnvironment(settings), singletonList(plugin), null)
             .getAnalysisRegistry()
-            .build(idxSettings);
+            .build(idxSettings, clusterService);
 
         // This shouldn't contain English stopwords
         try (NamedAnalyzer custom_analyser = indexAnalyzers.get("custom_analyzer_with_camel_case")) {
@@ -291,8 +291,8 @@ public class AnalysisRegistryTests extends ESTestCase {
         Settings settings = Settings.builder().put(Environment.PATH_HOME_SETTING.getKey(), createTempDir().toString()).build();
         Settings indexSettings = Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, Version.CURRENT).build();
         IndexSettings idxSettings = IndexSettingsModule.newIndexSettings("index", indexSettings);
-        IndexAnalyzers indexAnalyzers = emptyAnalysisRegistry(settings).build(idxSettings);
-        IndexAnalyzers otherIndexAnalyzers = emptyAnalysisRegistry(settings).build(idxSettings);
+        IndexAnalyzers indexAnalyzers = emptyAnalysisRegistry(settings).build(idxSettings, clusterService);
+        IndexAnalyzers otherIndexAnalyzers = emptyAnalysisRegistry(settings).build(idxSettings, clusterService);
         final int numIters = randomIntBetween(5, 20);
         for (int i = 0; i < numIters; i++) {
             PreBuiltAnalyzers preBuiltAnalyzers = RandomPicks.randomFrom(random(), PreBuiltAnalyzers.values());
@@ -310,12 +310,12 @@ public class AnalysisRegistryTests extends ESTestCase {
             .build();
         IndexSettings idxSettings = IndexSettingsModule.newIndexSettings("index", settings);
 
-        IllegalArgumentException e = expectThrows(IllegalArgumentException.class, () -> emptyAnalysisRegistry(settings).build(idxSettings));
+        IllegalArgumentException e = expectThrows(IllegalArgumentException.class, () -> emptyAnalysisRegistry(settings).build(idxSettings, clusterService));
         assertThat(e.getMessage(), equalTo("analyzer [test_analyzer] must specify either an analyzer type, or a tokenizer"));
     }
 
     public void testCloseIndexAnalyzersMultipleTimes() throws IOException {
-        IndexAnalyzers indexAnalyzers = emptyRegistry.build(indexSettingsOfCurrentVersion(Settings.builder()));
+        IndexAnalyzers indexAnalyzers = emptyRegistry.build(indexSettingsOfCurrentVersion(Settings.builder()), clusterService);
         indexAnalyzers.close();
         indexAnalyzers.close();
     }
@@ -333,8 +333,8 @@ public class AnalysisRegistryTests extends ESTestCase {
             emptyMap(),
             emptyMap(),
             emptyMap(),
-            Collections.singletonMap("key", mock)
-        );
+            Collections.singletonMap("key", mock),
+            null);
 
         registry.close();
         verify(mock).close();
@@ -432,7 +432,7 @@ public class AnalysisRegistryTests extends ESTestCase {
 
         IndexSettings idxSettings = IndexSettingsModule.newIndexSettings("index", indexSettings);
 
-        new AnalysisModule(TestEnvironment.newEnvironment(settings), singletonList(plugin)).getAnalysisRegistry().build(idxSettings);
+        new AnalysisModule(TestEnvironment.newEnvironment(settings), singletonList(plugin), null).getAnalysisRegistry().build(idxSettings, clusterService);
 
         // We should only get a warning from the token filter that is referenced in settings
         assertWarnings("Using deprecated token filter [deprecated]");
@@ -449,7 +449,7 @@ public class AnalysisRegistryTests extends ESTestCase {
             .build();
         idxSettings = IndexSettingsModule.newIndexSettings("index", indexSettings);
 
-        new AnalysisModule(TestEnvironment.newEnvironment(settings), singletonList(plugin)).getAnalysisRegistry().build(idxSettings);
+        new AnalysisModule(TestEnvironment.newEnvironment(settings), singletonList(plugin), null).getAnalysisRegistry().build(idxSettings, clusterService);
 
         // We should only get a warning from the normalizer, because we're on a version where 'deprecated'
         // works fine
@@ -467,8 +467,8 @@ public class AnalysisRegistryTests extends ESTestCase {
         IllegalArgumentException e = expectThrows(
             IllegalArgumentException.class,
             () -> {
-                new AnalysisModule(TestEnvironment.newEnvironment(settings), singletonList(plugin)).getAnalysisRegistry()
-                    .build(exceptionSettings);
+                new AnalysisModule(TestEnvironment.newEnvironment(settings), singletonList(plugin), null).getAnalysisRegistry()
+                    .build(exceptionSettings, clusterService);
             }
         );
         assertEquals("Cannot use token filter [exception]", e.getMessage());

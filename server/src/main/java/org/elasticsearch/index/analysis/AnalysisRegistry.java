@@ -14,8 +14,9 @@ import org.apache.lucene.analysis.core.WhitespaceTokenizer;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.Version;
 import org.elasticsearch.cluster.metadata.IndexMetadata;
+import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.settings.annotations.AnalysisSettingsFactory;
+import org.elasticsearch.common.settings.annotations.SettingsFactory;
 import org.elasticsearch.common.settings.annotations.SettingsProxy;
 import org.elasticsearch.core.IOUtils;
 import org.elasticsearch.env.Environment;
@@ -42,7 +43,7 @@ import static java.util.Collections.unmodifiableMap;
 
 /**
  * An internal registry for tokenizer, token filter, char filter and analyzer.
- * This class exists per node and allows to create per-index {@link IndexAnalyzers} via {@link #build(IndexSettings)}
+ * This class exists per node and allows to create per-index {@link IndexAnalyzers} via {xxxlink #build(IndexSettings, ClusterService)}
  */
 public final class AnalysisRegistry implements Closeable {
     public static final String INDEX_ANALYSIS_CHAR_FILTER = "index.analysis.char_filter";
@@ -62,6 +63,7 @@ public final class AnalysisRegistry implements Closeable {
     private final Map<String, AnalysisProvider<TokenizerFactory>> tokenizers;
     private final Map<String, AnalysisProvider<AnalyzerProvider<?>>> analyzers;
     private final Map<String, AnalysisProvider<AnalyzerProvider<?>>> normalizers;
+    private ClusterService clusterService;
 
     public AnalysisRegistry(
         Environment environment,
@@ -73,14 +75,15 @@ public final class AnalysisRegistry implements Closeable {
         Map<String, PreConfiguredCharFilter> preConfiguredCharFilters,
         Map<String, PreConfiguredTokenFilter> preConfiguredTokenFilters,
         Map<String, PreConfiguredTokenizer> preConfiguredTokenizers,
-        Map<String, PreBuiltAnalyzerProviderFactory> preConfiguredAnalyzers
-    ) {
+        Map<String, PreBuiltAnalyzerProviderFactory> preConfiguredAnalyzers,
+        ClusterService clusterService) {
         this.environment = environment;
         this.charFilters = unmodifiableMap(charFilters);
         this.tokenFilters = unmodifiableMap(tokenFilters);
         this.tokenizers = unmodifiableMap(tokenizers);
         this.analyzers = unmodifiableMap(analyzers);
         this.normalizers = unmodifiableMap(normalizers);
+        this.clusterService = clusterService;
         prebuiltAnalysis = new PrebuiltAnalysis(
             preConfiguredCharFilters,
             preConfiguredTokenFilters,
@@ -447,12 +450,12 @@ public final class AnalysisRegistry implements Closeable {
     @SuppressWarnings("unchecked")
     private <T> Map<String, T> buildMapping(
         Component component,
-        IndexSettings settings,
+        IndexSettings indexSettings,
         Map<String, Settings> settingsMap,
         Map<String, ? extends AnalysisModule.AnalysisProvider<T>> providerMap,
         Map<String, ? extends AnalysisModule.AnalysisProvider<T>> defaultInstance
     ) throws IOException {
-        Settings defaultSettings = Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, settings.getIndexVersionCreated()).build();
+        Settings defaultSettings = Settings.builder().put(IndexMetadata.SETTING_VERSION_CREATED, indexSettings.getIndexVersionCreated()).build();
         Map<String, T> factories = new HashMap<>();
         for (Map.Entry<String, Settings> entry : settingsMap.entrySet()) {
             String name = entry.getKey();
@@ -462,14 +465,14 @@ public final class AnalysisRegistry implements Closeable {
                 T factory = null;
                 if (typeName == null) {
                     if (currentSettings.get("tokenizer") != null) {
-                        factory = (T) new CustomAnalyzerProvider(settings, name, currentSettings);
+                        factory = (T) new CustomAnalyzerProvider(indexSettings, name, currentSettings);
                     } else {
                         throw new IllegalArgumentException(
                             component + " [" + name + "] " + "must specify either an analyzer type, or a tokenizer"
                         );
                     }
                 } else if (typeName.equals("custom")) {
-                    factory = (T) new CustomAnalyzerProvider(settings, name, currentSettings);
+                    factory = (T) new CustomAnalyzerProvider(indexSettings, name, currentSettings);
                 }
                 if (factory != null) {
                     factories.put(name, factory);
@@ -477,7 +480,7 @@ public final class AnalysisRegistry implements Closeable {
                 }
             } else if (component == Component.NORMALIZER) {
                 if (typeName == null || typeName.equals("custom")) {
-                    T factory = (T) new CustomNormalizerProvider(settings, name, currentSettings);
+                    T factory = (T) new CustomNormalizerProvider(indexSettings, name, currentSettings);
                     factories.put(name, factory);
                     continue;
                 }
@@ -488,15 +491,29 @@ public final class AnalysisRegistry implements Closeable {
             }
 
 
-            AnalysisSettingsFactory analysisSettings = new AnalysisSettingsFactory() {
+            SettingsFactory analysisSettingsFactory = new SettingsFactory() {
                 @Override
-                public <T> T create(Class<T> customAnalysisSettingsClass) {
-                    return SettingsProxy.create(currentSettings, customAnalysisSettingsClass);
+                public <T> T create(Class<T> settingsClass) {
+                    return SettingsProxy.create(currentSettings, settingsClass);
                 }
             };
-            T factory = type.get(analysisSettings);
+
+            SettingsFactory indexSettingsFactory = new SettingsFactory() {
+                @Override
+                public <T> T create(Class<T> settingsClass) {
+                    return SettingsProxy.create(indexSettings, settingsClass);
+                }
+            };
+
+            SettingsFactory clusterStateSettings = new SettingsFactory() {
+                @Override
+                public <T> T create(Class<T> settingsClass) {
+                    return SettingsProxy.create(clusterService, settingsClass);
+                }
+            };
+            T factory = type.get(analysisSettingsFactory, indexSettingsFactory, clusterStateSettings);
             if (factory == null) {
-                factory = type.get(settings, environment, name, currentSettings);
+                factory = type.get(indexSettings, environment, name, currentSettings);
             }
             factories.put(name, factory);
 
@@ -516,9 +533,9 @@ public final class AnalysisRegistry implements Closeable {
             AnalysisProvider<T> defaultProvider = defaultInstance.get(name);
             final T instance;
             if (defaultProvider == null) {
-                instance = provider.get(settings, environment, name, defaultSettings);
+                instance = provider.get(indexSettings, environment, name, defaultSettings);
             } else {
-                instance = defaultProvider.get(settings, environment, name, defaultSettings);
+                instance = defaultProvider.get(indexSettings, environment, name, defaultSettings);
             }
             factories.put(name, instance);
         }
@@ -526,7 +543,7 @@ public final class AnalysisRegistry implements Closeable {
         for (Map.Entry<String, ? extends AnalysisProvider<T>> entry : defaultInstance.entrySet()) {
             final String name = entry.getKey();
             final AnalysisProvider<T> provider = entry.getValue();
-            factories.putIfAbsent(name, provider.get(settings, environment, name, defaultSettings));
+            factories.putIfAbsent(name, provider.get(indexSettings, environment, name, defaultSettings));
         }
         return factories;
     }

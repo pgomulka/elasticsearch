@@ -1768,8 +1768,8 @@ public class SnapshotResiliencyTests extends ESTestCase {
                         emptyMap(),
                         emptyMap(),
                         emptyMap(),
-                        emptyMap()
-                    ),
+                        emptyMap(),
+                            null),
                     indexNameExpressionResolver,
                     mapperRegistry,
                     namedWriteableRegistry,
@@ -1898,7 +1898,7 @@ public class SnapshotResiliencyTests extends ESTestCase {
                             threadPool,
                             environment,
                             scriptService,
-                            new AnalysisModule(environment, Collections.emptyList()).getAnalysisRegistry(),
+                            new AnalysisModule(environment, Collections.emptyList(), null).getAnalysisRegistry(),
                             Collections.emptyList(),
                             client
                         ),

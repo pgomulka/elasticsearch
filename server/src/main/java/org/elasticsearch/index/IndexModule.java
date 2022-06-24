@@ -140,6 +140,7 @@ public final class IndexModule {
     private final IndexSettings indexSettings;
     private final AnalysisRegistry analysisRegistry;
     private final EngineFactory engineFactory;
+    private ClusterService clusterService;
     private final SetOnce<Function<IndexService, CheckedFunction<DirectoryReader, DirectoryReader, IOException>>> indexReaderWrapper =
         new SetOnce<>();
     private final Set<IndexEventListener> indexEventListeners = new HashSet<>();
@@ -156,11 +157,11 @@ public final class IndexModule {
     /**
      * Construct the index module for the index with the specified index settings. The index module contains extension points for plugins
      * via {@link org.elasticsearch.plugins.Plugin#onIndexModule(IndexModule)}.
-     *
-     * @param indexSettings       the index settings
+     *  @param indexSettings       the index settings
      * @param analysisRegistry    the analysis registry
      * @param engineFactory       the engine factory
      * @param directoryFactories the available store types
+     * @param clusterService
      */
     public IndexModule(
         final IndexSettings indexSettings,
@@ -169,11 +170,12 @@ public final class IndexModule {
         final Map<String, IndexStorePlugin.DirectoryFactory> directoryFactories,
         final BooleanSupplier allowExpensiveQueries,
         final IndexNameExpressionResolver expressionResolver,
-        final Map<String, IndexStorePlugin.RecoveryStateFactory> recoveryStateFactories
-    ) {
+        final Map<String, IndexStorePlugin.RecoveryStateFactory> recoveryStateFactories,
+        ClusterService clusterService) {
         this.indexSettings = indexSettings;
         this.analysisRegistry = analysisRegistry;
         this.engineFactory = Objects.requireNonNull(engineFactory);
+        this.clusterService = clusterService;
         this.searchOperationListeners.add(new SearchSlowLog(indexSettings));
         this.indexOperationListeners.add(new IndexingSlowLog(indexSettings));
         this.directoryFactories = Collections.unmodifiableMap(directoryFactories);

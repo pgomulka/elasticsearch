@@ -307,8 +307,8 @@ public class SecurityTests extends ESTestCase {
             emptyMap(),
             emptyMap(),
             emptyMap(),
-            emptyMap()
-        );
+            emptyMap(),
+            null);
         IndexModule indexModule = new IndexModule(
             indexSettings,
             emptyAnalysisRegistry,
@@ -316,8 +316,8 @@ public class SecurityTests extends ESTestCase {
             Collections.emptyMap(),
             () -> true,
             TestIndexNameExpressionResolver.newInstance(threadPool.getThreadContext()),
-            Collections.emptyMap()
-        );
+            Collections.emptyMap(),
+                null);
         security.onIndexModule(indexModule);
         // indexReaderWrapper is a SetOnce so if Security#onIndexModule had already set an ReaderWrapper we would get an exception here
         indexModule.setReaderWrapper(null);

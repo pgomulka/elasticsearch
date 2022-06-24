@@ -8,26 +8,35 @@
 
 package org.elasticsearch.common.settings.annotations;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.settings.Settings;
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.function.Function;
 
 public class SettingsProxy {
     @SuppressWarnings({"unchecked", "rawtypes"})
     public static <T> T create(Settings settings, Class<T> parameterType) {
-//        AnalysisSettings annotation = (AnalysisSettings) parameterType.getAnnotations()[0];
-//        String prefix = annotation.prefix();
         return (T) Proxy.newProxyInstance(
             parameterType.getClassLoader(),
             new Class[]{parameterType},
-            new DynamicInvocationHandler(settings));
+            new SettingsInvocationHandler(settings));
     }
+    @SuppressWarnings({"unchecked", "rawtypes"})
 
+    public static <T> T create(org.elasticsearch.index.IndexSettings settings, Class<T> parameterType) {
+        return (T) Proxy.newProxyInstance(
+            parameterType.getClassLoader(),
+            new Class[]{parameterType},
+            new IndexSettingsInvocationHandler(settings));
+    }
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public static <T> T create(ClusterService clusterService, Class<T> parameterType) {
+        ClusterSettingsInvocationHandler handler = new ClusterSettingsInvocationHandler(parameterType, clusterService);
+        handler.init();
+        return (T) Proxy.newProxyInstance(
+            parameterType.getClassLoader(),
+            new Class[]{parameterType},
+            handler);
+    }
 }
 

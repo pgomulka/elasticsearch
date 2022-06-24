@@ -15,11 +15,13 @@ import java.io.StringReader;
 
 public class CustomAnalysisCharFilter extends BaseCharFilter {
     private CustomAnalysisSettings analysisSettings;
+    private final CustomClusterSettings customClusterSettings;
     private Reader transformedInput;
 
-    public CustomAnalysisCharFilter(CustomAnalysisSettings analysisSettings, Reader reader) {
+    public CustomAnalysisCharFilter(CustomAnalysisSettings analysisSettings, CustomClusterSettings customClusterSettings, Reader reader) {
         super(reader);
         this.analysisSettings = analysisSettings;
+        this.customClusterSettings = customClusterSettings;
     }
 
 
@@ -46,13 +48,13 @@ public class CustomAnalysisCharFilter extends BaseCharFilter {
         long increase = analysisSettings.getNumberIncrease();
         for (int index = 0; index < input.length(); ++index) {
             char c = input.charAt(index);
-            if (c >= '0' && c < '9') {
-                input.setCharAt(index, (char) ((int) c + increase));
-            } else if (c == '9') {
-                input.setCharAt(index, '0');
+            if (c >= '0' && c <= '9') {
+                int v = c -'0';
+                int nv = (int)(v+increase) % 9;
+                input.setCharAt(index, (char) ('0'+nv));
             }
         }
-
+        input.append(customClusterSettings.getSuffix());
         return input;
     }
 

@@ -158,8 +158,8 @@ public class IndexModuleTests extends ESTestCase {
             emptyMap(),
             emptyMap(),
             emptyMap(),
-            emptyMap()
-        );
+            emptyMap(),
+            null);
         threadPool = new TestThreadPool("test");
         circuitBreakerService = new NoneCircuitBreakerService();
         PageCacheRecycler pageCacheRecycler = new PageCacheRecycler(settings);
@@ -210,8 +210,8 @@ public class IndexModuleTests extends ESTestCase {
             Collections.emptyMap(),
             () -> true,
             indexNameExpressionResolver,
-            Collections.emptyMap()
-        );
+            Collections.emptyMap(),
+                null);
         module.setReaderWrapper(s -> new Wrapper());
 
         IndexService indexService = newIndexService(module);
@@ -235,8 +235,8 @@ public class IndexModuleTests extends ESTestCase {
             indexStoreFactories,
             () -> true,
             indexNameExpressionResolver,
-            Collections.emptyMap()
-        );
+            Collections.emptyMap(),
+                null);
 
         final IndexService indexService = newIndexService(module);
         assertThat(indexService.getDirectoryFactory(), instanceOf(FooFunction.class));
@@ -519,8 +519,8 @@ public class IndexModuleTests extends ESTestCase {
             emptyMap(),
             emptyMap(),
             emptyMap(),
-            emptyMap()
-        );
+            emptyMap(),
+            null);
         IndexModule module = createIndexModule(indexSettings, analysisRegistry, indexNameExpressionResolver);
         threadPool.shutdown(); // causes index service creation to fail
         expectThrows(EsRejectedExecutionException.class, () -> newIndexService(module));
@@ -562,8 +562,8 @@ public class IndexModuleTests extends ESTestCase {
             Collections.emptyMap(),
             () -> true,
             indexNameExpressionResolver,
-            recoveryStateFactories
-        );
+            recoveryStateFactories,
+                null);
 
         final IndexService indexService = newIndexService(module);
 
@@ -597,8 +597,8 @@ public class IndexModuleTests extends ESTestCase {
             Collections.emptyMap(),
             () -> true,
             indexNameExpressionResolver,
-            Collections.emptyMap()
-        );
+            Collections.emptyMap(),
+                null);
     }
 
     class CustomQueryCache implements QueryCache {

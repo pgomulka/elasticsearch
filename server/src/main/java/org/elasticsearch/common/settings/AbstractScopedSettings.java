@@ -810,7 +810,7 @@ public abstract class AbstractScopedSettings {
                 toRemove.add(key);
                 // we don't set changed here it's set after we apply deletes below if something actually changed
             } else if (get(key) == null) {
-                throw new IllegalArgumentException(type + " setting [" + key + "], not recognized");
+//                throw new IllegalArgumentException(type + " setting [" + key + "], not recognized");
             } else if (isDelete == false && canUpdate.test(key)) {
                 get(key).validateWithoutDependencies(toApply); // we might not have a full picture here do to a dependency validation
                 settingsBuilder.copy(key, toApply);

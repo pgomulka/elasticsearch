@@ -11,10 +11,13 @@ import org.elasticsearch.common.settings.annotations.AnalysisSettings;
 import org.elasticsearch.common.settings.annotations.LongSetting;
 
 @AnalysisSettings(prefix="myplugin")//prefix not working yet
-public interface CustomAnalysisSettings {
+public interface  CustomAnalysisSettings {
 
 
     @LongSetting(path = "myplugin.number_increase", defaultValue = 1L, max = 5678L)
-    long getNumberIncrease();
+     long getNumberIncrease();
 
+
+    @LongSetting(path = "myplugin.number_increase", defaultValue = 1L, max = 5678L)
+     String getStartDate();
 }

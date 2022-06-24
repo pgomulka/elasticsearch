@@ -8,8 +8,7 @@
 package org.elasticsearch.xpack.custom;
 
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.settings.annotations.AnalysisSettings;
-import org.elasticsearch.common.settings.annotations.AnalysisSettingsFactory;
+import org.elasticsearch.common.settings.annotations.SettingsFactory;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.index.IndexSettings;
 import org.elasticsearch.index.analysis.CharFilterFactory;
@@ -22,10 +21,13 @@ import java.io.Reader;
 public class MyCustomAnalysisProvider<T> implements AnalysisModule.AnalysisProvider<CharFilterFactory> {
 
 
-
-    public CharFilterFactory get(AnalysisSettingsFactory analysisSettingsFactory/*, CustomNodeSettings nodeSettings*/) throws IOException {
+    @Override
+    public CharFilterFactory get(SettingsFactory analysisSettingsFactory, SettingsFactory indexSettingsFactory,  SettingsFactory clusterStateSettings) throws IOException {
         CustomAnalysisSettings analysisSettings = analysisSettingsFactory.create(CustomAnalysisSettings.class);
+        CustomIndexSettings customIndexSettings = indexSettingsFactory.create(CustomIndexSettings.class);
+        CustomClusterSettings customClusterSettings = clusterStateSettings.create(CustomClusterSettings.class);
 
+        System.out.println("getIndexQueryLenient" +customIndexSettings.getIndexQueryLenient());;
         return new CharFilterFactory() {
             @Override
             public String name() {
@@ -36,7 +38,7 @@ public class MyCustomAnalysisProvider<T> implements AnalysisModule.AnalysisProvi
             public Reader create(Reader reader) {
 
 
-                return new CustomAnalysisCharFilter(analysisSettings, reader);
+                return new CustomAnalysisCharFilter(analysisSettings, customClusterSettings, reader);
             }
         };
     }

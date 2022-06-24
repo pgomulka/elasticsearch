@@ -12,11 +12,12 @@ import org.apache.lucene.analysis.LowerCaseFilter;
 import org.apache.lucene.analysis.TokenStream;
 import org.elasticsearch.Version;
 import org.elasticsearch.cluster.metadata.IndexMetadata;
+import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.NamedRegistry;
 import org.elasticsearch.common.logging.DeprecationCategory;
 import org.elasticsearch.common.logging.DeprecationLogger;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.settings.annotations.AnalysisSettingsFactory;
+import org.elasticsearch.common.settings.annotations.SettingsFactory;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.index.IndexSettings;
 import org.elasticsearch.index.analysis.AbstractTokenFilterFactory;
@@ -69,7 +70,7 @@ public final class AnalysisModule {
     private final HunspellService hunspellService;
     private final AnalysisRegistry analysisRegistry;
 
-    public AnalysisModule(Environment environment, List<AnalysisPlugin> plugins) throws IOException {
+    public AnalysisModule(Environment environment, List<AnalysisPlugin> plugins, ClusterService clusterService) throws IOException {
         NamedRegistry<AnalysisProvider<CharFilterFactory>> charFilters = setupCharFilters(plugins);
         NamedRegistry<org.apache.lucene.analysis.hunspell.Dictionary> hunspellDictionaries = setupHunspellDictionaries(plugins);
         hunspellService = new HunspellService(environment.settings(), environment, hunspellDictionaries.getRegistry());
@@ -93,8 +94,8 @@ public final class AnalysisModule {
             preConfiguredCharFilters,
             preConfiguredTokenFilters,
             preConfiguredTokenizers,
-            preConfiguredAnalyzers
-        );
+            preConfiguredAnalyzers,
+            clusterService);
     }
 
     HunspellService getHunspellService() {
@@ -272,7 +273,7 @@ public final class AnalysisModule {
      * The basic factory interface for analysis components.
      */
     public interface AnalysisProvider<T> {
-        default  T get(AnalysisSettingsFactory analysisSettings) throws IOException {
+        default  T get(SettingsFactory analysisSettings, SettingsFactory indexSettingsFactory, SettingsFactory clusterStateSettings) throws IOException {
             return null;
         }
     /**

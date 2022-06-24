@@ -419,7 +419,7 @@ public class Node implements Closeable {
                 scriptModule.contexts,
                 threadPool::absoluteTimeInMillis
             );
-            AnalysisModule analysisModule = new AnalysisModule(this.environment, pluginsService.filterPlugins(AnalysisPlugin.class));
+
             // this is as early as we can validate settings at this point. we already pass them to ScriptModule as well as ThreadPool
             // so we might be late here already
 
@@ -458,6 +458,9 @@ public class Node implements Closeable {
             final ClusterService clusterService = new ClusterService(settings, settingsModule.getClusterSettings(), threadPool);
             clusterService.addStateApplier(scriptService);
             resourcesToClose.add(clusterService);
+
+            AnalysisModule analysisModule = new AnalysisModule(this.environment, pluginsService.filterPlugins(AnalysisPlugin.class),
+                clusterService);
 
             final Set<Setting<?>> consistentSettings = settingsModule.getConsistentSettings();
             if (consistentSettings.isEmpty() == false) {

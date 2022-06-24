@@ -8,19 +8,8 @@
 
 package org.elasticsearch.common.settings.annotations;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-import java.util.function.Function;
 
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
-public @interface LongSetting {
-    String path();
+public interface SettingsFactory {
 
-    long defaultValue();
-
-    long max();
-
+     <T> T create(Class<T> customAnalysisSettingsClass) ;
 }
