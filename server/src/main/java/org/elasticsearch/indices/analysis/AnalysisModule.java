@@ -169,15 +169,6 @@ public final class AnalysisModule {
             )
         );
 
-        List<? extends TokenFilterFactoryProvider> load = pluginsService.loadServiceProviders(TokenFilterFactoryProvider.class);
-
-        /*need to provide plugin's class loader otherwise no results??*/
-        // Optional<ServiceLoader.Provider<TokenFilterFactoryProvider>> first = load.stream().findFirst();
-        List<Map<String, AnalysisProvider<TokenFilterFactory>>> collect = load.stream()
-            .map(AnalysisModule::mapToOldApi)
-            .collect(Collectors.toList());
-        tokenFilters.register(collect);
-
         List<? extends org.elasticsearch.sp.api.analysis.AnalysisPlugin> analysisPlugins =
             pluginsService.loadServiceProviders(org.elasticsearch.sp.api.analysis.AnalysisPlugin.class);
         List<Map<String, AnalysisProvider<TokenFilterFactory>>> collect2 = new ArrayList<>();
@@ -191,16 +182,6 @@ public final class AnalysisModule {
 
         tokenFilters.extractAndRegister(plugins, AnalysisPlugin::getTokenFilters);
         return tokenFilters;
-    }
-
-    @SuppressWarnings("unchecked")
-    static Map<String, AnalysisProvider<TokenFilterFactory>> mapToOldApi(TokenFilterFactoryProvider provider) {
-        // Map<String,Class<? extends org.elasticsearch.sp.api.analysis.TokenFilterFactory>> newApiMap) {
-
-        Map<String, Class<? extends org.elasticsearch.sp.api.analysis.TokenFilterFactory>> tokenFilterFactories =
-            provider.getTokenFilterFactories();
-
-        return getStringAnalysisProviderMap(tokenFilterFactories);
     }
 
     private static Map<String, AnalysisProvider<TokenFilterFactory>> getStringAnalysisProviderMap(Map<String, Class<? extends org.elasticsearch.sp.api.analysis.TokenFilterFactory>> tokenFilterFactories) {
@@ -259,17 +240,17 @@ public final class AnalysisModule {
     }
 
     private static <T> T createSettings(Class<T> settingsClass, IndexSettings indexSettings, Settings nodeSettings, Settings analysisSettings) {
-        if( settingsClass.getAnnotationsByType(NodeSettings.class) != null) {
+        if( settingsClass.getAnnotationsByType(NodeSettings.class).length >0 ) {
             return SettingsProxy.create(nodeSettings, settingsClass);
         }
-        if(settingsClass.getAnnotationsByType(AnalysisSettings.class) != null) {
+        if(settingsClass.getAnnotationsByType(AnalysisSettings.class) .length >0) {
             return  SettingsProxy.create(analysisSettings, settingsClass);
 
         }
-        if(settingsClass.getAnnotationsByType(ClusterSettings.class) != null) {
+        if(settingsClass.getAnnotationsByType(ClusterSettings.class).length >0) {
             return null;//SettingsProxy.create(clusterService, settingsClass);
         }
-        if(settingsClass.getAnnotationsByType(org.elasticsearch.sp.api.analysis.settings.IndexSettings.class) != null) {
+        if(settingsClass.getAnnotationsByType(org.elasticsearch.sp.api.analysis.settings.IndexSettings.class).length >0) {
             return   SettingsProxy.create(indexSettings, settingsClass);
         }
 
