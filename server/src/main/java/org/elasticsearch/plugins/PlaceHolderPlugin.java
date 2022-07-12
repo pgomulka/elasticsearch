@@ -6,10 +6,14 @@
  * Side Public License, v 1.
  */
 
-package org.elasticsearch.sp.api.analysis;
+package org.elasticsearch.plugins;
 
-import java.util.Map;
+public final class PlaceHolderPlugin extends Plugin {
 
-public interface TokenFilterFactoryProvider {
-    Map<String, Class<? extends TokenFilterFactory>> getTokenFilterFactories();
+    private final String pluginName;
+
+    PlaceHolderPlugin(String pluginName) {
+        this.pluginName = pluginName;
+    }
+
 }

@@ -15,12 +15,12 @@ import org.elasticsearch.search.fetch.subphase.highlight.FastVectorHighlighter;
 import java.util.List;
 import java.util.function.Function;
 
-public interface TokenFilterFactory extends org.elasticsearch.sp.api.analysis.TokenFilterFactory{
+public interface TokenFilterFactory extends org.elasticsearch.sp.api.analysis.TokenFilterFactory {
     String name();
 
     TokenStream create(TokenStream tokenStream);
 
-    /**
+    /** **** This looks reasonable in the API ****
      * Normalize a tokenStream for use in multi-term queries
      *
      * The default implementation is a no-op

@@ -14,10 +14,11 @@ import org.elasticsearch.sp.api.analysis.TokenFilterFactory;
 import java.util.Map;
 
 import static java.util.Collections.singletonMap;
+
 public class NewAnalysisPhoneticPlugin implements AnalysisPlugin {
+
     @Override
     public Map<String, Class<? extends TokenFilterFactory>> getTokenFilterFactories() {
         return singletonMap("phonetic2", PhoneticTokenFilterFactory.class);
     }
-
 }
