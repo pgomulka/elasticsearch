@@ -9,6 +9,7 @@
 package org.elasticsearch.plugin.analysis.nori;
 
 import org.elasticsearch.sp.api.analysis.AnalysisPlugin;
+import org.elasticsearch.sp.api.analysis.Analyzer;
 import org.elasticsearch.sp.api.analysis.TokenFilterFactory;
 import org.elasticsearch.sp.api.analysis.TokenizerFactory;
 
@@ -23,7 +24,7 @@ public class NewAnalysisNoriPlugin implements AnalysisPlugin {
             "nori_readingform",
             NoriReadingFormFilterFactory.class,
             "nori_number",
-            NoriNumberFilterFactory2.class
+            NoriNumberFilterFactory.class
         );
     }
 
@@ -32,8 +33,8 @@ public class NewAnalysisNoriPlugin implements AnalysisPlugin {
         return Map.of("nori_tokenizer", NoriTokenizerFactory.class);
     }
 
-    // @Override
-    // public Map<String, Class< ? extends Analyzer>> getAnalyzers() {
-    // return null;// singletonMap("nori", NoriAnalyzerProvider::new);
-    // }
+    @Override
+    public Map<String, Class<? extends Analyzer<?>>> getAnalyzers() {
+        return Map.of("nori", NoriAnalyzerProvider.class);
+    }
 }

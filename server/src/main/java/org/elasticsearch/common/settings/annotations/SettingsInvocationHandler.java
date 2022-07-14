@@ -11,13 +11,18 @@ package org.elasticsearch.common.settings.annotations;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.env.Environment;
 import org.elasticsearch.sp.api.analysis.settings.BooleanSetting;
+import org.elasticsearch.sp.api.analysis.settings.ListSetting;
 import org.elasticsearch.sp.api.analysis.settings.LongSetting;
+import org.elasticsearch.sp.api.analysis.settings.PathSetting;
 import org.elasticsearch.sp.api.analysis.settings.StringSetting;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.nio.file.Path;
+import java.util.Collections;
 import java.util.function.Function;
 
 public class SettingsInvocationHandler implements InvocationHandler {
@@ -25,15 +30,13 @@ public class SettingsInvocationHandler implements InvocationHandler {
     private static Logger LOGGER = LogManager.getLogger(SettingsInvocationHandler.class);
     private String prefix = "";
     private Settings settings;
+    private Environment environment;
 
-    public SettingsInvocationHandler(Settings settings) {
+    public SettingsInvocationHandler(Settings settings, Environment environment) {
         this.settings = settings;
+        this.environment = environment;
     }
 
-    public SettingsInvocationHandler(String prefix, Settings settings) {
-        this.prefix = prefix;
-        this.settings = settings;
-    }
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
@@ -44,13 +47,25 @@ public class SettingsInvocationHandler implements InvocationHandler {
         if (annotation instanceof LongSetting) {
             LongSetting setting = (LongSetting) annotation;
             return getValue(Long::valueOf, setting.path(), setting.defaultValue(), setting.max());
-
         } else if (annotation instanceof BooleanSetting) {
             BooleanSetting setting = (BooleanSetting) annotation;
             return getValue(Boolean::valueOf, setting.path(), setting.defaultValue());
         } else if (annotation instanceof StringSetting) {
             StringSetting setting = (StringSetting) annotation;
-            return getValue(String::valueOf, setting.path(), setting.defaultValue());
+            return getValue(String::valueOf, setting.path(), null);
+        } else if (annotation instanceof ListSetting) {
+            ListSetting setting = (ListSetting) annotation;
+            return settings.getAsList(setting.path(), Collections.emptyList());
+        } else if ( annotation instanceof PathSetting){
+            PathSetting setting = (PathSetting) annotation;
+            String path = settings.get(setting.path());
+            if(path == null) {
+                return null;
+            }
+            if(setting.configRelative()) {
+                return environment.configFile().resolve(path);
+            }
+            return Path.of(path);
         } else {
             throw new IllegalArgumentException();
         }
@@ -66,9 +81,11 @@ public class SettingsInvocationHandler implements InvocationHandler {
     }
 
     private <T> T getValue(Function<String, T> parser, String path, T defaultValue) {
-        String key = /*prefix + "." +*/ path;
-        String value = settings.get(key, String.valueOf(defaultValue));
-        return parser.apply(value);
+        String key = path;
+        if(settings.get(key) != null) {
+            return parser.apply(settings.get(key));
+        }
+        return defaultValue;
     }
 
 }

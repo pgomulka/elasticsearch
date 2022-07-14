@@ -6,12 +6,16 @@
  * Side Public License, v 1.
  */
 
-package org.elasticsearch.plugin.analysis.nori;
+package org.elasticsearch.sp.api.analysis.settings;
 
-import org.elasticsearch.plugins.AnalysisPlugin;
-import org.elasticsearch.plugins.Plugin;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-//just to register a plugin with current infrastructure
-public class OldAnalysisNoriPlugin extends Plugin implements AnalysisPlugin {
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+public @interface ListSetting {
+    String path();
 
 }

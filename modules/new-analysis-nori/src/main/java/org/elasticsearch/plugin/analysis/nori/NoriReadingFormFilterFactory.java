@@ -14,10 +14,11 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.index.IndexSettings;
 import org.elasticsearch.sp.api.analysis.TokenFilterFactory;
+import org.elasticsearch.sp.api.analysis.settings.Inject;
 
 public class NoriReadingFormFilterFactory /*extends AbstractTokenFilterFactory*/ implements TokenFilterFactory {
     private String name;
-
+    @Inject
     public NoriReadingFormFilterFactory() {}
 
     public NoriReadingFormFilterFactory(IndexSettings indexSettings, Environment environment, String name, Settings settings) {

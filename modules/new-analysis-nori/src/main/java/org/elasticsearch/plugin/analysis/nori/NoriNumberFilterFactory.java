@@ -13,16 +13,14 @@ import org.apache.lucene.analysis.ko.KoreanNumberFilter;
 import org.elasticsearch.sp.api.analysis.TokenFilterFactory;
 import org.elasticsearch.sp.api.analysis.settings.Inject;
 
-public class NoriNumberFilterFactory2 implements TokenFilterFactory {
+public class NoriNumberFilterFactory implements TokenFilterFactory {
 
     private String name;
+    private NoriAnalysisSettings noriAnalysisSettings;
 
     @Inject
-    public NoriNumberFilterFactory2() {}
-
-    @Inject
-    public NoriNumberFilterFactory2(NoriAnalysisSettings noriAnalysisSettings) {
-        // System.out.println("new nori " + noriAnalysisSettings.getDecompoundMode());
+    public NoriNumberFilterFactory(NoriAnalysisSettings noriAnalysisSettings) {
+        this.noriAnalysisSettings = noriAnalysisSettings;
     }
 
     @Override

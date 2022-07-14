@@ -25,6 +25,7 @@ import org.apache.lucene.analysis.phonetic.BeiderMorseFilter;
 import org.apache.lucene.analysis.phonetic.DaitchMokotoffSoundexFilter;
 import org.apache.lucene.analysis.phonetic.DoubleMetaphoneFilter;
 import org.apache.lucene.analysis.phonetic.PhoneticFilter;
+import org.elasticsearch.sp.api.analysis.settings.Inject;
 
 import java.util.HashSet;
 import java.util.List;
@@ -46,6 +47,7 @@ public class PhoneticTokenFilterFactory
         return "phonetic2";
     }
 
+    @Inject
     public PhoneticTokenFilterFactory() {
         this.encoder = null;
         this.replace = true;

@@ -11,7 +11,9 @@ package org.elasticsearch.plugin.analysis.nori;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.ko.KoreanPartOfSpeechStopFilter;
 import org.apache.lucene.analysis.ko.POS;
+import org.elasticsearch.index.analysis.Analysis;
 import org.elasticsearch.sp.api.analysis.TokenFilterFactory;
+import org.elasticsearch.sp.api.analysis.settings.Inject;
 
 import java.util.HashSet;
 import java.util.List;
@@ -21,8 +23,21 @@ public class NoriPartOfSpeechStopFilterFactory implements TokenFilterFactory {
     private final Set<POS.Tag> stopTags;
     private String name;
 
-    public NoriPartOfSpeechStopFilterFactory() {
-        this.stopTags = KoreanPartOfSpeechStopFilter.DEFAULT_STOP_TAGS;
+    @Inject
+    public NoriPartOfSpeechStopFilterFactory(NoriAnalysisSettings noriAnalysisSettings) {
+        stopTags = getStopTags(noriAnalysisSettings);
+    }
+
+    public static Set<POS.Tag> getStopTags(NoriAnalysisSettings noriAnalysisSettings) {
+        if (noriAnalysisSettings.getStopTagsPath() != null) {
+            List<String> wordListFromFile =
+                Analysis.getWordListFromFile(noriAnalysisSettings.getStopTagsPath(), true);
+            return resolvePOSList(wordListFromFile);
+        } else if (noriAnalysisSettings.getStopTags() != null) {
+            return resolvePOSList(noriAnalysisSettings.getStopTags());
+        } else {
+            return KoreanPartOfSpeechStopFilter.DEFAULT_STOP_TAGS;
+        }
     }
 
     @Override

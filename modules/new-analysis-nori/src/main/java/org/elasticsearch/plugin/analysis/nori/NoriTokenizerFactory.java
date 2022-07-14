@@ -17,6 +17,7 @@ import org.elasticsearch.env.Environment;
 import org.elasticsearch.index.IndexSettings;
 import org.elasticsearch.index.analysis.Analysis;
 import org.elasticsearch.sp.api.analysis.TokenizerFactory;
+import org.elasticsearch.sp.api.analysis.settings.Inject;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -32,28 +33,25 @@ public class NoriTokenizerFactory implements TokenizerFactory {
     private String name;
     private final KoreanTokenizer.DecompoundMode decompoundMode;
     private final boolean discardPunctuation;
+    @Inject
+    public NoriTokenizerFactory(NoriAnalysisSettings noriAnalysisSettings) {
+        this.decompoundMode =  getMode(noriAnalysisSettings);
+        this.userDictionary = getUserDictionary(noriAnalysisSettings);;
+        this.discardPunctuation = noriAnalysisSettings.isDiscardPunctuation();
 
-    public NoriTokenizerFactory() {
-        this.userDictionary = null;
-        this.decompoundMode = null;
-        this.discardPunctuation = true;
     }
 
-    public NoriTokenizerFactory(IndexSettings indexSettings, Environment env, String name, Settings settings) {
-        this.name = name;
-        // super(indexSettings, settings, name);
-        decompoundMode = getMode(settings);
-        userDictionary = getUserDictionary(env, settings);
-        discardPunctuation = settings.getAsBoolean("discard_punctuation", true);
-    }
-
-    public static UserDictionary getUserDictionary(Environment env, Settings settings) {
-        if (settings.get(USER_DICT_PATH_OPTION) != null && settings.get(USER_DICT_RULES_OPTION) != null) {
+    public static UserDictionary getUserDictionary(NoriAnalysisSettings settings) {
+        if (settings.getUserDictionaryPath() != null && settings.getUserDictionaryRulesOption() != null) {
             throw new IllegalArgumentException(
                 "It is not allowed to use [" + USER_DICT_PATH_OPTION + "] in conjunction" + " with [" + USER_DICT_RULES_OPTION + "]"
             );
         }
-        List<String> ruleList = Analysis.getWordList(env, settings, USER_DICT_PATH_OPTION, USER_DICT_RULES_OPTION, true);
+        List<String> ruleList = settings.getUserDictionaryPath() != null ?
+            Analysis.getWordListFromFile(settings.getUserDictionaryPath(), true)
+            : settings.getUserDictionaryRulesOption();
+
+//            Analysis.getWordList(env, settings, USER_DICT_PATH_OPTION, USER_DICT_RULES_OPTION, true);
         StringBuilder sb = new StringBuilder();
         if (ruleList == null || ruleList.isEmpty()) {
             return null;
@@ -67,15 +65,15 @@ public class NoriTokenizerFactory implements TokenizerFactory {
             throw new ElasticsearchException("failed to load nori user dictionary", e);
         }
     }
-
-    public static KoreanTokenizer.DecompoundMode getMode(Settings settings) {
+    public static KoreanTokenizer.DecompoundMode getMode(NoriAnalysisSettings settings) {
         KoreanTokenizer.DecompoundMode mode = KoreanTokenizer.DEFAULT_DECOMPOUND;
-        String modeSetting = settings.get("decompound_mode", null);
+        String modeSetting = settings.getDecompoundMode();
         if (modeSetting != null) {
             mode = KoreanTokenizer.DecompoundMode.valueOf(modeSetting.toUpperCase(Locale.ENGLISH));
         }
         return mode;
     }
+
 
     @Override
     public String name() {

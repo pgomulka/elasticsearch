@@ -234,18 +234,22 @@ public class Analysis {
 
         final Path path = env.configFile().resolve(wordListPath);
 
+        return getWordListFromFile(path, removeComments);
+    }
+
+    public static List<String> getWordListFromFile(Path path, boolean removeComments) {
+
         try {
             return loadWordList(path, removeComments);
         } catch (CharacterCodingException ex) {
             String message = String.format(
                 Locale.ROOT,
-                "Unsupported character encoding detected while reading %s: %s - files must be UTF-8 encoded",
-                settingPath,
-                path.toString()
+                "Unsupported character encoding detected while reading %s - files must be UTF-8 encoded",
+                path
             );
             throw new IllegalArgumentException(message, ex);
         } catch (IOException ioe) {
-            String message = String.format(Locale.ROOT, "IOException while reading %s: %s", settingPath, path.toString());
+            String message = String.format(Locale.ROOT, "IOException while reading %s", path.toString());
             throw new IllegalArgumentException(message, ioe);
         }
     }

@@ -8,4 +8,7 @@
 
 package org.elasticsearch.sp.api.analysis;
 
-public interface Analyzer {}
+public interface Analyzer<T extends org.apache.lucene.analysis.Analyzer> {
+
+    T get();
+}

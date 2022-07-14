@@ -10,16 +10,17 @@ package org.elasticsearch.common.settings.annotations;
 
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.env.Environment;
 
 import java.lang.reflect.Proxy;
 
 public class SettingsProxy {
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static <T> T create(Settings settings, Class<T> parameterType) {
+    public static <T> T create(Settings settings, Class<T> parameterType, Environment environment) {
         return (T) Proxy.newProxyInstance(
             parameterType.getClassLoader(),
             new Class[] { parameterType },
-            new SettingsInvocationHandler(settings)
+            new SettingsInvocationHandler(settings, environment)
         );
     }
 
