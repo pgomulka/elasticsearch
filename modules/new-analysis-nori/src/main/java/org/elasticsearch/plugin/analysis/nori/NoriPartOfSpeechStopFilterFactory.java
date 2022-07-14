@@ -33,7 +33,7 @@ public class NoriPartOfSpeechStopFilterFactory implements TokenFilterFactory {
             List<String> wordListFromFile =
                 Analysis.getWordListFromFile(noriAnalysisSettings.getStopTagsPath(), true);
             return resolvePOSList(wordListFromFile);
-        } else if (noriAnalysisSettings.getStopTags() != null) {
+        } else if (noriAnalysisSettings.getStopTags() != null && noriAnalysisSettings.getStopTags().isEmpty() == false) {
             return resolvePOSList(noriAnalysisSettings.getStopTags());
         } else {
             return KoreanPartOfSpeechStopFilter.DEFAULT_STOP_TAGS;

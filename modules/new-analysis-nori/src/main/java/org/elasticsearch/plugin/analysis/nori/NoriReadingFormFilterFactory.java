@@ -21,11 +21,6 @@ public class NoriReadingFormFilterFactory /*extends AbstractTokenFilterFactory*/
     @Inject
     public NoriReadingFormFilterFactory() {}
 
-    public NoriReadingFormFilterFactory(IndexSettings indexSettings, Environment environment, String name, Settings settings) {
-        // super(name, settings);
-        this.name = name;
-    }
-
     @Override
     public String name() {
         return name;
