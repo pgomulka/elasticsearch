@@ -484,7 +484,7 @@ public final class AnalysisRegistry implements Closeable {
             if (type == null) {
                 throw new IllegalArgumentException("Unknown " + component + " type [" + typeName + "] for [" + name + "]");
             }
-            final T factory = type.get(settings, environment, name, currentSettings);// ASK ON REVIEW  call 1 and 3
+            final T factory = type.get(settings, environment, name, currentSettings);// ASK ON REVIEW call 1 and 3
             factories.put(name, factory);
 
         }
@@ -505,7 +505,7 @@ public final class AnalysisRegistry implements Closeable {
             if (defaultProvider == null) {
                 instance = provider.get(settings, environment, name, defaultSettings); // ASK ON REVIEW call 2 and 4
             } else {
-                instance = defaultProvider.get(settings, environment, name, defaultSettings); // ASK ON REVIEW  this??
+                instance = defaultProvider.get(settings, environment, name, defaultSettings); // ASK ON REVIEW this??
             }
             factories.put(name, instance);
         }

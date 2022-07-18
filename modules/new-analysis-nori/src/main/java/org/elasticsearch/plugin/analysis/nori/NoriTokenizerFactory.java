@@ -12,9 +12,6 @@ import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.ko.KoreanTokenizer;
 import org.apache.lucene.analysis.ko.dict.UserDictionary;
 import org.elasticsearch.ElasticsearchException;
-import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.env.Environment;
-import org.elasticsearch.index.IndexSettings;
 import org.elasticsearch.index.analysis.Analysis;
 import org.elasticsearch.sp.api.analysis.TokenizerFactory;
 import org.elasticsearch.sp.api.analysis.settings.Inject;
@@ -33,10 +30,12 @@ public class NoriTokenizerFactory implements TokenizerFactory {
     private String name;
     private final KoreanTokenizer.DecompoundMode decompoundMode;
     private final boolean discardPunctuation;
+
     @Inject
     public NoriTokenizerFactory(NoriAnalysisSettings noriAnalysisSettings) {
-        this.decompoundMode =  getMode(noriAnalysisSettings);
-        this.userDictionary = getUserDictionary(noriAnalysisSettings);;
+        this.decompoundMode = getMode(noriAnalysisSettings);
+        this.userDictionary = getUserDictionary(noriAnalysisSettings);
+        ;
         this.discardPunctuation = noriAnalysisSettings.isDiscardPunctuation();
 
     }
@@ -47,11 +46,10 @@ public class NoriTokenizerFactory implements TokenizerFactory {
                 "It is not allowed to use [" + USER_DICT_PATH_OPTION + "] in conjunction" + " with [" + USER_DICT_RULES_OPTION + "]"
             );
         }
-        List<String> ruleList = settings.getUserDictionaryPath() != null ?
-            Analysis.getWordListFromFile(settings.getUserDictionaryPath(), true)
+        List<String> ruleList = settings.getUserDictionaryPath() != null
+            ? Analysis.getWordListFromFile(settings.getUserDictionaryPath(), true)
             : settings.getUserDictionaryRulesOption();
 
-//            Analysis.getWordList(env, settings, USER_DICT_PATH_OPTION, USER_DICT_RULES_OPTION, true);
         StringBuilder sb = new StringBuilder();
         if (ruleList == null || ruleList.isEmpty()) {
             return null;
@@ -65,6 +63,7 @@ public class NoriTokenizerFactory implements TokenizerFactory {
             throw new ElasticsearchException("failed to load nori user dictionary", e);
         }
     }
+
     public static KoreanTokenizer.DecompoundMode getMode(NoriAnalysisSettings settings) {
         KoreanTokenizer.DecompoundMode mode = KoreanTokenizer.DEFAULT_DECOMPOUND;
         String modeSetting = settings.getDecompoundMode();
@@ -73,7 +72,6 @@ public class NoriTokenizerFactory implements TokenizerFactory {
         }
         return mode;
     }
-
 
     @Override
     public String name() {

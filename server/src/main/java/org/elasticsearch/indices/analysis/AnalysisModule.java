@@ -131,7 +131,8 @@ public final class AnalysisModule {
     private static NamedRegistry<AnalysisProvider<TokenFilterFactory>> setupTokenFilters(
         List<AnalysisPlugin> plugins,
         HunspellService hunspellService,
-        PluginsService pluginsService) {
+        PluginsService pluginsService
+    ) {
         NamedRegistry<AnalysisProvider<TokenFilterFactory>> tokenFilters = new NamedRegistry<>("token_filter");
         tokenFilters.register("stop", StopTokenFilterFactory::new);
         // Add "standard" for old indices (bwc)
@@ -181,14 +182,14 @@ public final class AnalysisModule {
         return tokenFilters;
     }
 
-    private static Map<String, AnalysisProvider<TokenFilterFactory>>
-    getStringAnalysisProviderMap(Map<String, Class<? extends org.elasticsearch.sp.api.analysis.TokenFilterFactory>> tokenFilterFactories) {
+    private static Map<String, AnalysisProvider<TokenFilterFactory>> getStringAnalysisProviderMap(
+        Map<String, Class<? extends org.elasticsearch.sp.api.analysis.TokenFilterFactory>> tokenFilterFactories
+    ) {
         Map<String, AnalysisProvider<TokenFilterFactory>> res = new HashMap<>();
         for (var entry : tokenFilterFactories.entrySet()) {
             String name = entry.getKey();
             // TokenFilterFactory
             Class<? extends org.elasticsearch.sp.api.analysis.TokenFilterFactory> clazz = entry.getValue();
-
 
             res.put(name, new AnalysisProvider<TokenFilterFactory>() {
                 @Override
@@ -216,24 +217,29 @@ public final class AnalysisModule {
         return res;
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    private static <T> T createSettings(Class<T> settingsClass, IndexSettings indexSettings, Settings nodeSettings,
-                                        Settings analysisSettings, Environment environment) {
-        if( settingsClass.getAnnotationsByType(NodeSettings.class).length >0 ) {
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private static <T> T createSettings(
+        Class<T> settingsClass,
+        IndexSettings indexSettings,
+        Settings nodeSettings,
+        Settings analysisSettings,
+        Environment environment
+    ) {
+        if (settingsClass.getAnnotationsByType(NodeSettings.class).length > 0) {
             return SettingsProxy.create(nodeSettings, settingsClass, environment);
         }
-        if(settingsClass.getAnnotationsByType(AnalysisSettings.class) .length >0) {
-            return  SettingsProxy.create(analysisSettings, settingsClass, environment);
+        if (settingsClass.getAnnotationsByType(AnalysisSettings.class).length > 0) {
+            return SettingsProxy.create(analysisSettings, settingsClass, environment);
 
         }
-        if(settingsClass.getAnnotationsByType(ClusterSettings.class).length >0) {
-            return null;//SettingsProxy.create(clusterService, settingsClass);
+        if (settingsClass.getAnnotationsByType(ClusterSettings.class).length > 0) {
+            return null;// SettingsProxy.create(clusterService, settingsClass);
         }
-        if(settingsClass.getAnnotationsByType(org.elasticsearch.sp.api.analysis.settings.IndexSettings.class).length >0) {
-            return   SettingsProxy.create(indexSettings, settingsClass);
+        if (settingsClass.getAnnotationsByType(org.elasticsearch.sp.api.analysis.settings.IndexSettings.class).length > 0) {
+            return SettingsProxy.create(indexSettings, settingsClass);
         }
 
-         throw new IllegalArgumentException("unsupported parameter");
+        throw new IllegalArgumentException("unsupported parameter");
     }
 
     static Map<String, PreBuiltAnalyzerProviderFactory> setupPreBuiltAnalyzerProviderFactories(List<AnalysisPlugin> plugins) {
@@ -317,7 +323,10 @@ public final class AnalysisModule {
         return unmodifiableMap(preConfiguredTokenizers.getRegistry());
     }
 
-    private static NamedRegistry<AnalysisProvider<TokenizerFactory>> setupTokenizers(List<AnalysisPlugin> plugins, PluginsService pluginsService) {
+    private static NamedRegistry<AnalysisProvider<TokenizerFactory>> setupTokenizers(
+        List<AnalysisPlugin> plugins,
+        PluginsService pluginsService
+    ) {
         NamedRegistry<AnalysisProvider<TokenizerFactory>> tokenizers = new NamedRegistry<>("tokenizer");
         tokenizers.register("standard", StandardTokenizerFactory::new);
 
@@ -333,13 +342,13 @@ public final class AnalysisModule {
         return tokenizers;
     }
 
-    private static Map<String,AnalysisProvider<TokenizerFactory>>
-    mapStableTokenizers(Map<String, Class<? extends org.elasticsearch.sp.api.analysis.TokenizerFactory>> stringClassMap) {
+    private static Map<String, AnalysisProvider<TokenizerFactory>> mapStableTokenizers(
+        Map<String, Class<? extends org.elasticsearch.sp.api.analysis.TokenizerFactory>> stringClassMap
+    ) {
         Map<String, AnalysisProvider<TokenizerFactory>> res = new HashMap<>();
         for (var entry : stringClassMap.entrySet()) {
             String name = entry.getKey();
             Class<? extends org.elasticsearch.sp.api.analysis.TokenizerFactory> clazz = entry.getValue();
-
 
             res.put(name, new AnalysisProvider<TokenizerFactory>() {
                 @Override
@@ -368,52 +377,54 @@ public final class AnalysisModule {
         return res;
     }
 
-//    @FunctionalInterface
-//    interface MappingInterface<FROM, TO> {
-//        TO map(IndexSettings indexSettings, Environment environment, Settings settings, Class<? extends FROM> clazz);
-//    }
-//
-//    private static <STABLE, OLD> Map<String, AnalysisProvider<OLD>> mapStableTokenizers(
-//        Map<String, Class<? extends STABLE>> mapOfStableClasses, MappingInterface<STABLE,OLD> mapper) {
-//
-//        Map<String, AnalysisProvider<OLD>> res = new HashMap<>();
-//        for (var entry : mapOfStableClasses.entrySet()) {
-//            String name = entry.getKey();
-//            var clazz = entry.getValue();
-//            res.put(name, new AnalysisProvider<OLD>() {
-//                @Override
-//                public OLD get(IndexSettings indexSettings, Environment environment, String name, Settings settings) {
-//                    try {
-//                        return mapper.map(indexSettings, environment, settings, clazz);
-//                    } catch (Throwable t) {
-//                        throw new RuntimeException(t);
-//                    }
-//                }
-//            });
-//        }
-//
-//        return res;
-//    }
-//
-//    private static TokenizerFactory tokenizerAdapter(IndexSettings indexSettings, Environment environment, Settings analysisSettings,
-//                                                     Class<? extends org.elasticsearch.sp.api.analysis.TokenizerFactory> clazz) {
-//        var tokenFilterFactory = createInstance(clazz, indexSettings, environment.settings(), analysisSettings, environment);
-//        return new TokenizerFactory() {
-//
-//            @Override
-//            public String name() {
-//                return null;
-//            }
-//
-//            @Override
-//            public Tokenizer create() {
-//                return null;
-//            }
-//        };
-//    }
+    // @FunctionalInterface
+    // interface MappingInterface<FROM, TO> {
+    // TO map(IndexSettings indexSettings, Environment environment, Settings settings, Class<? extends FROM> clazz);
+    // }
+    //
+    // private static <STABLE, OLD> Map<String, AnalysisProvider<OLD>> mapStableTokenizers(
+    // Map<String, Class<? extends STABLE>> mapOfStableClasses, MappingInterface<STABLE,OLD> mapper) {
+    //
+    // Map<String, AnalysisProvider<OLD>> res = new HashMap<>();
+    // for (var entry : mapOfStableClasses.entrySet()) {
+    // String name = entry.getKey();
+    // var clazz = entry.getValue();
+    // res.put(name, new AnalysisProvider<OLD>() {
+    // @Override
+    // public OLD get(IndexSettings indexSettings, Environment environment, String name, Settings settings) {
+    // try {
+    // return mapper.map(indexSettings, environment, settings, clazz);
+    // } catch (Throwable t) {
+    // throw new RuntimeException(t);
+    // }
+    // }
+    // });
+    // }
+    //
+    // return res;
+    // }
+    //
+    // private static TokenizerFactory tokenizerAdapter(IndexSettings indexSettings, Environment environment, Settings analysisSettings,
+    // Class<? extends org.elasticsearch.sp.api.analysis.TokenizerFactory> clazz) {
+    // var tokenFilterFactory = createInstance(clazz, indexSettings, environment.settings(), analysisSettings, environment);
+    // return new TokenizerFactory() {
+    //
+    // @Override
+    // public String name() {
+    // return null;
+    // }
+    //
+    // @Override
+    // public Tokenizer create() {
+    // return null;
+    // }
+    // };
+    // }
 
-
-    private static NamedRegistry<AnalysisProvider<AnalyzerProvider<?>>> setupAnalyzers(List<AnalysisPlugin> plugins, PluginsService pluginsService) {
+    private static NamedRegistry<AnalysisProvider<AnalyzerProvider<?>>> setupAnalyzers(
+        List<AnalysisPlugin> plugins,
+        PluginsService pluginsService
+    ) {
         NamedRegistry<AnalysisProvider<AnalyzerProvider<?>>> analyzers = new NamedRegistry<>("analyzer");
         analyzers.register("default", StandardAnalyzerProvider::new);
         analyzers.register("standard", StandardAnalyzerProvider::new);
@@ -432,8 +443,10 @@ public final class AnalysisModule {
         return analyzers;
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    private static Map<String,AnalysisProvider<AnalyzerProvider<? extends org.apache.lucene.analysis.Analyzer>>> mapStableAnalysers(Map<String, Class<? extends Analyzer<?>>> analyzersClassMap) {
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private static Map<String, AnalysisProvider<AnalyzerProvider<? extends org.apache.lucene.analysis.Analyzer>>> mapStableAnalysers(
+        Map<String, Class<? extends Analyzer<?>>> analyzersClassMap
+    ) {
         Map<String, AnalysisProvider<AnalyzerProvider<? extends org.apache.lucene.analysis.Analyzer>>> res = new HashMap<>();
         for (var entry : analyzersClassMap.entrySet()) {
             String name = entry.getKey();
@@ -441,12 +454,16 @@ public final class AnalysisModule {
             // TokenFilterFactory
             Class<? extends Analyzer<?>> clazz = entry.getValue();
 
-
             res.put(name, new AnalysisProvider<AnalyzerProvider<? extends org.apache.lucene.analysis.Analyzer>>() {
                 @Override
-                public AnalyzerProvider<? extends org.apache.lucene.analysis.Analyzer> get(IndexSettings indexSettings, Environment environment, String name, Settings settings) {
-                    var stableAnalyzer = createInstance( clazz, indexSettings, environment.settings(), settings, environment);
-                    return new AnalyzerProvider (){
+                public AnalyzerProvider<? extends org.apache.lucene.analysis.Analyzer> get(
+                    IndexSettings indexSettings,
+                    Environment environment,
+                    String name,
+                    Settings settings
+                ) {
+                    var stableAnalyzer = createInstance(clazz, indexSettings, environment.settings(), settings, environment);
+                    return new AnalyzerProvider() {
 
                         @Override
                         public String name() {
@@ -469,18 +486,25 @@ public final class AnalysisModule {
         }
         return res;
     }
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    private static <T>  T createInstance(Class<T> clazz, IndexSettings indexSettings, Settings nodeSettings,
-                                         Settings analysisSettings, Environment environment) {
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private static <T> T createInstance(
+        Class<T> clazz,
+        IndexSettings indexSettings,
+        Settings nodeSettings,
+        Settings analysisSettings,
+        Environment environment
+    ) {
 
         try {
             for (Constructor<?> constructor : clazz.getConstructors()) {
-                org.elasticsearch.sp.api.analysis.settings.Inject inject =
-                    constructor.getAnnotation(org.elasticsearch.sp.api.analysis.settings.Inject.class);
+                org.elasticsearch.sp.api.analysis.settings.Inject inject = constructor.getAnnotation(
+                    org.elasticsearch.sp.api.analysis.settings.Inject.class
+                );
                 if (inject != null) {
                     Class<?>[] parameterTypes = constructor.getParameterTypes();
                     Object[] parameters = new Object[parameterTypes.length];
-                    for (int i =0; i< parameterTypes.length; i++) {
+                    for (int i = 0; i < parameterTypes.length; i++) {
                         Object settings = createSettings(parameterTypes[i], indexSettings, nodeSettings, analysisSettings, environment);
                         parameters[i] = settings;
                     }
@@ -489,7 +513,7 @@ public final class AnalysisModule {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            // e.printStackTrace();
         }
         throw new RuntimeException("cannot create instance of " + clazz + ", no injectable ctr found");
     }

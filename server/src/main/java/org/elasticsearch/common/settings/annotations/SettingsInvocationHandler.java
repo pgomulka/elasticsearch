@@ -21,7 +21,6 @@ import org.elasticsearch.sp.api.analysis.settings.StringSetting;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-import java.nio.file.Path;
 import java.util.Collections;
 import java.util.function.Function;
 
@@ -36,7 +35,6 @@ public class SettingsInvocationHandler implements InvocationHandler {
         this.settings = settings;
         this.environment = environment;
     }
-
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
@@ -56,16 +54,16 @@ public class SettingsInvocationHandler implements InvocationHandler {
         } else if (annotation instanceof ListSetting) {
             ListSetting setting = (ListSetting) annotation;
             return settings.getAsList(setting.path(), Collections.emptyList());
-        } else if ( annotation instanceof PathSetting){
+        } else if (annotation instanceof PathSetting) {
             PathSetting setting = (PathSetting) annotation;
             String path = settings.get(setting.path());
-            if(path == null) {
+            if (path == null) {
                 return null;
             }
-            if(setting.configRelative()) {
+            if (setting.configRelative()) {
                 return environment.configFile().resolve(path);
             }
-            return Path.of(path);
+            return environment.pluginsFile().resolve(path);
         } else {
             throw new IllegalArgumentException();
         }
@@ -82,7 +80,7 @@ public class SettingsInvocationHandler implements InvocationHandler {
 
     private <T> T getValue(Function<String, T> parser, String path, T defaultValue) {
         String key = path;
-        if(settings.get(key) != null) {
+        if (settings.get(key) != null) {
             return parser.apply(settings.get(key));
         }
         return defaultValue;

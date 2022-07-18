@@ -30,8 +30,7 @@ public class NoriPartOfSpeechStopFilterFactory implements TokenFilterFactory {
 
     public static Set<POS.Tag> getStopTags(NoriAnalysisSettings noriAnalysisSettings) {
         if (noriAnalysisSettings.getStopTagsPath() != null) {
-            List<String> wordListFromFile =
-                Analysis.getWordListFromFile(noriAnalysisSettings.getStopTagsPath(), true);
+            List<String> wordListFromFile = Analysis.getWordListFromFile(noriAnalysisSettings.getStopTagsPath(), true);
             return resolvePOSList(wordListFromFile);
         } else if (noriAnalysisSettings.getStopTags() != null && noriAnalysisSettings.getStopTags().isEmpty() == false) {
             return resolvePOSList(noriAnalysisSettings.getStopTags());

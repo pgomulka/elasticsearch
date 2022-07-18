@@ -21,7 +21,7 @@ public interface AnalysisPlugin {
         return Collections.emptyMap();
     }
 
-    default Map<String, Class<? extends Analyzer<?>>>  getAnalyzers() {
+    default Map<String, Class<? extends Analyzer<?>>> getAnalyzers() {
         return Collections.emptyMap();
     }
 }

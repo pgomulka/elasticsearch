@@ -8,7 +8,6 @@
 
 package org.elasticsearch.plugin.analysis.nori;
 
-import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.sp.api.analysis.settings.AnalysisSettings;
 import org.elasticsearch.sp.api.analysis.settings.BooleanSetting;
 import org.elasticsearch.sp.api.analysis.settings.ListSetting;
@@ -37,5 +36,5 @@ public interface NoriAnalysisSettings {
     List<String> getUserDictionaryRulesOption();
 
     @BooleanSetting(path = "discard_punctuation", defaultValue = true)
-    Boolean isDiscardPunctuation();
+    boolean isDiscardPunctuation();
 }
