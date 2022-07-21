@@ -27,6 +27,10 @@ import org.elasticsearch.env.Environment;
 import org.elasticsearch.jdk.JarHell;
 import org.elasticsearch.node.ReportingService;
 import org.elasticsearch.plugins.spi.SPIClassIterator;
+import org.elasticsearch.sp.api.analysis.Analyzer;
+import org.elasticsearch.sp.api.analysis.TokenFilterFactory;
+import org.elasticsearch.sp.api.analysis.TokenizerFactory;
+import org.elasticsearch.sp.api.analysis.annotations.Factory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -39,12 +43,14 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.net.URLDecoder;
 import java.nio.file.Path;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -56,6 +62,8 @@ import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -98,6 +106,8 @@ public class PluginsService implements ReportingService<PluginsAndModules> {
      */
     private final List<LoadedPlugin> plugins;
     private final PluginsAndModules info;
+    private final Map<Class<?>,  Map<String, Class<?>>> analysisInterfaceToNameClassMap = new HashMap<>();
+    private final Map<String, Class<?>> analysisAnnotatedPlugins = new HashMap<>();
 
     public static final Setting<List<String>> MANDATORY_SETTING = Setting.listSetting(
         "plugin.mandatory",
@@ -314,6 +324,14 @@ public class PluginsService implements ReportingService<PluginsAndModules> {
 
         return Collections.unmodifiableList(result);
     }
+    public  Map<String, Class<?>> loadAnalysisFactory(Class<?> service) {
+        Map<String, Class<?>> nameToClass = analysisInterfaceToNameClassMap.get(service);
+
+        if(nameToClass!=null) {
+            return nameToClass;
+        }
+        return Collections.emptyMap();
+    }
 
     private static void loadExtensionsForPlugin(ExtensiblePlugin extensiblePlugin, List<Plugin> extendingPlugins) {
         ExtensiblePlugin.ExtensionLoader extensionLoader = new ExtensiblePlugin.ExtensionLoader() {
@@ -457,6 +475,44 @@ public class PluginsService implements ReportingService<PluginsAndModules> {
                     );
                 }
                 plugin = loadPlugin(pluginClass, settings, configPath);
+
+                for ( URL url : bundle.allUrls) {
+                    try {
+                        // build jar file name, then loop through zipped entries
+                        String jarFileName = URLDecoder.decode(url.getFile(), "UTF-8");
+                        JarFile jf  = new JarFile(jarFileName);
+                        Enumeration<JarEntry> jarEntries = jf.entries();
+                        while(jarEntries.hasMoreElements()){
+                            String  entryName = jarEntries.nextElement().getName();
+                            if(entryName.endsWith(".class") && entryName.endsWith("module-info.class") == false) {
+                                String className = entryName.replace('/', '.').substring(0, entryName.length()-6);
+                                Class<?> aClass = null;
+                                try{
+                                 aClass = pluginClassLoader.loadClass(className);
+                                    Factory[] annotationsByType = aClass.getAnnotationsByType(Factory.class);
+                                    if(annotationsByType != null && annotationsByType.length>0) {
+                                        Factory factory = annotationsByType[0];
+                                        Class<?>[] interfaces = aClass.getInterfaces();
+                                        for(Class<?> analysisInterface :
+                                            Set.of(TokenFilterFactory.class, TokenizerFactory.class, Analyzer.class )) {
+                                            analysisInterfaceToNameClassMap.computeIfAbsent(analysisInterface, (k)-> new HashMap<>());
+                                            analysisInterfaceToNameClassMap.get(analysisInterface)
+                                                .put(factory.name(), aClass);
+                                        }
+                                        analysisAnnotatedPlugins.put(factory.name(), aClass);
+                                    }
+                                }catch (NoClassDefFoundError e){
+                                    e.printStackTrace();
+                                }
+
+                            }
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } catch (ClassNotFoundException e) {
+                        e.printStackTrace();
+                    }
+                }
             } else {
                 // this is just a shortcut to get things working quickly. FIXME
                 plugin = new PlaceHolderPlugin(bundle.plugin.getName());

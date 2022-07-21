@@ -171,25 +171,26 @@ public final class AnalysisModule {
 
         // Register Stable Plugins
         if (pluginsService != null) {
-            pluginsService.loadServiceProviders(org.elasticsearch.sp.api.analysis.AnalysisPlugin.class)
-                .stream()
-                .map(org.elasticsearch.sp.api.analysis.AnalysisPlugin::getTokenFilterFactories)
-                .map(AnalysisModule::getStringAnalysisProviderMap)
-                .forEach(tokenFilters::register);
+            Map<String, Class<?>> nameToFactoryMap =
+                pluginsService.loadAnalysisFactory(org.elasticsearch.sp.api.analysis.TokenFilterFactory.class);
+            Map<String, AnalysisProvider<TokenFilterFactory>> oldApiMap =
+                getStringAnalysisProviderMap(nameToFactoryMap);
+            tokenFilters.register(oldApiMap);
         }
 
         tokenFilters.extractAndRegister(plugins, AnalysisPlugin::getTokenFilters);
         return tokenFilters;
     }
-
+    @SuppressWarnings("unchecked")
     private static Map<String, AnalysisProvider<TokenFilterFactory>> getStringAnalysisProviderMap(
-        Map<String, Class<? extends org.elasticsearch.sp.api.analysis.TokenFilterFactory>> tokenFilterFactories
+        Map<String, Class<?>> tokenFilterFactories
     ) {
         Map<String, AnalysisProvider<TokenFilterFactory>> res = new HashMap<>();
         for (var entry : tokenFilterFactories.entrySet()) {
             String name = entry.getKey();
             // TokenFilterFactory
-            Class<? extends org.elasticsearch.sp.api.analysis.TokenFilterFactory> clazz = entry.getValue();
+            Class<? extends org.elasticsearch.sp.api.analysis.TokenFilterFactory> clazz =
+                (Class<? extends org.elasticsearch.sp.api.analysis.TokenFilterFactory>) entry.getValue();
 
             res.put(name, new AnalysisProvider<TokenFilterFactory>() {
                 @Override
