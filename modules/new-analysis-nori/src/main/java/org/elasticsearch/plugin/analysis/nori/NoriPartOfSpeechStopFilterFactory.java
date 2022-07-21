@@ -13,12 +13,13 @@ import org.apache.lucene.analysis.ko.KoreanPartOfSpeechStopFilter;
 import org.apache.lucene.analysis.ko.POS;
 import org.elasticsearch.index.analysis.Analysis;
 import org.elasticsearch.sp.api.analysis.TokenFilterFactory;
+import org.elasticsearch.sp.api.analysis.annotations.Factory;
 import org.elasticsearch.sp.api.analysis.settings.Inject;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
+@Factory(name = "nori_part_of_speech")
 public class NoriPartOfSpeechStopFilterFactory implements TokenFilterFactory {
     private final Set<POS.Tag> stopTags;
     private String name;

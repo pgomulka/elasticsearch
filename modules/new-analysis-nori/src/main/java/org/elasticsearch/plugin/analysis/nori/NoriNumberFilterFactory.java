@@ -11,8 +11,10 @@ package org.elasticsearch.plugin.analysis.nori;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.ko.KoreanNumberFilter;
 import org.elasticsearch.sp.api.analysis.TokenFilterFactory;
+import org.elasticsearch.sp.api.analysis.annotations.Factory;
 import org.elasticsearch.sp.api.analysis.settings.Inject;
 
+@Factory(name = "nori_number")
 public class NoriNumberFilterFactory implements TokenFilterFactory {
 
     private String name;

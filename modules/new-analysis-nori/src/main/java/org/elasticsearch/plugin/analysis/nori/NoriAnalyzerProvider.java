@@ -13,10 +13,11 @@ import org.apache.lucene.analysis.ko.KoreanTokenizer;
 import org.apache.lucene.analysis.ko.POS;
 import org.apache.lucene.analysis.ko.dict.UserDictionary;
 import org.elasticsearch.sp.api.analysis.Analyzer;
+import org.elasticsearch.sp.api.analysis.annotations.Factory;
 import org.elasticsearch.sp.api.analysis.settings.Inject;
 
 import java.util.Set;
-
+@Factory(name = "nori")
 public class NoriAnalyzerProvider implements Analyzer<KoreanAnalyzer> {
     private final KoreanAnalyzer analyzer;
 

@@ -36,7 +36,6 @@ public class DynamicInvocationHandler implements InvocationHandler {
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        LOGGER.info("Invoked method: {}", method.getName());
         // LongSetting annotation = method.getAnnotation(LongSetting.class);
         // assert method.getAnnotations().length == 1;
         Annotation annotation = method.getAnnotations()[0];

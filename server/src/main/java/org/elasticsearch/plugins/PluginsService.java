@@ -48,6 +48,7 @@ import java.nio.file.Path;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -412,7 +413,7 @@ public class PluginsService implements ReportingService<PluginsAndModules> {
 
     private Plugin loadBundle(PluginBundle bundle, Map<String, LoadedPlugin> loaded) {
         String name = bundle.plugin.getName();
-        logger.debug(() -> "Loading bundle: " + name);
+        logger.info(() -> "Loading bundle: " + name);
 
         PluginsUtils.verifyCompatibility(bundle.plugin);
 
@@ -458,7 +459,48 @@ public class PluginsService implements ReportingService<PluginsAndModules> {
             // that have dependencies with their own SPI endpoints have a chance to load
             // and initialize them appropriately.
             privilegedSetContextClassLoader(pluginClassLoader);
+            for ( URL url : bundle.allUrls) {
+                try {
+                    // build jar file name, then loop through zipped entries
+                    String jarFileName = URLDecoder.decode(url.getFile(), "UTF-8");
+                    JarFile jf  = new JarFile(jarFileName);
+                    Enumeration<JarEntry> jarEntries = jf.entries();
+                    while(jarEntries.hasMoreElements()){
+                        String  entryName = jarEntries.nextElement().getName();
+                        if(entryName.endsWith(".class") && entryName.endsWith("module-info.class") == false) {
+                            String className = entryName.replace('/', '.').substring(0, entryName.length()-6);
+                            Class<?> aClass = null;
+                            try{
+                                aClass = pluginClassLoader.loadClass(className);
+                                Factory[] annotationsByType = aClass.getAnnotationsByType(Factory.class);
+                                if(annotationsByType != null && annotationsByType.length>0) {
+                                    Factory factory = annotationsByType[0];
+                                    Set<Class<?>> interfaces = Set.of(aClass.getInterfaces());
+//                                    if(interfaces.size() > 0) {
+//                                        ne
+                                    for(Class<?> analysisInterface :
+                                        Set.of(TokenFilterFactory.class, TokenizerFactory.class, Analyzer.class )) {
+                                        if(interfaces.contains(analysisInterface)) {
+                                            analysisInterfaceToNameClassMap.computeIfAbsent(analysisInterface, (k)-> new HashMap<>());
+                                            analysisInterfaceToNameClassMap.get(analysisInterface)
+                                                .put(factory.name(), aClass);
 
+                                        }
+                                    }
+                                    analysisAnnotatedPlugins.put(factory.name(), aClass);
+                                }
+                            }catch (NoClassDefFoundError e){
+                                //         e.printStackTrace();
+                            }
+
+                        }
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (ClassNotFoundException e) {
+                    //        e.printStackTrace();
+                }
+            }
             Plugin plugin;
             String classname = bundle.plugin.getClassname();
             if (classname != null && "".equals(classname) == false) {
@@ -476,43 +518,7 @@ public class PluginsService implements ReportingService<PluginsAndModules> {
                 }
                 plugin = loadPlugin(pluginClass, settings, configPath);
 
-                for ( URL url : bundle.allUrls) {
-                    try {
-                        // build jar file name, then loop through zipped entries
-                        String jarFileName = URLDecoder.decode(url.getFile(), "UTF-8");
-                        JarFile jf  = new JarFile(jarFileName);
-                        Enumeration<JarEntry> jarEntries = jf.entries();
-                        while(jarEntries.hasMoreElements()){
-                            String  entryName = jarEntries.nextElement().getName();
-                            if(entryName.endsWith(".class") && entryName.endsWith("module-info.class") == false) {
-                                String className = entryName.replace('/', '.').substring(0, entryName.length()-6);
-                                Class<?> aClass = null;
-                                try{
-                                 aClass = pluginClassLoader.loadClass(className);
-                                    Factory[] annotationsByType = aClass.getAnnotationsByType(Factory.class);
-                                    if(annotationsByType != null && annotationsByType.length>0) {
-                                        Factory factory = annotationsByType[0];
-                                        Class<?>[] interfaces = aClass.getInterfaces();
-                                        for(Class<?> analysisInterface :
-                                            Set.of(TokenFilterFactory.class, TokenizerFactory.class, Analyzer.class )) {
-                                            analysisInterfaceToNameClassMap.computeIfAbsent(analysisInterface, (k)-> new HashMap<>());
-                                            analysisInterfaceToNameClassMap.get(analysisInterface)
-                                                .put(factory.name(), aClass);
-                                        }
-                                        analysisAnnotatedPlugins.put(factory.name(), aClass);
-                                    }
-                                }catch (NoClassDefFoundError e){
-                                    e.printStackTrace();
-                                }
 
-                            }
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    } catch (ClassNotFoundException e) {
-                        e.printStackTrace();
-                    }
-                }
             } else {
                 // this is just a shortcut to get things working quickly. FIXME
                 plugin = new PlaceHolderPlugin(bundle.plugin.getName());

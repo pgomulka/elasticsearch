@@ -332,24 +332,27 @@ public final class AnalysisModule {
         tokenizers.register("standard", StandardTokenizerFactory::new);
 
         if (pluginsService != null) {
-            pluginsService.loadServiceProviders(org.elasticsearch.sp.api.analysis.AnalysisPlugin.class)
-                .stream()
-                .map(org.elasticsearch.sp.api.analysis.AnalysisPlugin::getTokenizerFactories)
-                .map(AnalysisModule::mapStableTokenizers)
-                .forEach(tokenizers::register);
+
+
+            Map<String, Class<?>> nameToFactoryMap =
+                pluginsService.loadAnalysisFactory(org.elasticsearch.sp.api.analysis.TokenizerFactory.class);
+            Map<String, AnalysisProvider<TokenizerFactory>> oldApiMap =
+                mapStableTokenizers(nameToFactoryMap);
+            tokenizers.register(oldApiMap);
         }
 
         tokenizers.extractAndRegister(plugins, AnalysisPlugin::getTokenizers);
         return tokenizers;
     }
-
+@SuppressWarnings("unchecked")
     private static Map<String, AnalysisProvider<TokenizerFactory>> mapStableTokenizers(
-        Map<String, Class<? extends org.elasticsearch.sp.api.analysis.TokenizerFactory>> stringClassMap
+        Map<String, Class<?>> stringClassMap
     ) {
         Map<String, AnalysisProvider<TokenizerFactory>> res = new HashMap<>();
         for (var entry : stringClassMap.entrySet()) {
             String name = entry.getKey();
-            Class<? extends org.elasticsearch.sp.api.analysis.TokenizerFactory> clazz = entry.getValue();
+            Class<? extends org.elasticsearch.sp.api.analysis.TokenizerFactory> clazz =
+                (Class<? extends org.elasticsearch.sp.api.analysis.TokenizerFactory>) entry.getValue();
 
             res.put(name, new AnalysisProvider<TokenizerFactory>() {
                 @Override
@@ -435,25 +438,31 @@ public final class AnalysisModule {
         analyzers.register("keyword", KeywordAnalyzerProvider::new);
         analyzers.extractAndRegister(plugins, AnalysisPlugin::getAnalyzers);
         if (pluginsService != null) {
-            pluginsService.loadServiceProviders(org.elasticsearch.sp.api.analysis.AnalysisPlugin.class)
-                .stream()
-                .map(org.elasticsearch.sp.api.analysis.AnalysisPlugin::getAnalyzers)
-                .map(AnalysisModule::mapStableAnalysers)
-                .forEach(analyzers::register);
+//            pluginsService.loadServiceProviders(org.elasticsearch.sp.api.analysis.AnalysisPlugin.class)
+//                .stream()
+//                .map(org.elasticsearch.sp.api.analysis.AnalysisPlugin::getAnalyzers)
+//                .map(AnalysisModule::mapStableAnalysers)
+//                .forEach(analyzers::register);
+
+            Map<String, Class<?>> nameToFactoryMap =
+                pluginsService.loadAnalysisFactory(org.elasticsearch.sp.api.analysis.Analyzer.class);
+            Map<String, AnalysisProvider<AnalyzerProvider<? extends org.apache.lucene.analysis.Analyzer>>> oldApiMap =
+                mapStableAnalysers(nameToFactoryMap);
+            analyzers.register(oldApiMap);
         }
         return analyzers;
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private static Map<String, AnalysisProvider<AnalyzerProvider<? extends org.apache.lucene.analysis.Analyzer>>> mapStableAnalysers(
-        Map<String, Class<? extends Analyzer<?>>> analyzersClassMap
+        Map<String, Class<?>> analyzersClassMap
     ) {
         Map<String, AnalysisProvider<AnalyzerProvider<? extends org.apache.lucene.analysis.Analyzer>>> res = new HashMap<>();
         for (var entry : analyzersClassMap.entrySet()) {
             String name = entry.getKey();
             var cls = entry.getValue();
             // TokenFilterFactory
-            Class<? extends Analyzer<?>> clazz = entry.getValue();
+            Class<? extends Analyzer<?>> clazz = (Class<? extends Analyzer<?>>) entry.getValue();
 
             res.put(name, new AnalysisProvider<AnalyzerProvider<? extends org.apache.lucene.analysis.Analyzer>>() {
                 @Override

@@ -11,8 +11,9 @@ package org.elasticsearch.plugin.analysis.nori;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.ko.KoreanReadingFormFilter;
 import org.elasticsearch.sp.api.analysis.TokenFilterFactory;
+import org.elasticsearch.sp.api.analysis.annotations.Factory;
 import org.elasticsearch.sp.api.analysis.settings.Inject;
-
+@Factory(name = "nori_readingform")
 public class NoriReadingFormFilterFactory /*extends AbstractTokenFilterFactory*/ implements TokenFilterFactory {
     private String name;
 
