@@ -48,6 +48,8 @@ module org.elasticsearch.server {
     requires org.apache.lucene.sandbox;
     requires org.apache.lucene.suggest;
 
+    requires org.objectweb.asm;
+
     exports org.elasticsearch;
     exports org.elasticsearch.action;
     exports org.elasticsearch.action.admin.cluster.allocation;

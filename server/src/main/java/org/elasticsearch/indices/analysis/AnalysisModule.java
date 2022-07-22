@@ -18,6 +18,7 @@ import org.elasticsearch.common.logging.DeprecationCategory;
 import org.elasticsearch.common.logging.DeprecationLogger;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.annotations.SettingsProxy;
+import org.elasticsearch.core.Tuple;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.index.IndexSettings;
 import org.elasticsearch.index.analysis.AbstractTokenFilterFactory;
@@ -171,7 +172,7 @@ public final class AnalysisModule {
 
         // Register Stable Plugins
         if (pluginsService != null) {
-            Map<String, Class<?>> nameToFactoryMap =
+            Map<String, Tuple<String, ClassLoader>> nameToFactoryMap =
                 pluginsService.loadAnalysisFactory(org.elasticsearch.sp.api.analysis.TokenFilterFactory.class);
             Map<String, AnalysisProvider<TokenFilterFactory>> oldApiMap =
                 getStringAnalysisProviderMap(nameToFactoryMap);
@@ -181,22 +182,26 @@ public final class AnalysisModule {
         tokenFilters.extractAndRegister(plugins, AnalysisPlugin::getTokenFilters);
         return tokenFilters;
     }
+
     @SuppressWarnings("unchecked")
     private static Map<String, AnalysisProvider<TokenFilterFactory>> getStringAnalysisProviderMap(
-        Map<String, Class<?>> tokenFilterFactories
+        Map<String, Tuple<String, ClassLoader>> tokenFilterFactories
     ) {
         Map<String, AnalysisProvider<TokenFilterFactory>> res = new HashMap<>();
         for (var entry : tokenFilterFactories.entrySet()) {
             String name = entry.getKey();
-            // TokenFilterFactory
-            Class<? extends org.elasticsearch.sp.api.analysis.TokenFilterFactory> clazz =
-                (Class<? extends org.elasticsearch.sp.api.analysis.TokenFilterFactory>) entry.getValue();
 
             res.put(name, new AnalysisProvider<TokenFilterFactory>() {
                 @Override
                 public TokenFilterFactory get(IndexSettings indexSettings, Environment environment, String name, Settings settings) {
-                    var tokenFilterFactory = createInstance(clazz, indexSettings, environment.settings(), settings, environment);
                     try {
+                        Tuple<String, ClassLoader> value = entry.getValue();
+
+                        Class<? extends org.elasticsearch.sp.api.analysis.TokenFilterFactory> clazz =
+                            (Class<? extends org.elasticsearch.sp.api.analysis.TokenFilterFactory>) value.v2().loadClass(value.v1());
+                        var tokenFilterFactory = createInstance(clazz, indexSettings, environment.settings(), settings, environment);
+
+
                         return new TokenFilterFactory() {
                             @Override
                             public String name() {
@@ -218,7 +223,7 @@ public final class AnalysisModule {
         return res;
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private static <T> T createSettings(
         Class<T> settingsClass,
         IndexSettings indexSettings,
@@ -332,9 +337,7 @@ public final class AnalysisModule {
         tokenizers.register("standard", StandardTokenizerFactory::new);
 
         if (pluginsService != null) {
-
-
-            Map<String, Class<?>> nameToFactoryMap =
+            Map<String, Tuple<String, ClassLoader>> nameToFactoryMap =
                 pluginsService.loadAnalysisFactory(org.elasticsearch.sp.api.analysis.TokenizerFactory.class);
             Map<String, AnalysisProvider<TokenizerFactory>> oldApiMap =
                 mapStableTokenizers(nameToFactoryMap);
@@ -347,19 +350,22 @@ public final class AnalysisModule {
 
     @SuppressWarnings("unchecked")
     private static Map<String, AnalysisProvider<TokenizerFactory>> mapStableTokenizers(
-        Map<String, Class<?>> stringClassMap
+        Map<String, Tuple<String, ClassLoader>> stringClassMap
     ) {
         Map<String, AnalysisProvider<TokenizerFactory>> res = new HashMap<>();
         for (var entry : stringClassMap.entrySet()) {
             String name = entry.getKey();
-            Class<? extends org.elasticsearch.sp.api.analysis.TokenizerFactory> clazz =
-                (Class<? extends org.elasticsearch.sp.api.analysis.TokenizerFactory>) entry.getValue();
 
             res.put(name, new AnalysisProvider<TokenizerFactory>() {
                 @Override
                 public TokenizerFactory get(IndexSettings indexSettings, Environment environment, String name, Settings settings) {
-                    var tokenFilterFactory = createInstance(clazz, indexSettings, environment.settings(), settings, environment);
+                    Tuple<String, ClassLoader> value = entry.getValue();
                     try {
+                        Class<? extends org.elasticsearch.sp.api.analysis.TokenizerFactory> clazz =
+                            (Class<? extends org.elasticsearch.sp.api.analysis.TokenizerFactory>) value.v2().loadClass(value.v1());
+
+                        var tokenFilterFactory = createInstance(clazz, indexSettings, environment.settings(), settings, environment);
+
                         return new TokenizerFactory() {
 
                             @Override
@@ -445,7 +451,7 @@ public final class AnalysisModule {
 //                .map(AnalysisModule::mapStableAnalysers)
 //                .forEach(analyzers::register);
 
-            Map<String, Class<?>> nameToFactoryMap =
+            Map<String, Tuple<String,ClassLoader>> nameToFactoryMap =
                 pluginsService.loadAnalysisFactory(org.elasticsearch.sp.api.analysis.Analyzer.class);
             Map<String, AnalysisProvider<AnalyzerProvider<? extends org.apache.lucene.analysis.Analyzer>>> oldApiMap =
                 mapStableAnalysers(nameToFactoryMap);
@@ -454,16 +460,13 @@ public final class AnalysisModule {
         return analyzers;
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private static Map<String, AnalysisProvider<AnalyzerProvider<? extends org.apache.lucene.analysis.Analyzer>>> mapStableAnalysers(
-        Map<String, Class<?>> analyzersClassMap
+        Map<String, Tuple<String,ClassLoader>> analyzersClassMap
     ) {
         Map<String, AnalysisProvider<AnalyzerProvider<? extends org.apache.lucene.analysis.Analyzer>>> res = new HashMap<>();
         for (var entry : analyzersClassMap.entrySet()) {
             String name = entry.getKey();
-            var cls = entry.getValue();
-            // TokenFilterFactory
-            Class<? extends Analyzer<?>> clazz = (Class<? extends Analyzer<?>>) entry.getValue();
 
             res.put(name, new AnalysisProvider<AnalyzerProvider<? extends org.apache.lucene.analysis.Analyzer>>() {
                 @Override
@@ -473,6 +476,12 @@ public final class AnalysisModule {
                     String name,
                     Settings settings
                 ) {
+                    Tuple<String, ClassLoader> value = entry.getValue();
+                    try {
+                    Class<? extends org.elasticsearch.sp.api.analysis.Analyzer<?>> clazz =
+                        (Class<? extends org.elasticsearch.sp.api.analysis.Analyzer<?>>) value.v2().loadClass(value.v1());
+
+
                     var stableAnalyzer = createInstance(clazz, indexSettings, environment.settings(), settings, environment);
                     return new AnalyzerProvider() {
 
@@ -491,6 +500,9 @@ public final class AnalysisModule {
                             return stableAnalyzer.get();
                         }
                     };
+                    } catch (Throwable t) {
+                        throw new RuntimeException(t);
+                    }
 
                 }
             });
@@ -498,7 +510,7 @@ public final class AnalysisModule {
         return res;
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private static <T> T createInstance(
         Class<T> clazz,
         IndexSettings indexSettings,

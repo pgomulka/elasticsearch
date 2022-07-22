@@ -31,6 +31,7 @@ import org.elasticsearch.sp.api.analysis.Analyzer;
 import org.elasticsearch.sp.api.analysis.TokenFilterFactory;
 import org.elasticsearch.sp.api.analysis.TokenizerFactory;
 import org.elasticsearch.sp.api.analysis.annotations.Factory;
+import org.objectweb.asm.ClassReader;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -108,7 +109,7 @@ public class PluginsService implements ReportingService<PluginsAndModules> {
     private final List<LoadedPlugin> plugins;
     private final PluginsAndModules info;
     private final Map<Class<?>,  Map<String, Class<?>>> analysisInterfaceToNameClassMap = new HashMap<>();
-    private final Map<String, Class<?>> analysisAnnotatedPlugins = new HashMap<>();
+    private final Map<Class<?>,  Map<String, Tuple<String,ClassLoader>>> analysisInterfaceToNameComponentClassnameMap = new HashMap<>();
 
     public static final Setting<List<String>> MANDATORY_SETTING = Setting.listSetting(
         "plugin.mandatory",
@@ -325,11 +326,11 @@ public class PluginsService implements ReportingService<PluginsAndModules> {
 
         return Collections.unmodifiableList(result);
     }
-    public  Map<String, Class<?>> loadAnalysisFactory(Class<?> service) {
-        Map<String, Class<?>> nameToClass = analysisInterfaceToNameClassMap.get(service);
+    public  Map<String, Tuple<String,ClassLoader>> loadAnalysisFactory(Class<?> service) {
+        Map<String, Tuple<String,ClassLoader>> nameToClassname = analysisInterfaceToNameComponentClassnameMap.get(service);
 
-        if(nameToClass!=null) {
-            return nameToClass;
+        if(nameToClassname!=null) {
+            return nameToClassname;
         }
         return Collections.emptyMap();
     }
@@ -459,6 +460,8 @@ public class PluginsService implements ReportingService<PluginsAndModules> {
             // that have dependencies with their own SPI endpoints have a chance to load
             // and initialize them appropriately.
             privilegedSetContextClassLoader(pluginClassLoader);
+          AnnotationScanner scanner = new AnnotationScanner(pluginClassLoader, analysisInterfaceToNameComponentClassnameMap);
+
             for ( URL url : bundle.allUrls) {
                 try {
                     // build jar file name, then loop through zipped entries
@@ -466,39 +469,15 @@ public class PluginsService implements ReportingService<PluginsAndModules> {
                     JarFile jf  = new JarFile(jarFileName);
                     Enumeration<JarEntry> jarEntries = jf.entries();
                     while(jarEntries.hasMoreElements()){
-                        String  entryName = jarEntries.nextElement().getName();
-                        if(entryName.endsWith(".class") && entryName.endsWith("module-info.class") == false) {
-                            String className = entryName.replace('/', '.').substring(0, entryName.length()-6);
-                            Class<?> aClass = null;
-                            try{
-                                aClass = pluginClassLoader.loadClass(className);
-                                Factory[] annotationsByType = aClass.getAnnotationsByType(Factory.class);
-                                if(annotationsByType != null && annotationsByType.length>0) {
-                                    Factory factory = annotationsByType[0];
-                                    Set<Class<?>> interfaces = Set.of(aClass.getInterfaces());
-//                                    if(interfaces.size() > 0) {
-//                                        ne
-                                    for(Class<?> analysisInterface :
-                                        Set.of(TokenFilterFactory.class, TokenizerFactory.class, Analyzer.class )) {
-                                        if(interfaces.contains(analysisInterface)) {
-                                            analysisInterfaceToNameClassMap.computeIfAbsent(analysisInterface, (k)-> new HashMap<>());
-                                            analysisInterfaceToNameClassMap.get(analysisInterface)
-                                                .put(factory.name(), aClass);
-
-                                        }
-                                    }
-                                    analysisAnnotatedPlugins.put(factory.name(), aClass);
-                                }
-                            }catch (NoClassDefFoundError e){
-                                //         e.printStackTrace();
-                            }
-
+                        JarEntry jarEntry = jarEntries.nextElement();
+                        try{
+                            ClassReader cr = new ClassReader(jf.getInputStream(jarEntry));
+                            cr.accept(scanner,0);
+                        } catch (Throwable t) {
                         }
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
-                } catch (ClassNotFoundException e) {
-                    //        e.printStackTrace();
                 }
             }
             Plugin plugin;
