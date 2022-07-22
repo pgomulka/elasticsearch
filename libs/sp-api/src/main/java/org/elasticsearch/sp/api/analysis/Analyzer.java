@@ -8,7 +8,7 @@
 
 package org.elasticsearch.sp.api.analysis;
 
-public interface Analyzer<T extends org.apache.lucene.analysis.Analyzer> {
+public non-sealed interface Analyzer<T extends org.apache.lucene.analysis.Analyzer> extends NamedComponent {
 
     T get();
 }

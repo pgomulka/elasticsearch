@@ -10,9 +10,6 @@ package org.elasticsearch.sp.api.analysis;
 
 import org.apache.lucene.analysis.TokenStream;
 
-public interface TokenFilterFactory {
-    String name();
-
+public non-sealed interface TokenFilterFactory extends NamedComponent {
     TokenStream create(TokenStream tokenStream);
-
 }

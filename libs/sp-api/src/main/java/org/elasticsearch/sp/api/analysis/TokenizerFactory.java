@@ -10,9 +10,6 @@ package org.elasticsearch.sp.api.analysis;
 
 import org.apache.lucene.analysis.Tokenizer;
 
-public interface TokenizerFactory {
+public non-sealed interface TokenizerFactory extends NamedComponent {
     Tokenizer create();
-
-    String name();
-
 }

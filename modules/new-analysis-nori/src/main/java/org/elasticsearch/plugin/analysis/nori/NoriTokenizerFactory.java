@@ -23,6 +23,7 @@ import java.io.StringReader;
 import java.util.List;
 import java.util.Locale;
 @Factory(name = "nori_tokenizer")
+
 public class NoriTokenizerFactory implements TokenizerFactory {
     private static final String USER_DICT_PATH_OPTION = "user_dictionary";
     private static final String USER_DICT_RULES_OPTION = "user_dictionary_rules";
@@ -36,13 +37,12 @@ public class NoriTokenizerFactory implements TokenizerFactory {
     public NoriTokenizerFactory(NoriAnalysisSettings noriAnalysisSettings) {
         this.decompoundMode = getMode(noriAnalysisSettings);
         this.userDictionary = getUserDictionary(noriAnalysisSettings);
-        ;
         this.discardPunctuation = noriAnalysisSettings.isDiscardPunctuation();
-
+        var n = name();
     }
 
     public static UserDictionary getUserDictionary(NoriAnalysisSettings settings) {
-        if (settings.getUserDictionaryPath() != null && settings.getUserDictionaryRulesOption() != null) {
+        if (settings.getUserDictionaryPath() != null && settings.getUserDictionaryRulesOption() != null) { // TODO declare in annotation
             throw new IllegalArgumentException(
                 "It is not allowed to use [" + USER_DICT_PATH_OPTION + "] in conjunction" + " with [" + USER_DICT_RULES_OPTION + "]"
             );
@@ -74,10 +74,7 @@ public class NoriTokenizerFactory implements TokenizerFactory {
         return mode;
     }
 
-    @Override
-    public String name() {
-        return name;
-    }
+
 
     @Override
     public Tokenizer create() {

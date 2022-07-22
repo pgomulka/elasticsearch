@@ -344,7 +344,8 @@ public final class AnalysisModule {
         tokenizers.extractAndRegister(plugins, AnalysisPlugin::getTokenizers);
         return tokenizers;
     }
-@SuppressWarnings("unchecked")
+
+    @SuppressWarnings("unchecked")
     private static Map<String, AnalysisProvider<TokenizerFactory>> mapStableTokenizers(
         Map<String, Class<?>> stringClassMap
     ) {
