@@ -536,7 +536,7 @@ public final class AnalysisModule {
             }
 
         } catch (Exception e) {
-            // e.printStackTrace();
+             e.printStackTrace();
         }
         throw new RuntimeException("cannot create instance of " + clazz + ", no injectable ctr found");
     }

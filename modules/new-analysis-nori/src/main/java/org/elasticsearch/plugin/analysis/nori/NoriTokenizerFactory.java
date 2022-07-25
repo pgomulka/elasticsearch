@@ -42,14 +42,8 @@ public class NoriTokenizerFactory implements TokenizerFactory {
     }
 
     public static UserDictionary getUserDictionary(NoriAnalysisSettings settings) {
-        if (settings.getUserDictionaryPath() != null && settings.getUserDictionaryRulesOption() != null) { // TODO declare in annotation
-            throw new IllegalArgumentException(
-                "It is not allowed to use [" + USER_DICT_PATH_OPTION + "] in conjunction" + " with [" + USER_DICT_RULES_OPTION + "]"
-            );
-        }
-        List<String> ruleList = settings.getUserDictionaryPath() != null
-            ? Analysis.getWordListFromFile(settings.getUserDictionaryPath(), true)
-            : settings.getUserDictionaryRulesOption();
+        List<String> ruleList = settings.getUserDictionaryRules();
+
 
         StringBuilder sb = new StringBuilder();
         if (ruleList == null || ruleList.isEmpty()) {

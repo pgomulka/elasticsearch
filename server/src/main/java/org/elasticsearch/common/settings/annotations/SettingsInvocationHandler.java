@@ -12,6 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.env.Environment;
+import org.elasticsearch.index.analysis.Analysis;
 import org.elasticsearch.sp.api.analysis.settings.BooleanSetting;
 import org.elasticsearch.sp.api.analysis.settings.ListSetting;
 import org.elasticsearch.sp.api.analysis.settings.LongSetting;
@@ -52,6 +53,19 @@ public class SettingsInvocationHandler implements InvocationHandler {
             return getValue(String::valueOf, setting.path(), null);
         } else if (annotation instanceof ListSetting) {
             ListSetting setting = (ListSetting) annotation;
+            if(setting.fallbackToPathOption()!=""){
+                if(setting.exclusiveWithFallbackPath()) {
+                    String optionListSetting = settings.get(setting.path());
+                    String pathSetting = settings.get(setting.fallbackToPathOption());
+
+                    if (setting.exclusiveWithFallbackPath() && optionListSetting != null && pathSetting != "") {
+                        throw new IllegalArgumentException(
+                            "It is not allowed to use [" + setting.path() + "] in conjunction with [" + setting.fallbackToPathOption() + "]"
+                        );
+                    }
+                }
+                return Analysis.getWordList(environment, settings, setting.fallbackToPathOption(), setting.path(),true);
+            }
             return settings.getAsList(setting.path(), Collections.emptyList());
         } else if (annotation instanceof PathSetting) {
             PathSetting setting = (PathSetting) annotation;

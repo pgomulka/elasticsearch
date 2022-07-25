@@ -16,6 +16,9 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface ListSetting {
-    String path();
+    String path() ;
 
+    String fallbackToPathOption() default "";
+
+    boolean exclusiveWithFallbackPath() default true;
 }
