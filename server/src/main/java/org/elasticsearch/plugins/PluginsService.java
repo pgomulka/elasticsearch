@@ -26,11 +26,10 @@ import org.elasticsearch.core.Tuple;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.jdk.JarHell;
 import org.elasticsearch.node.ReportingService;
+import org.elasticsearch.plugins.scanners.AnnotationScanner;
+import org.elasticsearch.plugins.scanners.ClassTraversal;
+import org.elasticsearch.plugins.scanners.InterfaceScanner;
 import org.elasticsearch.plugins.spi.SPIClassIterator;
-import org.elasticsearch.sp.api.analysis.Analyzer;
-import org.elasticsearch.sp.api.analysis.TokenFilterFactory;
-import org.elasticsearch.sp.api.analysis.TokenizerFactory;
-import org.elasticsearch.sp.api.analysis.annotations.Factory;
 import org.objectweb.asm.ClassReader;
 
 import java.io.IOException;
@@ -49,7 +48,6 @@ import java.nio.file.Path;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -109,7 +107,7 @@ public class PluginsService implements ReportingService<PluginsAndModules> {
     private final List<LoadedPlugin> plugins;
     private final PluginsAndModules info;
     private final Map<Class<?>,  Map<String, Class<?>>> analysisInterfaceToNameClassMap = new HashMap<>();
-    private final Map<Class<?>,  Map<String, Tuple<String,ClassLoader>>> analysisInterfaceToNameComponentClassnameMap = new HashMap<>();
+    private  Map<Class<?>,  Map<String, Tuple<String,ClassLoader>>> analysisInterfaceToNameComponentClassnameMap = new HashMap<>();
 
     public static final Setting<List<String>> MANDATORY_SETTING = Setting.listSetting(
         "plugin.mandatory",
@@ -460,26 +458,9 @@ public class PluginsService implements ReportingService<PluginsAndModules> {
             // that have dependencies with their own SPI endpoints have a chance to load
             // and initialize them appropriately.
             privilegedSetContextClassLoader(pluginClassLoader);
-          AnnotationScanner scanner = new AnnotationScanner(pluginClassLoader, analysisInterfaceToNameComponentClassnameMap);
+            loadStablePlugins(bundle, pluginClassLoader);
 
-            for ( URL url : bundle.allUrls) {
-                try {
-                    // build jar file name, then loop through zipped entries
-                    String jarFileName = URLDecoder.decode(url.getFile(), "UTF-8");
-                    JarFile jf  = new JarFile(jarFileName);
-                    Enumeration<JarEntry> jarEntries = jf.entries();
-                    while(jarEntries.hasMoreElements()){
-                        JarEntry jarEntry = jarEntries.nextElement();
-                        try{
-                            ClassReader cr = new ClassReader(jf.getInputStream(jarEntry));
-                            cr.accept(scanner,0);
-                        } catch (Throwable t) {
-                        }
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+
             Plugin plugin;
             String classname = bundle.plugin.getClassname();
             if (classname != null && "".equals(classname) == false) {
@@ -509,6 +490,37 @@ public class PluginsService implements ReportingService<PluginsAndModules> {
             privilegedSetContextClassLoader(cl);
         }
     }
+
+    private void loadStablePlugins(PluginBundle bundle, ClassLoader pluginClassLoader) {
+        AnnotationScanner annotationScanner = new AnnotationScanner(pluginClassLoader);
+        InterfaceScanner interfaceScanner = new InterfaceScanner(pluginClassLoader);
+
+        for ( URL url : bundle.allUrls) {
+            try {
+                // build jar file name, then loop through zipped entries
+                String jarFileName = URLDecoder.decode(url.getFile(), "UTF-8");
+                JarFile jf  = new JarFile(jarFileName);
+                Enumeration<JarEntry> jarEntries = jf.entries();
+                while(jarEntries.hasMoreElements()){
+                    JarEntry jarEntry = jarEntries.nextElement();
+                    try{
+                        ClassReader cr = new ClassReader(jf.getInputStream(jarEntry));
+                        cr.accept(annotationScanner,0);
+                        cr.accept(interfaceScanner,0);
+                    } catch (Throwable t) {
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        ClassTraversal ct = new ClassTraversal(annotationScanner.getClassNameToAnnotatedName(), interfaceScanner.getClassHierarchy());
+        analysisInterfaceToNameComponentClassnameMap .putAll(ct.getResult(pluginClassLoader));
+
+
+    }
+
 
     static LayerAndLoader createSPI(PluginBundle bundle, ClassLoader parentLoader, List<LoadedPlugin> extendedPlugins) {
         final PluginDescriptor plugin = bundle.plugin;

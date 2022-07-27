@@ -354,9 +354,9 @@ public final class AnalysisModule {
     ) {
         Map<String, AnalysisProvider<TokenizerFactory>> res = new HashMap<>();
         for (var entry : stringClassMap.entrySet()) {
-            String name = entry.getKey();
+            String className = entry.getKey();
 
-            res.put(name, new AnalysisProvider<TokenizerFactory>() {
+            res.put(className, new AnalysisProvider<TokenizerFactory>() {
                 @Override
                 public TokenizerFactory get(IndexSettings indexSettings, Environment environment, String name, Settings settings) {
                     Tuple<String, ClassLoader> value = entry.getValue();

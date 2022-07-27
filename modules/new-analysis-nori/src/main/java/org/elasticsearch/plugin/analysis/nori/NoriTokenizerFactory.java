@@ -22,8 +22,8 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.util.List;
 import java.util.Locale;
-@Factory(name = "nori_tokenizer")
 
+@Factory(name = "nori_tokenizer")
 public class NoriTokenizerFactory implements TokenizerFactory {
     private static final String USER_DICT_PATH_OPTION = "user_dictionary";
     private static final String USER_DICT_RULES_OPTION = "user_dictionary_rules";

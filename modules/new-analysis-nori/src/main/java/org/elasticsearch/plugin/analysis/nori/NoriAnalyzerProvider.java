@@ -18,7 +18,7 @@ import org.elasticsearch.sp.api.analysis.settings.Inject;
 
 import java.util.Set;
 @Factory(name = "nori")
-public class NoriAnalyzerProvider implements Analyzer<KoreanAnalyzer> {
+public class NoriAnalyzerProvider implements AbstractAnalyzer {
     private final KoreanAnalyzer analyzer;
 
     @Inject

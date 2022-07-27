@@ -6,13 +6,13 @@
  * Side Public License, v 1.
  */
 
-package org.elasticsearch.plugins;
+package org.elasticsearch.plugins.scanners;
 
 import org.apache.lucene.analysis.TokenStream;
 import org.elasticsearch.sp.api.analysis.TokenFilterFactory;
 import org.elasticsearch.sp.api.analysis.annotations.Factory;
 
-@Factory(name = "fff")
+@Factory(name = "TestClass")
 public class TestClass implements TokenFilterFactory {
 
     @Override
