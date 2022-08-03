@@ -16,7 +16,7 @@ dependencies {
   api "org.apache.lucene:lucene-core:${versions.lucene}"
   api "org.apache.lucene:lucene-analysis-common:${versions.lucene}"
   api "org.apache.lucene:lucene-analysis-common:${versions.lucene}"
-  api project(':libs:elasticsearch-plugin-api')
+  api project(':libs:elasticsearch-api-plugin')
 }
 
 

@@ -6,10 +6,10 @@
  * Side Public License, v 1.
  */
 
-package org.elasticsearch.analysis.plugin.api;
+package org.elasticsearch.api.plugin.analysis;
 
 import org.apache.lucene.analysis.TokenStream;
-import org.elasticsearch.plugin.api.Nameable;
+import org.elasticsearch.api.plugin.Nameable;
 
 /**
  * An analysis component used to create token filters.

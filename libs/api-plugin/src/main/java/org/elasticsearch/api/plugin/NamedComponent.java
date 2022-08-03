@@ -6,7 +6,7 @@
  * Side Public License, v 1.
  */
 
-package org.elasticsearch.plugin.api;
+package org.elasticsearch.api.plugin;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

@@ -6,9 +6,9 @@
  * Side Public License, v 1.
  */
 
-package org.elasticsearch.analysis.plugin.api;
+package org.elasticsearch.api.plugin.analysis;
 
-import org.elasticsearch.plugin.api.Nameable;
+import org.elasticsearch.api.plugin.Nameable;
 
 /**
  * An analysis component used to create Analyzers
