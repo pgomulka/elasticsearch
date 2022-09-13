@@ -8,15 +8,21 @@
 
 package org.elasticsearch.analysis.common;
 
+import org.elasticsearch.common.io.Streams;
 import org.elasticsearch.plugin.analysis.api.CharFilterFactory;
 import org.elasticsearch.plugin.api.NamedComponent;
 
+import java.io.IOException;
 import java.io.Reader;
+import java.io.StringReader;
 
 @NamedComponent(name = "xxx")
 public class XX implements CharFilterFactory {
     @Override
     public Reader create(Reader reader) {
+        try {
+            return new StringReader(Streams.copyToString(reader) + "_stable");
+        } catch (IOException e) {}
         return reader;
     }
 }

@@ -471,9 +471,19 @@ public class PluginsService implements ReportingService<PluginsAndModules> {
             }
 
             if (bundle.pluginDescriptor().getName().contains("analysis-common")) {
+                UberModuleClassLoader instance = UberModuleClassLoader.getInstance(pluginParentLoader, "analysis.common",
+                    bundle.allUrls.stream().map(u -> {
+                        try {
+                            return PathUtils.get(u.toURI());
+                        } catch (URISyntaxException e) {
+                            e.printStackTrace();
+                        }
+                        return null;
+                    }).collect(Collectors.toList()));
+
                 stablePluginsRegistry.namedComponents.put(
                     CharFilterFactory.class.getCanonicalName(),
-                    new NameToPluginInfo(Map.of("xx", new PluginInfo("xx", "org.elasticsearch.analysis.common.XX", pluginClassLoader)))
+                    new NameToPluginInfo(Map.of("xx", new PluginInfo("xx", "org.elasticsearch.analysis.common.XX", instance)))
                 );
             }
 
@@ -496,6 +506,8 @@ public class PluginsService implements ReportingService<PluginsAndModules> {
             privilegedSetContextClassLoader(cl);
         }
     }
+
+
 
     static LayerAndLoader createSPI(PluginBundle bundle, ClassLoader parentLoader, List<LoadedPlugin> extendedPlugins) {
         final PluginDescriptor plugin = bundle.plugin;
