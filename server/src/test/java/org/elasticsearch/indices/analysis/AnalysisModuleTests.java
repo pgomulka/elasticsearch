@@ -45,6 +45,8 @@ import org.elasticsearch.index.analysis.TokenizerFactory;
 import org.elasticsearch.indices.analysis.AnalysisModule.AnalysisProvider;
 import org.elasticsearch.plugin.analysis.api.AnalysisMode;
 import org.elasticsearch.plugin.api.NamedComponent;
+import org.elasticsearch.plugin.api.Parser;
+import org.elasticsearch.plugin.api.TypeSetting;
 import org.elasticsearch.plugins.AnalysisPlugin;
 import org.elasticsearch.plugins.scanners.NameToPluginInfo;
 import org.elasticsearch.plugins.scanners.NamedComponentReader;
@@ -60,6 +62,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
+import java.io.Serializable;
 import java.io.StringReader;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -476,6 +479,24 @@ public class AnalysisModuleTests extends ESTestCase {
         assertSame(dictionary, module.getHunspellService().getDictionary("foo"));
     }
 
+    static class MyClass {
+        int a;
+        String b;
+    }
+
+    static class MyParser implements Parser<MyClass> {
+        @Override
+        public MyClass parse(String json) {
+            return null;
+        }
+    }
+
+    //@AnalysisSettings
+    interface MyPluginSettings {
+        @TypeSetting(parser = MyParser.class)
+        MyClass getMyClass();
+    }
+
     @NamedComponent(name = "stableCharFilterFactory")
     public static class TestCharFilterFactory implements org.elasticsearch.plugin.analysis.api.CharFilterFactory {
         @SuppressForbidden(reason = "need a public constructor")
@@ -553,7 +574,6 @@ public class AnalysisModuleTests extends ESTestCase {
         public Tokenizer create() {
             return new UnderscoreTokenizer();
         }
-
     }
 
     static class UnderscoreTokenizer extends CharTokenizer {
