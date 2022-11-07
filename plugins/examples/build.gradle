@@ -2,6 +2,7 @@ import org.elasticsearch.gradle.VersionProperties
 
 buildscript {
   repositories {
+  mavenLocal()
     maven {
       url = 'https://snapshots.elastic.co/maven/'
     }

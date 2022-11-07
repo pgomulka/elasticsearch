@@ -17,6 +17,11 @@ import java.io.Reader;
 
 @NamedComponent(name = "example_char_filter")
 public class ExampleCharFilterFactory implements CharFilterFactory {
+
+
+    public ExampleCharFilterFactory() {
+    }
+
     @Override
     public Reader create(Reader reader) {
         return new ReplaceHash(reader);

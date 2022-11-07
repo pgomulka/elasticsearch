@@ -1,0 +1,42 @@
+## Smoke tests for char filters included in the analysis-common module
+
+#todo this can be expanded with parameters once settings support is added
+---
+"Stable char_filter plugin. Replace # with 3":
+  - do:
+      indices.create:
+        index: test
+        body:
+          settings:
+            analysis:
+              char_filter:
+                my_char_filter:
+                  type: example_char_filter
+                  custom: he1
+              analyzer:
+                my_analyzer:
+                  tokenizer: standard
+                  char_filter: ["my_char_filter"
+                  ]
+          mappings:
+            properties:
+              text:
+                type: text
+                analyzer: my_analyzer
+  - do:
+      index:
+        index: test
+        id: "1"
+        body: { "text": "t#st" }
+  - do:
+      indices.refresh: { }
+
+  - do:
+      search:
+        rest_total_hits_as_int: true
+        index: test
+        body:
+          query:
+            match:
+              text: t31st
+  - match: { hits.total: 1 }

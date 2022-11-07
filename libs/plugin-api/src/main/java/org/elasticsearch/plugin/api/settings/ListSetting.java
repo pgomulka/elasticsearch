@@ -6,10 +6,14 @@
  * Side Public License, v 1.
  */
 
-package org.elasticsearch.plugin.api;
+package org.elasticsearch.plugin.api.settings;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import java.io.Serializable;
-
-public interface Parser<T>  {
-    T parse(String json);
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+public @interface ListSetting {
+    String path();
 }

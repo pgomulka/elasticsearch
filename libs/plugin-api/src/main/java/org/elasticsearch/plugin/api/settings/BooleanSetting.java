@@ -6,11 +6,17 @@
  * Side Public License, v 1.
  */
 
-package org.elasticsearch.plugin.api;
+package org.elasticsearch.plugin.api.settings;
 
-import java.io.Serializable;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-public @interface TypeSetting {
-    Class<? extends  Parser<?>> parser();
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+public @interface BooleanSetting {
+    String path();
+
+    boolean defaultValue();
 }
-

@@ -45,8 +45,12 @@ import org.elasticsearch.index.analysis.TokenizerFactory;
 import org.elasticsearch.indices.analysis.AnalysisModule.AnalysisProvider;
 import org.elasticsearch.plugin.analysis.api.AnalysisMode;
 import org.elasticsearch.plugin.api.NamedComponent;
-import org.elasticsearch.plugin.api.Parser;
-import org.elasticsearch.plugin.api.TypeSetting;
+import org.elasticsearch.plugin.api.settings.AnalysisSettings;
+import org.elasticsearch.plugin.api.settings.Inject;
+import org.elasticsearch.plugin.api.settings.LongSetting;
+import org.elasticsearch.plugin.api.settings.Parser;
+import org.elasticsearch.plugin.api.settings.StringSetting;
+import org.elasticsearch.plugin.api.settings.TypeSetting;
 import org.elasticsearch.plugins.AnalysisPlugin;
 import org.elasticsearch.plugins.scanners.NameToPluginInfo;
 import org.elasticsearch.plugins.scanners.NamedComponentReader;
@@ -62,7 +66,6 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
-import java.io.Serializable;
 import java.io.StringReader;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -479,28 +482,39 @@ public class AnalysisModuleTests extends ESTestCase {
         assertSame(dictionary, module.getHunspellService().getDictionary("foo"));
     }
 
-    static class MyClass {
-        int a;
-        String b;
-    }
+    //has to be public..
+    public static class MyClass {
+        String s;
 
-    static class MyParser implements Parser<MyClass> {
+        public MyClass(String s) {
+            this.s = s;
+        }
+    }
+    //must be public
+    public static class MyParser implements Parser<MyClass> {
         @Override
         public MyClass parse(String json) {
-            return null;
+            return new MyClass(json);
         }
     }
 
-    //@AnalysisSettings
-    interface MyPluginSettings {
-        @TypeSetting(parser = MyParser.class)
+
+
+    @AnalysisSettings
+    public interface MyPluginSettings {
+        @TypeSetting(parser = MyParser.class, path = "coorinat")
         MyClass getMyClass();
     }
 
+
+
     @NamedComponent(name = "stableCharFilterFactory")
     public static class TestCharFilterFactory implements org.elasticsearch.plugin.analysis.api.CharFilterFactory {
-        @SuppressForbidden(reason = "need a public constructor")
-        public TestCharFilterFactory() {}
+        final MyClass myClass;
+        @Inject
+        public TestCharFilterFactory(MyPluginSettings settings) {
+             myClass = settings.getMyClass();
+        }
 
         @Override
         public Reader create(Reader reader) {
@@ -649,6 +663,7 @@ public class AnalysisModuleTests extends ESTestCase {
             Settings.builder()
                 .put("index.analysis.analyzer.char_filter_test.tokenizer", "standard")
                 .put("index.analysis.analyzer.char_filter_test.char_filter", "stableCharFilterFactory")
+                .put("index.analysis.analyzer.char_filter_test.testsetting", "yyyy")
 
                 .put("index.analysis.analyzer.token_filter_test.tokenizer", "standard")
                 .put("index.analysis.analyzer.token_filter_test.filter", "stableTokenFilterFactory")
