@@ -20,6 +20,7 @@ public class ExampleCharFilterFactory implements CharFilterFactory {
 
 
     public ExampleCharFilterFactory() {
+
     }
 
     @Override

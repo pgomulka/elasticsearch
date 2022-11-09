@@ -504,6 +504,9 @@ public class AnalysisModuleTests extends ESTestCase {
     public interface MyPluginSettings {
         @TypeSetting(parser = MyParser.class, path = "coorinat")
         MyClass getMyClass();
+
+        @StringSetting(path = "s", getAsJson = true)
+        String getString();
     }
 
 
@@ -514,6 +517,7 @@ public class AnalysisModuleTests extends ESTestCase {
         @Inject
         public TestCharFilterFactory(MyPluginSettings settings) {
              myClass = settings.getMyClass();
+             String s = settings.getString();
         }
 
         @Override
@@ -661,9 +665,23 @@ public class AnalysisModuleTests extends ESTestCase {
         IndexAnalyzers analyzers = getIndexAnalyzers(
             registry,
             Settings.builder()
+                .put("index.analysis.char_filter.my_char_filter.type", "stableCharFilterFactory")
+                .loadFromSource("""
+            {
+              "index.analysis.char_filter.my_char_filter.s": {
+              "a" : {
+                "a1" : 1,
+                "b" : {
+                  "c" : 3
+                }
+              }
+            }
+            }
+            """, XContentType.JSON)
+
                 .put("index.analysis.analyzer.char_filter_test.tokenizer", "standard")
-                .put("index.analysis.analyzer.char_filter_test.char_filter", "stableCharFilterFactory")
-                .put("index.analysis.analyzer.char_filter_test.testsetting", "yyyy")
+                .put("index.analysis.analyzer.char_filter_test.char_filter", "my_char_filter")
+
 
                 .put("index.analysis.analyzer.token_filter_test.tokenizer", "standard")
                 .put("index.analysis.analyzer.token_filter_test.filter", "stableTokenFilterFactory")

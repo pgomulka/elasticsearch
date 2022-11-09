@@ -16,4 +16,5 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 public @interface StringSetting {
     String path();
+    boolean getAsJson() default false;
 }

@@ -12,7 +12,8 @@
               char_filter:
                 my_char_filter:
                   type: example_char_filter
-                  custom: he1
+                  custom: 1
+                  custom2: h2
               analyzer:
                 my_analyzer:
                   tokenizer: standard
