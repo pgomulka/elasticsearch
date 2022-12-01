@@ -29,8 +29,8 @@ import java.util.concurrent.TimeUnit;
 
 @Fork(3)
 @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-@Measurement(iterations = 10, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-@BenchmarkMode(Mode.AverageTime)
+@Measurement(iterations = 5000, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+@BenchmarkMode(Mode.SingleShotTime)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 @State(Scope.Thread)
 public class BigArrayAvgTuplesBenchmark {
