@@ -746,6 +746,14 @@ public class BigArrays {
         return resize(array, newSize);
     }
 
+    public GeoBigArray grow(GeoBigArray array, long minSize) {
+        if (minSize <= array.size()) {
+            return array;
+        }
+        final long newSize = overSize(minSize, PageCacheRecycler.DOUBLE_PAGE_SIZE, Double.BYTES*6);
+        return resize(array, newSize);
+    }
+
     public static class DoubleBinarySearcher extends BinarySearcher {
 
         DoubleArray array;
@@ -882,6 +890,18 @@ public class BigArrays {
         // }
     }
 
+    public GeoBigArray newGeoBigArray(long size, boolean clearOnResize) {
+        // if (size > PageCacheRecycler.LONG_DOUBLE_DOUBLE_PAGE_SIZE || (size >= PageCacheRecycler.LONG_DOUBLE_DOUBLE_PAGE_SIZE / 2 &&
+        // recycler != null)) {
+        // when allocating big arrays, we want to first ensure we have the capacity by
+        // checking with the circuit breaker before attempting to allocate
+        adjustBreaker(GeoBigArray.estimateRamBytes(size), false);
+        return new GeoBigArray(size, this, clearOnResize);
+        // } else {
+        // return validate(new ByteLongDoubleDoubleArrayWrapper(this, size, clearOnResize));
+        // }
+    }
+
     /** Resize the array to the exact provided size. */
     public LongDoubleDoubleArray resize(LongDoubleDoubleArray array, long size) {
         if (array instanceof LongDoubleDoubleArray) {
@@ -890,7 +910,13 @@ public class BigArrays {
             throw new UnsupportedOperationException();
         }
     }
-
+    public GeoBigArray resize(GeoBigArray array, long size) {
+        if (array instanceof GeoBigArray) {
+            return resizeInPlace((GeoBigArray) array, size);
+        } else {
+            throw new UnsupportedOperationException();
+        }
+    }
     public LongDoubleDoubleArray grow(LongDoubleDoubleArray array, long minSize) {
         if (minSize <= array.size()) {
             return array;

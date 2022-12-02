@@ -10,6 +10,7 @@ package org.elasticsearch.search.aggregations.metrics;
 
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.util.DoubleArray;
+import org.elasticsearch.common.util.GeoBigArray;
 import org.elasticsearch.core.Releasables;
 import org.elasticsearch.index.fielddata.MultiGeoPointValues;
 import org.elasticsearch.search.aggregations.AggregationExecutionContext;
@@ -32,11 +33,13 @@ final class GeoBoundsAggregator extends MetricsAggregator {
     private final ValuesSource.GeoPoint valuesSource;
     private final boolean wrapLongitude;
     DoubleArray tops;
-    DoubleArray bottoms;
-    DoubleArray posLefts;
-    DoubleArray posRights;
-    DoubleArray negLefts;
-    DoubleArray negRights;
+//    DoubleArray bottoms;
+//    DoubleArray posLefts;
+//    DoubleArray posRights;
+//    DoubleArray negLefts;
+//    DoubleArray negRights;
+
+    GeoBigArray geoBigArray;
 
     // TODO: update with a DoubleDoubleDoubleDoubleDoubleDoubleArray
 
@@ -53,18 +56,25 @@ final class GeoBoundsAggregator extends MetricsAggregator {
         this.valuesSource = valuesSourceConfig.hasValues() ? (ValuesSource.GeoPoint) valuesSourceConfig.getValuesSource() : null;
         this.wrapLongitude = wrapLongitude;
         if (valuesSource != null) {
-            tops = bigArrays().newDoubleArray(1, false);
-            tops.fill(0, tops.size(), Double.NEGATIVE_INFINITY);
-            bottoms = bigArrays().newDoubleArray(1, false);
-            bottoms.fill(0, bottoms.size(), Double.POSITIVE_INFINITY);
-            posLefts = bigArrays().newDoubleArray(1, false);
-            posLefts.fill(0, posLefts.size(), Double.POSITIVE_INFINITY);
-            posRights = bigArrays().newDoubleArray(1, false);
-            posRights.fill(0, posRights.size(), Double.NEGATIVE_INFINITY);
-            negLefts = bigArrays().newDoubleArray(1, false);
-            negLefts.fill(0, negLefts.size(), Double.POSITIVE_INFINITY);
-            negRights = bigArrays().newDoubleArray(1, false);
-            negRights.fill(0, negRights.size(), Double.NEGATIVE_INFINITY);
+            geoBigArray = bigArrays().newGeoBigArray(1, false);
+            geoBigArray.fill_tops(0,geoBigArray.size()/6,Double.NEGATIVE_INFINITY);
+            geoBigArray.fill_bottoms(0,geoBigArray.size()/6,Double.POSITIVE_INFINITY);
+            geoBigArray.fill_posLefts(0,geoBigArray.size()/6,Double.POSITIVE_INFINITY);
+            geoBigArray.fill_posRights(0,geoBigArray.size()/6,Double.NEGATIVE_INFINITY);
+            geoBigArray.fill_negLefts(0,geoBigArray.size()/6,Double.POSITIVE_INFINITY);
+            geoBigArray.fill_negRights(0,geoBigArray.size()/6,Double.NEGATIVE_INFINITY);
+//            tops = bigArrays().newDoubleArray(1, false);
+//            geoBigArray.fill(0, tops.size(), Double.NEGATIVE_INFINITY);
+//            bottoms = bigArrays().newDoubleArray(1, false);
+//            bottoms.fill(0, bottoms.size(), Double.POSITIVE_INFINITY);
+//            posLefts = bigArrays().newDoubleArray(1, false);
+//            posLefts.fill(0, posLefts.size(), Double.POSITIVE_INFINITY);
+//            posRights = bigArrays().newDoubleArray(1, false);
+//            posRights.fill(0, posRights.size(), Double.NEGATIVE_INFINITY);
+//            negLefts = bigArrays().newDoubleArray(1, false);
+//            negLefts.fill(0, negLefts.size(), Double.POSITIVE_INFINITY);
+//            negRights = bigArrays().newDoubleArray(1, false);
+//            negRights.fill(0, negRights.size(), Double.NEGATIVE_INFINITY);
         }
     }
 
@@ -77,20 +87,15 @@ final class GeoBoundsAggregator extends MetricsAggregator {
         return new LeafBucketCollectorBase(sub, values) {
             @Override
             public void collect(int doc, long bucket) throws IOException {
-                if (bucket >= tops.size()) {
-                    long from = tops.size();
-                    tops = bigArrays().grow(tops, bucket + 1);
-                    tops.fill(from, tops.size(), Double.NEGATIVE_INFINITY);
-                    bottoms = bigArrays().resize(bottoms, tops.size());
-                    bottoms.fill(from, bottoms.size(), Double.POSITIVE_INFINITY);
-                    posLefts = bigArrays().resize(posLefts, tops.size());
-                    posLefts.fill(from, posLefts.size(), Double.POSITIVE_INFINITY);
-                    posRights = bigArrays().resize(posRights, tops.size());
-                    posRights.fill(from, posRights.size(), Double.NEGATIVE_INFINITY);
-                    negLefts = bigArrays().resize(negLefts, tops.size());
-                    negLefts.fill(from, negLefts.size(), Double.POSITIVE_INFINITY);
-                    negRights = bigArrays().resize(negRights, tops.size());
-                    negRights.fill(from, negRights.size(), Double.NEGATIVE_INFINITY);
+                if (bucket >= geoBigArray.size()) {
+                    long from = geoBigArray.size();
+                    geoBigArray = bigArrays().grow(geoBigArray, bucket + 1);
+                    geoBigArray.fill_tops(from,geoBigArray.size()/6,Double.NEGATIVE_INFINITY);
+                    geoBigArray.fill_bottoms(from,geoBigArray.size()/6,Double.POSITIVE_INFINITY);
+                    geoBigArray.fill_posLefts(from,geoBigArray.size()/6,Double.POSITIVE_INFINITY);
+                    geoBigArray.fill_posRights(from,geoBigArray.size()/6,Double.NEGATIVE_INFINITY);
+                    geoBigArray.fill_negLefts(from,geoBigArray.size()/6,Double.POSITIVE_INFINITY);
+                    geoBigArray.fill_negRights(from,geoBigArray.size()/6,Double.NEGATIVE_INFINITY);
                 }
 
                 if (values.advanceExact(doc)) {
@@ -98,36 +103,36 @@ final class GeoBoundsAggregator extends MetricsAggregator {
 
                     for (int i = 0; i < valuesCount; ++i) {
                         GeoPoint value = values.nextValue();
-                        double top = tops.get(bucket);
+                        double top = geoBigArray.tops_get(bucket);
                         if (value.lat() > top) {
                             top = value.lat();
                         }
-                        double bottom = bottoms.get(bucket);
+                        double bottom = geoBigArray.bottoms_get(bucket);
                         if (value.lat() < bottom) {
                             bottom = value.lat();
                         }
-                        double posLeft = posLefts.get(bucket);
+                        double posLeft = geoBigArray.posLefts_get(bucket);
                         if (value.lon() >= 0 && value.lon() < posLeft) {
                             posLeft = value.lon();
                         }
-                        double posRight = posRights.get(bucket);
+                        double posRight = geoBigArray.posRights_get(bucket);
                         if (value.lon() >= 0 && value.lon() > posRight) {
                             posRight = value.lon();
                         }
-                        double negLeft = negLefts.get(bucket);
+                        double negLeft = geoBigArray.negLefts_get(bucket);
                         if (value.lon() < 0 && value.lon() < negLeft) {
                             negLeft = value.lon();
                         }
-                        double negRight = negRights.get(bucket);
+                        double negRight = geoBigArray.negRights_get(bucket);
                         if (value.lon() < 0 && value.lon() > negRight) {
                             negRight = value.lon();
                         }
-                        tops.set(bucket, top);
-                        bottoms.set(bucket, bottom);
-                        posLefts.set(bucket, posLeft);
-                        posRights.set(bucket, posRight);
-                        negLefts.set(bucket, negLeft);
-                        negRights.set(bucket, negRight);
+                        geoBigArray.tops_set(bucket, top);
+                        geoBigArray.bottoms_set(bucket, bottom);
+                        geoBigArray.posLefts_set(bucket, posLeft);
+                        geoBigArray.posRights_set(bucket, posRight);
+                        geoBigArray.negLefts_set(bucket, negLeft);
+                        geoBigArray.negRights_set(bucket, negRight);
                     }
                 }
             }
@@ -139,12 +144,12 @@ final class GeoBoundsAggregator extends MetricsAggregator {
         if (valuesSource == null) {
             return buildEmptyAggregation();
         }
-        double top = tops.get(owningBucketOrdinal);
-        double bottom = bottoms.get(owningBucketOrdinal);
-        double posLeft = posLefts.get(owningBucketOrdinal);
-        double posRight = posRights.get(owningBucketOrdinal);
-        double negLeft = negLefts.get(owningBucketOrdinal);
-        double negRight = negRights.get(owningBucketOrdinal);
+        double top = geoBigArray.tops_get(owningBucketOrdinal);
+        double bottom = geoBigArray.bottoms_get(owningBucketOrdinal);
+        double posLeft = geoBigArray.posLefts_get(owningBucketOrdinal);
+        double posRight = geoBigArray.posRights_get(owningBucketOrdinal);
+        double negLeft = geoBigArray.negLefts_get(owningBucketOrdinal);
+        double negRight = geoBigArray.negRights_get(owningBucketOrdinal);
         return new InternalGeoBounds(name, top, bottom, posLeft, posRight, negLeft, negRight, wrapLongitude, metadata());
     }
 
@@ -165,6 +170,6 @@ final class GeoBoundsAggregator extends MetricsAggregator {
 
     @Override
     public void doClose() {
-        Releasables.close(tops, bottoms, posLefts, posRights, negLefts, negRights);
+        Releasables.close(geoBigArray);
     }
 }
