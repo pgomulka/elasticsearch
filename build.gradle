@@ -220,7 +220,7 @@ allprojects {
     }
   }
 
-  tasks.register(TransportVersionTask.NAME, TransportVersionTask.class)
+
 
   /*
    * Remove assemble/dependenciesInfo on all qa projects because we don't
