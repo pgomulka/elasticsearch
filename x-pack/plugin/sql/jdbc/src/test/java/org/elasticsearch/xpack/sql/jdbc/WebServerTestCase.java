@@ -9,10 +9,11 @@ package org.elasticsearch.xpack.sql.jdbc;
 
 import org.elasticsearch.Build;
 import org.elasticsearch.Version;
-import org.elasticsearch.action.main.MainResponse;
 import org.elasticsearch.cluster.ClusterName;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.test.http.MockWebServer;
+import org.elasticsearch.xcontent.ToXContent;
+import org.elasticsearch.xcontent.ToXContentObject;
 import org.junit.After;
 import org.junit.Before;
 
@@ -39,17 +40,37 @@ public abstract class WebServerTestCase extends ESTestCase {
         return webServer;
     }
 
-    MainResponse createCurrentVersionMainResponse() {
+    ToXContent createCurrentVersionMainResponse() {
         return createMainResponse(Version.CURRENT);
     }
 
-    MainResponse createMainResponse(Version version) {
+    ToXContentObject createMainResponse(Version version) {
         String clusterUuid = randomAlphaOfLength(10);
         ClusterName clusterName = new ClusterName(randomAlphaOfLength(10));
         String nodeName = randomAlphaOfLength(10);
         final String date = new Date(randomNonNegativeLong()).toString();
         Build build = new Build(Build.Type.UNKNOWN, randomAlphaOfLength(8), date, randomBoolean(), version.toString());
-        return new MainResponse(nodeName, version, clusterName, clusterUuid, build);
+
+        return (builder, p) -> {
+            builder.startObject();
+            builder.field("name", nodeName);
+            builder.field("cluster_name", clusterName.value());
+            builder.field("cluster_uuid", clusterUuid);
+            builder.startObject("version")
+                .field("number", build.qualifiedVersion())
+                .field("build_flavor", "default")
+                .field("build_type", build.type().displayName())
+                .field("build_hash", build.hash())
+                .field("build_date", build.date())
+                .field("build_snapshot", build.isSnapshot())
+                .field("lucene_version", version.luceneVersion.toString())
+                .field("minimum_wire_compatibility_version", version.minimumCompatibilityVersion().toString())
+                .field("minimum_index_compatibility_version", version.minimumIndexCompatibilityVersion().toString())
+                .endObject();
+            builder.field("tagline", "You Know, for Search");
+            builder.endObject();
+            return builder;
+        };
     }
 
     String webServerAddress() {
