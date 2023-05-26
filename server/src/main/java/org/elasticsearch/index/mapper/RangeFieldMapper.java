@@ -442,11 +442,11 @@ public class RangeFieldMapper extends FieldMapper {
         // create the lower value by zeroing out the host portion, upper value by filling it with all ones.
         byte[] lower = cidr.v1().getAddress();
         byte[] upper = lower.clone();
-        for (int i = cidr.v2(); i < 8 * lower.length; i++) {
-            int m = 1 << 7 - (i & 7);
-            lower[i >> 3] &= ~m;
-            upper[i >> 3] |= m;
-        }
+//        for (int i = cidr.v2(); i < 8 * lower.length; i++) {
+//            int m = 1 << 7 - (i & 7);
+//            lower[i >> 3] &= ~m;
+//            upper[i >> 3] |= m;
+//        }
         try {
             return new Range(RangeType.IP, InetAddress.getByAddress(lower), InetAddress.getByAddress(upper), true, true);
         } catch (UnknownHostException bogus) {

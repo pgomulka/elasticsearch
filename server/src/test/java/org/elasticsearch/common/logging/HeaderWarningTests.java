@@ -14,8 +14,11 @@ import org.elasticsearch.common.util.concurrent.ThreadContext;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.test.hamcrest.RegexMatcher;
 import org.hamcrest.core.IsSame;
+import org.junit.Assert;
 
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
@@ -298,7 +301,11 @@ public class HeaderWarningTests extends ESTestCase {
 
     // Reproduces https://github.com/elastic/elasticsearch/issues/95972
     public void testAddComplexWarning() {
-        final int maxWarningHeaderCount = 2;
+        RuntimeMXBean runtimeMXBean = ManagementFactory.getRuntimeMXBean();
+        List<String> jvmArgs = runtimeMXBean.getInputArguments();
+        for (String arg : jvmArgs) {
+            System.out.println(arg);
+        }        final int maxWarningHeaderCount = 2;
         Settings settings = Settings.builder().put("http.max_warning_header_count", maxWarningHeaderCount).build();
         ThreadContext threadContext = new ThreadContext(settings);
         final Set<ThreadContext> threadContexts = Collections.singleton(threadContext);
@@ -334,5 +341,6 @@ public class HeaderWarningTests extends ESTestCase {
         // assertThat(responses.get(0), warningValueMatcher);
         assertThat(responses.get(0), containsString("\"legacy template [global] has index patterns"));
         assertThat(responses.get(0), containsString(Integer.toString(299)));
+        Assert.fail();
     }
 }
