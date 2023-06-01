@@ -263,19 +263,7 @@ public class LogConfigurator {
         System.setOut(
             new PrintStream(new LoggingOutputStream(LogManager.getLogger("stdout"), Level.INFO, List.of()), false, StandardCharsets.UTF_8)
         );
-        System.setErr(
-            new PrintStream(
-                new LoggingOutputStream(
-                    LogManager.getLogger("stderr"),
-                    Level.WARN,
-                    // MMapDirectory messages come from Lucene, suggesting to users as a warning that they should enable preview features in
-                    // the JDK
-                    List.of("MMapDirectory")
-                ),
-                false,
-                StandardCharsets.UTF_8
-            )
-        );
+        System.setErr(new PrintStream(new LoggingOutputStream(LogManager.getLogger("stderr"), Level.WARN, List.of()), false, StandardCharsets.UTF_8));
 
         final Logger rootLogger = LogManager.getRootLogger();
         Appender appender = Loggers.findAppender(rootLogger, ConsoleAppender.class);
