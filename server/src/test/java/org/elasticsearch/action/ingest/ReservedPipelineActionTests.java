@@ -121,8 +121,8 @@ public class ReservedPipelineActionTests extends ESTestCase {
                 Settings.EMPTY,
                 new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS),
                 threadPool,
-                null
-            )
+                null,
+                null)
         );
 
         fileSettingsService = spy(

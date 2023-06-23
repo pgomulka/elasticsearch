@@ -1647,8 +1647,8 @@ public class SnapshotResiliencyTests extends ESTestCase {
                                 // take charge of these connections
                             });
                         }
-                    }
-                );
+                    },
+                    null);
                 recoverySettings = new RecoverySettings(settings, clusterSettings);
                 mockTransport = new DisruptableMockTransport(node, deterministicTaskQueue) {
                     @Override

@@ -298,7 +298,9 @@ import org.elasticsearch.xpack.security.ingest.SetSecurityUserProcessor;
 import org.elasticsearch.xpack.security.operator.DefaultOperatorOnlyRegistry;
 import org.elasticsearch.xpack.security.operator.FileOperatorUsersStore;
 import org.elasticsearch.xpack.security.operator.OperatorOnlyRegistry;
+import org.elasticsearch.xpack.security.operator.OperatorOnlyRegistryFactory;
 import org.elasticsearch.xpack.security.operator.OperatorPrivileges;
+import org.elasticsearch.xpack.security.operator.ServerlessOperatorOnlyRegistryFactory;
 import org.elasticsearch.xpack.security.profile.ProfileService;
 import org.elasticsearch.xpack.security.rest.RemoteHostHeader;
 import org.elasticsearch.xpack.security.rest.SecurityRestFilter;
@@ -543,7 +545,8 @@ public class Security extends Plugin
     private final List<SecurityExtension> securityExtensions = new ArrayList<>();
     private final SetOnce<Transport> transportReference = new SetOnce<>();
     private final SetOnce<ScriptService> scriptServiceReference = new SetOnce<>();
-    private final SetOnce<OperatorOnlyRegistry> operatorOnlyRegistry = new SetOnce<>();
+//    private final SetOnce<OperatorOnlyRegistry> operatorOnlyRegistry = new SetOnce<>();
+    private final SetOnce<OperatorOnlyRegistryFactory> operatorOnlyRegistryFactory = new SetOnce<>();
     private final SetOnce<OperatorPrivileges.OperatorPrivilegesService> operatorPrivilegesService = new SetOnce<>();
 
     private final SetOnce<ReservedRoleMappingAction> reservedRoleMappingAction = new SetOnce<>();
@@ -896,15 +899,21 @@ public class Security extends Plugin
         final boolean operatorPrivilegesEnabled = OPERATOR_PRIVILEGES_ENABLED.get(settings) || DiscoveryNode.isServerless();
 
         if (operatorPrivilegesEnabled) {
+            OperatorOnlyRegistry operatorOnlyRegistry;
             logger.info("operator privileges are enabled");
-            if (operatorOnlyRegistry.get() == null) {
-                operatorOnlyRegistry.set(new DefaultOperatorOnlyRegistry(clusterService.getClusterSettings()));
+            if (operatorOnlyRegistryFactory.get() == null) {
+                operatorOnlyRegistry = new DefaultOperatorOnlyRegistry(clusterService.getClusterSettings());
+            } else {
+                operatorOnlyRegistry = operatorOnlyRegistryFactory.get()
+                    .create(clusterService.getIndexScopedSettings(), clusterService.getSettingsFilter());
             }
+
+
             operatorPrivilegesService.set(
                 new OperatorPrivileges.DefaultOperatorPrivilegesService(
                     getLicenseState(),
                     new FileOperatorUsersStore(environment, resourceWatcherService),
-                    operatorOnlyRegistry.get()
+                    operatorOnlyRegistry
                 )
             );
         } else {
@@ -1920,13 +1929,15 @@ public class Security extends Plugin
         if (operatorOnlyRegistries.size() > 1) {
             throw new IllegalStateException(OperatorOnlyRegistry.class + " may not have multiple implementations");
         } else if (operatorOnlyRegistries.size() == 1) {
-            OperatorOnlyRegistry operatorOnlyRegistry = operatorOnlyRegistries.get(0);
-            this.operatorOnlyRegistry.set(operatorOnlyRegistry);
-            logger.debug(
-                "Loaded implementation [{}] for interface OperatorOnlyRegistry",
-                operatorOnlyRegistry.getClass().getCanonicalName()
-            );
+//            OperatorOnlyRegistry operatorOnlyRegistry = operatorOnlyRegistries.get(0);
+//            this.operatorOnlyRegistry.set(operatorOnlyRegistry);
+//            logger.debug(
+//                "Loaded implementation [{}] for interface OperatorOnlyRegistry",
+//                operatorOnlyRegistry.getClass().getCanonicalName()
+//            );
         }
+        this.operatorOnlyRegistryFactory.set(new ServerlessOperatorOnlyRegistryFactory());
+
     }
 
     private synchronized SharedGroupFactory getNettySharedGroupFactory(Settings settings) {

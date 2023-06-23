@@ -66,7 +66,7 @@ public class InternalClusterInfoServiceSchedulingTests extends ESTestCase {
             fail("master service should not run any tasks");
         });
 
-        final ClusterService clusterService = new ClusterService(settings, clusterSettings, masterService, clusterApplierService);
+        final ClusterService clusterService = new ClusterService(settings, clusterSettings, masterService, clusterApplierService, null);
 
         final FakeClusterInfoServiceClient client = new FakeClusterInfoServiceClient(threadPool);
         final InternalClusterInfoService clusterInfoService = new InternalClusterInfoService(settings, clusterService, threadPool, client);

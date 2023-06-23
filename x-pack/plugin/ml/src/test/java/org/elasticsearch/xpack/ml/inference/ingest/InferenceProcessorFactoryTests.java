@@ -84,7 +84,7 @@ public class InferenceProcessorFactoryTests extends ESTestCase {
                 )
             )
         );
-        clusterService = new ClusterService(settings, clusterSettings, tp, null);
+        clusterService = new ClusterService(settings, clusterSettings, tp, null, null);
     }
 
     public void testCreateProcessorWithTooManyExisting() throws Exception {

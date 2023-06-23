@@ -412,8 +412,8 @@ public abstract class AbstractBuilderTestCase extends ESTestCase {
                 Settings.EMPTY,
                 new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS),
                 null,
-                (TaskManager) null
-            );
+                (TaskManager) null,
+                null);
 
             client = (Client) Proxy.newProxyInstance(
                 Client.class.getClassLoader(),

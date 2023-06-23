@@ -25,7 +25,7 @@ public final class DefaultSettingsFilter implements SettingsFilter {
     public static String SETTINGS_FILTER_PARAM = "settings_filter";
 
     private final Set<String> patterns;
-    private final String patternString;
+//    private final String patternString;
     private final ServerlessOperatorSettingsFilter filter;
 
     public DefaultSettingsFilter(Collection<String> patterns, ServerlessOperatorSettingsFilter filter) {
@@ -35,7 +35,7 @@ public final class DefaultSettingsFilter implements SettingsFilter {
             }
         }
         this.patterns = Set.copyOf(patterns);
-        patternString = Strings.collectionToDelimitedString(patterns, ",");
+//        patternString = getPatternString()
         this.filter = filter;
     }
 
@@ -46,16 +46,12 @@ public final class DefaultSettingsFilter implements SettingsFilter {
     /**
      * Returns a set of patterns
      */
+    @Override
     public Set<String> getPatterns() {
         return patterns;
     }
 
-    @Override
-    public void addFilterSettingParams(RestRequest request) {
-        if (patterns.isEmpty() == false) {
-            request.params().put(SETTINGS_FILTER_PARAM, patternString);
-        }
-    }
+
 
     @Override
     public Settings filter(Settings settings) {

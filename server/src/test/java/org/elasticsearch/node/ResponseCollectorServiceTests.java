@@ -43,8 +43,8 @@ public class ResponseCollectorServiceTests extends ESTestCase {
             Settings.EMPTY,
             new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS),
             threadpool,
-            null
-        );
+            null,
+            null);
         collector = new ResponseCollectorService(clusterService);
     }
 

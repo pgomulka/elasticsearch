@@ -94,7 +94,7 @@ public class ClusterStateUpdatersTests extends ESTestCase {
 
             })
         );
-        final ClusterService clusterService = new ClusterService(Settings.EMPTY, clusterSettings, null, (TaskManager) null);
+        final ClusterService clusterService = new ClusterService(Settings.EMPTY, clusterSettings, null, (TaskManager) null, null);
         final Metadata.Builder builder = Metadata.builder();
         final Settings settings = Settings.builder().put("foo.old", randomAlphaOfLength(8)).build();
         applySettingsToBuilder.accept(builder, settings);

@@ -456,7 +456,7 @@ public class SnapshotLifecycleServiceTests extends ESTestCase {
             )
         );
         final SetOnce<ClusterStateUpdateTask> task = new SetOnce<>();
-        ClusterService fakeService = new ClusterService(Settings.EMPTY, clusterSettings, threadPool, null) {
+        ClusterService fakeService = new ClusterService(Settings.EMPTY, clusterSettings, threadPool, null, null) {
             @Override
             public void submitUnbatchedStateUpdateTask(String source, ClusterStateUpdateTask updateTask) {
                 logger.info("--> got task: [source: {}]: {}", source, updateTask);

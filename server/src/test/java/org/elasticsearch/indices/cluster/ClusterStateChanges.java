@@ -184,7 +184,7 @@ public class ClusterStateChanges {
             }
         };
         // mocks
-        clusterService = new ClusterService(SETTINGS, clusterSettings, masterService, null);
+        clusterService = new ClusterService(SETTINGS, clusterSettings, masterService, null, null);
         resetMasterService();
         masterService.start();
 

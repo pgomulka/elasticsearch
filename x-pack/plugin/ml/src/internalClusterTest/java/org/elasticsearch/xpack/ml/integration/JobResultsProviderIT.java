@@ -130,7 +130,7 @@ public class JobResultsProviderIT extends MlSingleNodeTestCase {
                 )
             )
         );
-        ClusterService clusterService = new ClusterService(builder.build(), clusterSettings, tp, null);
+        ClusterService clusterService = new ClusterService(builder.build(), clusterSettings, tp, null, null);
 
         OriginSettingClient originSettingClient = new OriginSettingClient(client(), ClientHelper.ML_ORIGIN);
         resultsPersisterService = new ResultsPersisterService(tp, originSettingClient, clusterService, builder.build());

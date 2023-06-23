@@ -407,8 +407,8 @@ public class TransformPersistentTasksExecutorTests extends ESTestCase {
                 Settings.EMPTY,
                 new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS),
                 null,
-                (TaskManager) null
-            ),
+                (TaskManager) null,
+                null),
             transformsConfigManager,
             mockAuditor
         );

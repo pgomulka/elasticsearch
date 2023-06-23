@@ -40,8 +40,8 @@ public class ServerlessOperatorSettingsFilter implements SettingsFilter {
     }
 
     @Override
-    public void addFilterSettingParams(RestRequest request) {
-
+    public Set<String> getPatterns() {
+        return patterns;
     }
 
     @Override

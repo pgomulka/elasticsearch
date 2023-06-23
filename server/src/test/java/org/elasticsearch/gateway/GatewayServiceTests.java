@@ -38,8 +38,8 @@ public class GatewayServiceTests extends ESTestCase {
             Settings.builder().put("cluster.name", "GatewayServiceTests").build(),
             new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS),
             null,
-            (TaskManager) null
-        );
+            (TaskManager) null,
+            null);
         return new GatewayService(
             settings.build(),
             (reason, priority, listener) -> fail("should not reroute"),

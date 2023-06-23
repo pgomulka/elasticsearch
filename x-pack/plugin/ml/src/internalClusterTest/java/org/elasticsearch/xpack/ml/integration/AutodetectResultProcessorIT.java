@@ -167,7 +167,7 @@ public class AutodetectResultProcessorIT extends MlSingleNodeTestCase {
                 )
             )
         );
-        ClusterService clusterService = new ClusterService(settings, clusterSettings, tp, null);
+        ClusterService clusterService = new ClusterService(settings, clusterSettings, tp, null, null);
         OriginSettingClient originSettingClient = new OriginSettingClient(client(), ClientHelper.ML_ORIGIN);
         resultsPersisterService = new ResultsPersisterService(tp, originSettingClient, clusterService, settings);
         resultProcessor = new AutodetectResultProcessor(

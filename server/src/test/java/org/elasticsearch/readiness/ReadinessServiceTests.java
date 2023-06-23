@@ -89,8 +89,8 @@ public class ReadinessServiceTests extends ESTestCase implements ReadinessClient
             Settings.EMPTY,
             new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS),
             threadpool,
-            null
-        );
+            null,
+            null);
         env = newEnvironment(Settings.builder().put(ReadinessService.PORT.getKey(), 0).build());
 
         httpTransport = new FakeHttpTransport();

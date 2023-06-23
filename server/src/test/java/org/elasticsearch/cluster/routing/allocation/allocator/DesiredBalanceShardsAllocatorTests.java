@@ -133,8 +133,8 @@ public class DesiredBalanceShardsAllocatorTests extends ESAllocationTestCase {
                 protected PrioritizedEsThreadPoolExecutor createThreadPoolExecutor() {
                     return deterministicTaskQueue.getPrioritizedEsThreadPoolExecutor();
                 }
-            }
-        );
+            },
+            null);
         clusterService.getClusterApplierService().setInitialState(initialState);
         clusterService.setNodeConnectionsService(ClusterServiceUtils.createNoOpNodeConnectionsService());
         clusterService.getMasterService()

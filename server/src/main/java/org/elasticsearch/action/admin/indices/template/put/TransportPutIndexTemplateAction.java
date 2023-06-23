@@ -88,7 +88,9 @@ public class TransportPutIndexTemplateAction extends AcknowledgedTransportMaster
         templateSettingsBuilder.put(request.settings()).normalizePrefix(IndexMetadata.INDEX_SETTING_PREFIX);
         indexScopedSettings.validate(templateSettingsBuilder.build(), true); // templates must be consistent with regards to dependencies
         try {
-            settingsFilter.validateSettings(request.settings());
+            if(request.settings()!=null){
+                settingsFilter.validateSettings(request.settings());
+            }
         } catch (Exception e) {
             listener.onFailure(e);
         }

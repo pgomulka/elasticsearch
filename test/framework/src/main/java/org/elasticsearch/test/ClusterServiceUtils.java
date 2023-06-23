@@ -121,8 +121,8 @@ public class ClusterServiceUtils {
             settings,
             clusterSettings,
             threadPool,
-            new TaskManager(settings, threadPool, Collections.emptySet(), Tracer.NOOP)
-        );
+            new TaskManager(settings, threadPool, Collections.emptySet(), Tracer.NOOP),
+            null);
         clusterService.setNodeConnectionsService(createNoOpNodeConnectionsService());
         ClusterState initialClusterState = ClusterState.builder(new ClusterName(ClusterServiceUtils.class.getSimpleName()))
             .nodes(DiscoveryNodes.builder().add(localNode).localNodeId(localNode.getId()).masterNodeId(localNode.getId()))

@@ -679,6 +679,7 @@ public class ReservedComposableIndexTemplateActionTests extends ESTestCase {
             null,
             null,
             mock(ActionFilters.class),
+            null,
             null
         );
         assertEquals(ReservedComposableIndexTemplateAction.NAME, putIndexAction.reservedStateHandlerName().get());
@@ -928,6 +929,7 @@ public class ReservedComposableIndexTemplateActionTests extends ESTestCase {
             null,
             null,
             mock(ActionFilters.class),
+            null,
             null
         );
 

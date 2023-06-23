@@ -124,7 +124,7 @@ public class TransportGetTrainedModelsStatsActionTests extends ESTestCase {
                 )
             )
         );
-        clusterService = new ClusterService(settings, clusterSettings, tp, null);
+        clusterService = new ClusterService(settings, clusterSettings, tp, null, null);
         ingestService = new IngestService(
             clusterService,
             tp,

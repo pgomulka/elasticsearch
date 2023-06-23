@@ -72,7 +72,7 @@ public class JobModelSnapshotCRUDIT extends MlSingleNodeTestCase {
                 )
             )
         );
-        ClusterService clusterService = new ClusterService(Settings.EMPTY, clusterSettings, tp, null);
+        ClusterService clusterService = new ClusterService(Settings.EMPTY, clusterSettings, tp, null, null);
 
         OriginSettingClient originSettingClient = new OriginSettingClient(client(), ClientHelper.ML_ORIGIN);
         ResultsPersisterService resultsPersisterService = new ResultsPersisterService(

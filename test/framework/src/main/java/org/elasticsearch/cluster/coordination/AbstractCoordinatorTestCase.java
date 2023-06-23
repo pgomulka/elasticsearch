@@ -1087,7 +1087,7 @@ public class AbstractCoordinatorTestCase extends ESTestCase {
                     deterministicTaskQueue,
                     threadPool
                 );
-                clusterService = new ClusterService(settings, clusterSettings, masterService, clusterApplierService);
+                clusterService = new ClusterService(settings, clusterSettings, masterService, clusterApplierService, null);
                 masterHistoryService = new MasterHistoryService(transportService, threadPool, clusterService);
                 clusterService.setNodeConnectionsService(
                     new NodeConnectionsService(clusterService.getSettings(), threadPool, transportService)

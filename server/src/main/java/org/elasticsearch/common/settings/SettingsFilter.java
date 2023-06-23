@@ -15,6 +15,9 @@ import org.elasticsearch.xcontent.ToXContent;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+
+import static org.elasticsearch.common.settings.DefaultSettingsFilter.SETTINGS_FILTER_PARAM;
 
 public interface SettingsFilter {
     /**
@@ -28,7 +31,7 @@ public interface SettingsFilter {
     }
 
     static Settings filterSettings(ToXContent.Params params, Settings settings) {
-        String patterns = params.param(DefaultSettingsFilter.SETTINGS_FILTER_PARAM);
+        String patterns = params.param(SETTINGS_FILTER_PARAM);
         final Settings filteredSettings;
         if (patterns != null && patterns.isEmpty() == false) {
             filteredSettings = filterSettings(Strings.commaDelimitedListToSet(patterns), settings);
@@ -55,7 +58,17 @@ public interface SettingsFilter {
         return builder.build();
     }
 
-    void addFilterSettingParams(RestRequest request);
+    default void addFilterSettingParams(RestRequest request) {
+        if (getPatterns().isEmpty() == false) {
+            request.params().put(SETTINGS_FILTER_PARAM, getPatternString());
+        }
+    }
+
+    default String getPatternString() {
+       return Strings.collectionToDelimitedString(getPatterns(), ",");
+    }
+
+    Set<String> getPatterns();
 
     Settings filter(Settings settings);
 

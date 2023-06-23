@@ -22,6 +22,7 @@ import org.elasticsearch.cluster.metadata.MetadataIndexTemplateService;
 import org.elasticsearch.cluster.metadata.ReservedStateMetadata;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.inject.Inject;
+import org.elasticsearch.common.settings.SettingsFilter;
 import org.elasticsearch.tasks.Task;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
@@ -38,6 +39,7 @@ public class TransportPutComposableIndexTemplateAction extends AcknowledgedTrans
     PutComposableIndexTemplateAction.Request> {
 
     private final MetadataIndexTemplateService indexTemplateService;
+    private final SettingsFilter settingsFilter;
 
     @Inject
     public TransportPutComposableIndexTemplateAction(
@@ -46,7 +48,8 @@ public class TransportPutComposableIndexTemplateAction extends AcknowledgedTrans
         ThreadPool threadPool,
         MetadataIndexTemplateService indexTemplateService,
         ActionFilters actionFilters,
-        IndexNameExpressionResolver indexNameExpressionResolver
+        IndexNameExpressionResolver indexNameExpressionResolver,
+        SettingsFilter settingsFilter
     ) {
         super(
             PutComposableIndexTemplateAction.NAME,
@@ -59,6 +62,7 @@ public class TransportPutComposableIndexTemplateAction extends AcknowledgedTrans
             ThreadPool.Names.SAME
         );
         this.indexTemplateService = indexTemplateService;
+        this.settingsFilter = settingsFilter;
     }
 
     @Override
@@ -73,6 +77,11 @@ public class TransportPutComposableIndexTemplateAction extends AcknowledgedTrans
         final ClusterState state,
         final ActionListener<AcknowledgedResponse> listener
     ) {
+//        try {
+//            settingsFilter.validateSettings(request.indexTemplate().template().settings());
+//        } catch (Exception e) {
+//            listener.onFailure(e);
+//        }
         verifyIfUsingReservedComponentTemplates(request, state);
         ComposableIndexTemplate indexTemplate = request.indexTemplate();
         indexTemplateService.putIndexTemplateV2(

@@ -107,7 +107,7 @@ public class OpenJobPersistentTasksExecutorTests extends ESTestCase {
                 )
             )
         );
-        clusterService = new ClusterService(settings, clusterSettings, tp, null);
+        clusterService = new ClusterService(settings, clusterSettings, tp, null, null);
         autodetectProcessManager = mock(AutodetectProcessManager.class);
         datafeedConfigProvider = mock(DatafeedConfigProvider.class);
         client = mock(Client.class);

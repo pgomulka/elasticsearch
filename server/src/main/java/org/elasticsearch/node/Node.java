@@ -512,8 +512,8 @@ public class Node implements Closeable {
                 settings,
                 settingsModule.getClusterSettings(),
                 threadPool,
-                taskManager
-            );
+                taskManager,
+                settingsModule);
             clusterService.addStateApplier(scriptService);
             resourcesToClose.add(clusterService);
 
@@ -729,7 +729,7 @@ public class Node implements Closeable {
                 shardLimitValidator,
                 threadPool
             );
-
+//
             Collection<Object> pluginComponents = pluginsService.flatMap(
                 p -> p.createComponents(
                     client,

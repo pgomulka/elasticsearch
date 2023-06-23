@@ -90,8 +90,8 @@ public class DatafeedJobBuilderTests extends ESTestCase {
             Settings.builder().put(Node.NODE_NAME_SETTING.getKey(), "test_node").build(),
             clusterSettings,
             threadPool,
-            null
-        );
+            null,
+            null);
         clusterService.getClusterApplierService()
             .setInitialState(
                 ClusterState.builder(new ClusterName("DatafeedJobBuilderTests"))

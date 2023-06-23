@@ -23,9 +23,12 @@ import org.elasticsearch.cluster.routing.RerouteService;
 import org.elasticsearch.common.Priority;
 import org.elasticsearch.common.component.AbstractLifecycleComponent;
 import org.elasticsearch.common.settings.ClusterSettings;
+import org.elasticsearch.common.settings.IndexScopedSettings;
 import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Setting.Property;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.settings.SettingsFilter;
+import org.elasticsearch.common.settings.SettingsModule;
 import org.elasticsearch.core.SuppressForbidden;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.tasks.TaskManager;
@@ -53,24 +56,25 @@ public class ClusterService extends AbstractLifecycleComponent {
     private final ClusterSettings clusterSettings;
 
     private final String nodeName;
+    private final IndexScopedSettings indexScopedSettings;
+    private final SettingsFilter settingsFilter;
 
     private RerouteService rerouteService;
 
-    public ClusterService(Settings settings, ClusterSettings clusterSettings, ThreadPool threadPool, TaskManager taskManager) {
+    public ClusterService(Settings settings, ClusterSettings clusterSettings, ThreadPool threadPool, TaskManager taskManager, SettingsModule settingsModule) {
         this(
             settings,
             clusterSettings,
             new MasterService(settings, clusterSettings, threadPool, taskManager),
-            new ClusterApplierService(Node.NODE_NAME_SETTING.get(settings), settings, clusterSettings, threadPool)
-        );
+            new ClusterApplierService(Node.NODE_NAME_SETTING.get(settings), settings, clusterSettings, threadPool),
+            settingsModule);
     }
 
     public ClusterService(
         Settings settings,
         ClusterSettings clusterSettings,
         MasterService masterService,
-        ClusterApplierService clusterApplierService
-    ) {
+        ClusterApplierService clusterApplierService, SettingsModule settingsModule) {
         this.settings = settings;
         this.nodeName = Node.NODE_NAME_SETTING.get(settings);
         this.masterService = masterService;
@@ -80,6 +84,8 @@ public class ClusterService extends AbstractLifecycleComponent {
         // Add a no-op update consumer so changes are logged
         this.clusterSettings.addAffixUpdateConsumer(USER_DEFINED_METADATA, (first, second) -> {}, (first, second) -> {});
         this.clusterApplierService = clusterApplierService;
+        this.indexScopedSettings = settingsModule.getIndexScopedSettings();
+        this.settingsFilter = settingsModule.getSettingsFilter();
     }
 
     public ThreadPool threadPool() {
@@ -211,6 +217,14 @@ public class ClusterService extends AbstractLifecycleComponent {
 
     public ClusterSettings getClusterSettings() {
         return clusterSettings;
+    }
+
+    public IndexScopedSettings getIndexScopedSettings() {
+        return indexScopedSettings;
+    }
+
+    public SettingsFilter getSettingsFilter() {
+        return settingsFilter;
     }
 
     /**
