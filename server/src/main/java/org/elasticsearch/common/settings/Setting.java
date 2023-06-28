@@ -92,6 +92,7 @@ public class Setting<T> implements ToXContentObject {
          * Operator only Dynamic setting
          */
         OperatorDynamic,
+        PublicServerless,
 
         /**
          * mark this setting as final, not updateable even when the context is not dynamic
@@ -365,6 +366,10 @@ public class Setting<T> implements ToXContentObject {
         return properties.contains(Property.OperatorDynamic);
     }
 
+    public boolean isPublicServerless() {
+        return properties.contains(Property.PublicServerless);
+    }
+
     /**
      * Returns <code>true</code> if this setting is final, otherwise <code>false</code>
      */
@@ -452,7 +457,7 @@ public class Setting<T> implements ToXContentObject {
     }
 
     /**
-     * Validate the current setting value only without dependencies with {@link Setting.Validator#validate(Object)}.
+     * Validate the current setting value only without dependencies with {@link Validator#validate(Object)}.
      * @param settings a settings object for settings that has a default value depending on another setting if available
      */
     void validateWithoutDependencies(Settings settings) {
