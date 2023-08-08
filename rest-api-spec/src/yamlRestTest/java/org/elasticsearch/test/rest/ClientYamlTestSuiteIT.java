@@ -13,6 +13,9 @@ import com.carrotsearch.randomizedtesting.annotations.ParametersFactory;
 import com.carrotsearch.randomizedtesting.annotations.TimeoutSuite;
 
 import org.apache.lucene.tests.util.TimeUnits;
+import org.elasticsearch.common.settings.SecureString;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.util.concurrent.ThreadContext;
 import org.elasticsearch.test.cluster.ElasticsearchCluster;
 import org.elasticsearch.test.cluster.FeatureFlag;
 import org.elasticsearch.test.rest.yaml.ClientYamlTestCandidate;
@@ -33,8 +36,15 @@ public class ClientYamlTestSuiteIT extends ESClientYamlSuiteTestCase {
         .module("analysis-common")
         .feature(FeatureFlag.TIME_SERIES_MODE)
         .feature(FeatureFlag.DATA_STREAM_LIFECYCLE_ENABLED)
-        .build();
+        .setting("xpack.security.enabled", "true")
+        .user("admin-user", "x-pack-test-password")
 
+        .build();
+    @Override
+    protected Settings restClientSettings() {
+        String token = basicAuthHeaderValue("admin-user", new SecureString("x-pack-test-password".toCharArray()));
+        return Settings.builder().put(ThreadContext.PREFIX + ".Authorization", token).build();
+    }
     public ClientYamlTestSuiteIT(@Name("yaml") ClientYamlTestCandidate testCandidate) {
         super(testCandidate);
     }
