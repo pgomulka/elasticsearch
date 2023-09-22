@@ -815,7 +815,7 @@ public class Node implements Closeable {
                 circuitBreakerService,
                 usageService,
                 systemIndices,
-                tracer,
+                telemetryProvider,
                 clusterService,
                 reservedStateHandlers,
                 pluginsService.loadSingletonServiceProvider(RestExtension.class, RestExtension::allowAll)
