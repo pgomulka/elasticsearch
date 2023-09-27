@@ -18,6 +18,7 @@ import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 import io.opentelemetry.context.propagation.TextMapGetter;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.util.automaton.Automata;
@@ -26,6 +27,7 @@ import org.apache.lucene.util.automaton.CharacterRunAutomaton;
 import org.apache.lucene.util.automaton.Operations;
 import org.elasticsearch.Version;
 import org.elasticsearch.common.component.AbstractLifecycleComponent;
+import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.lucene.RegExp;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.Maps;
@@ -89,6 +91,7 @@ public class APMTracer extends AbstractLifecycleComponent implements org.elastic
     record APMServices(Tracer tracer, OpenTelemetry openTelemetry) {}
 
     public APMTracer(Settings settings) {
+        Loggers.setLevel(logger, Level.TRACE);
         this.includeNames = APM_TRACING_NAMES_INCLUDE_SETTING.get(settings);
         this.excludeNames = APM_TRACING_NAMES_EXCLUDE_SETTING.get(settings);
         this.labelFilters = APM_TRACING_SANITIZE_FIELD_NAMES.get(settings);
@@ -379,7 +382,7 @@ public class APMTracer extends AbstractLifecycleComponent implements org.elastic
     @Override
     public void stopTrace(SpanId spanId) {
         final var span = Span.fromContextOrNull(spans.remove(spanId));
-        if (span != null) {
+        if (span != null && span.isRecording()) {
             logger.trace("Finishing trace [{}]", spanId);
             span.end();
         }
