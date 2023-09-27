@@ -650,8 +650,8 @@ public class Security extends Plugin
                 xContentRegistry,
                 environment,
                 nodeEnvironment.nodeMetadata(),
-                expressionResolver
-            );
+                expressionResolver,
+                telemetryProvider);
         } catch (final Exception e) {
             throw new IllegalStateException("security initialization failed", e);
         }
@@ -667,8 +667,8 @@ public class Security extends Plugin
         NamedXContentRegistry xContentRegistry,
         Environment environment,
         NodeMetadata nodeMetadata,
-        IndexNameExpressionResolver expressionResolver
-    ) throws Exception {
+        IndexNameExpressionResolver expressionResolver,
+        TelemetryProvider telemetryProvider) throws Exception {
         logger.info("Security is {}", enabled ? "enabled" : "disabled");
         if (enabled == false) {
             return Collections.singletonList(new SecurityUsageServices(null, null, null, null, null, null));
@@ -706,7 +706,7 @@ public class Security extends Plugin
 
         // audit trail service construction
         final AuditTrail auditTrail = XPackSettings.AUDIT_ENABLED.get(settings)
-            ? new LoggingAuditTrail(settings, clusterService, threadPool)
+            ? new LoggingAuditTrail(settings, clusterService, threadPool,telemetryProvider.getMeter())
             : null;
         final AuditTrailService auditTrailService = new AuditTrailService(auditTrail, getLicenseState());
         components.add(auditTrailService);

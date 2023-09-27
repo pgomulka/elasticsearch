@@ -27,6 +27,7 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
 import org.elasticsearch.http.HttpRequest;
 import org.elasticsearch.rest.RestRequest;
+import org.elasticsearch.telemetry.metric.Meter;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.test.rest.FakeRestRequest;
 import org.elasticsearch.test.rest.FakeRestRequest.Builder;
@@ -149,7 +150,7 @@ public class LoggingAuditTrailFilterTests extends ESTestCase {
         final List<String> filteredActions = randomNonEmptyListOfFilteredActions();
         settingsBuilder.putList("xpack.security.audit.logfile.events.ignore_filters.actionsPolicy.actions", filteredActions);
 
-        final LoggingAuditTrail auditTrail = new LoggingAuditTrail(settingsBuilder.build(), clusterService, logger, threadContext);
+        final LoggingAuditTrail auditTrail = new LoggingAuditTrail(settingsBuilder.build(), clusterService, logger, threadContext, Meter.NOOP);
 
         // user field matches
         assertTrue(
@@ -325,7 +326,7 @@ public class LoggingAuditTrailFilterTests extends ESTestCase {
         final List<String> filteredActions = randomNonEmptyListOfFilteredActions();
         settingsBuilder.putList("xpack.security.audit.logfile.events.ignore_filters.completeFilterPolicy.actions", filteredActions);
 
-        final LoggingAuditTrail auditTrail = new LoggingAuditTrail(settingsBuilder.build(), clusterService, logger, threadContext);
+        final LoggingAuditTrail auditTrail = new LoggingAuditTrail(settingsBuilder.build(), clusterService, logger, threadContext, Meter.NOOP);
 
         // all fields match
         Random random = random();
@@ -521,7 +522,7 @@ public class LoggingAuditTrailFilterTests extends ESTestCase {
         final List<String> filteredActions = randomNonEmptyListOfFilteredActions();
         settingsBuilder.putList("xpack.security.audit.logfile.events.ignore_filters.completeFilterPolicy.actions", filteredActions);
 
-        final LoggingAuditTrail auditTrail = new LoggingAuditTrail(settingsBuilder.build(), clusterService, logger, threadContext);
+        final LoggingAuditTrail auditTrail = new LoggingAuditTrail(settingsBuilder.build(), clusterService, logger, threadContext, Meter.NOOP);
 
         // all fields match
         Random random = random();
@@ -734,7 +735,7 @@ public class LoggingAuditTrailFilterTests extends ESTestCase {
         final List<String> filteredIndices = randomNonEmptyListOfFilteredNames();
         settingsBuilder.putList("xpack.security.audit.logfile.events.ignore_filters.secondPolicy.indices", filteredIndices);
 
-        final LoggingAuditTrail auditTrail = new LoggingAuditTrail(settingsBuilder.build(), clusterService, logger, threadContext);
+        final LoggingAuditTrail auditTrail = new LoggingAuditTrail(settingsBuilder.build(), clusterService, logger, threadContext, Meter.NOOP);
 
         final User unfilteredUser;
         unfilteredUser = new User(UNFILTER_MARKER + randomAlphaOfLengthBetween(1, 8));
@@ -870,7 +871,7 @@ public class LoggingAuditTrailFilterTests extends ESTestCase {
         final MockToken filteredToken = new MockToken(randomFrom(allFilteredUsers));
         final MockToken unfilteredToken = new MockToken(UNFILTER_MARKER + randomAlphaOfLengthBetween(1, 4));
 
-        final LoggingAuditTrail auditTrail = new LoggingAuditTrail(settingsBuilder.build(), clusterService, logger, threadContext);
+        final LoggingAuditTrail auditTrail = new LoggingAuditTrail(settingsBuilder.build(), clusterService, logger, threadContext, Meter.NOOP);
         final List<String> logOutput = CapturingLogger.output(logger.getName(), Level.INFO);
         // anonymous accessDenied
         auditTrail.anonymousAccessDenied(randomAlphaOfLength(8), "_action", request);
@@ -1223,7 +1224,7 @@ public class LoggingAuditTrailFilterTests extends ESTestCase {
             : new MockIndicesRequest(threadContext, new String[] { "idx1", "idx2" });
         final MockToken authToken = new MockToken("token1");
 
-        final LoggingAuditTrail auditTrail = new LoggingAuditTrail(settingsBuilder.build(), clusterService, logger, threadContext);
+        final LoggingAuditTrail auditTrail = new LoggingAuditTrail(settingsBuilder.build(), clusterService, logger, threadContext, Meter.NOOP);
         final List<String> logOutput = CapturingLogger.output(logger.getName(), Level.INFO);
         // anonymous accessDenied
         auditTrail.anonymousAccessDenied(randomAlphaOfLength(8), "_action", request);
@@ -1730,7 +1731,7 @@ public class LoggingAuditTrailFilterTests extends ESTestCase {
             : new MockIndicesRequest(threadContext, new String[] { "idx1", "idx2" });
         final MockToken authToken = new MockToken("token1");
 
-        final LoggingAuditTrail auditTrail = new LoggingAuditTrail(settingsBuilder.build(), clusterService, logger, threadContext);
+        final LoggingAuditTrail auditTrail = new LoggingAuditTrail(settingsBuilder.build(), clusterService, logger, threadContext, Meter.NOOP);
         final List<String> logOutput = CapturingLogger.output(logger.getName(), Level.INFO);
         // anonymous accessDenied
         auditTrail.anonymousAccessDenied(randomAlphaOfLength(8), "_action", request);
@@ -2047,7 +2048,7 @@ public class LoggingAuditTrailFilterTests extends ESTestCase {
         final MockToken authToken = new MockToken("token1");
         final TransportRequest noIndexRequest = new MockRequest(threadContext);
 
-        final LoggingAuditTrail auditTrail = new LoggingAuditTrail(settingsBuilder.build(), clusterService, logger, threadContext);
+        final LoggingAuditTrail auditTrail = new LoggingAuditTrail(settingsBuilder.build(), clusterService, logger, threadContext, Meter.NOOP);
         final List<String> logOutput = CapturingLogger.output(logger.getName(), Level.INFO);
         // anonymous accessDenied
         auditTrail.anonymousAccessDenied(randomAlphaOfLength(8), "_action", noIndexRequest);
@@ -2517,7 +2518,7 @@ public class LoggingAuditTrailFilterTests extends ESTestCase {
             ? new MockRequest(threadContext)
             : new MockIndicesRequest(threadContext, new String[] { "idx1", "idx2" });
         final MockToken authToken = new MockToken("token1");
-        final LoggingAuditTrail auditTrail = new LoggingAuditTrail(settingsBuilder.build(), clusterService, logger, threadContext);
+        final LoggingAuditTrail auditTrail = new LoggingAuditTrail(settingsBuilder.build(), clusterService, logger, threadContext, Meter.NOOP);
         final List<String> logOutput = CapturingLogger.output(logger.getName(), Level.INFO);
 
         // anonymous accessDenied
@@ -2752,8 +2753,8 @@ public class LoggingAuditTrailFilterTests extends ESTestCase {
             Settings.builder().put(settings).build(),
             clusterService,
             logger,
-            threadContext
-        );
+            threadContext,
+            Meter.NOOP);
         final List<String> logOutput = CapturingLogger.output(logger.getName(), Level.INFO);
 
         // First create a working ignore filter
