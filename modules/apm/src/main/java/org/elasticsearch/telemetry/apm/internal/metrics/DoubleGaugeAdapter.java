@@ -10,9 +10,13 @@ package org.elasticsearch.telemetry.apm.internal.metrics;
 
 import io.opentelemetry.api.metrics.Meter;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -20,13 +24,13 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class DoubleGaugeAdapter extends AbstractInstrument<io.opentelemetry.api.metrics.ObservableDoubleGauge>
     implements
-        org.elasticsearch.telemetry.metric.DoubleGauge {
+    org.elasticsearch.telemetry.metric.DoubleGauge {
 
-    private final AtomicReference<ValueWithAttributes> valueWithAttributes;
+//    private final AtomicReference<Queue<ValueWithAttributes>> valueWithAttributes = new AtomicReference<>(new ConcurrentLinkedQueue<>()/*bounds?*/);
+    private final Queue<ValueWithAttributes> valueWithAttributes = new ConcurrentLinkedQueue<>();//bounds?
 
     public DoubleGaugeAdapter(Meter meter, String name, String description, String unit) {
         super(meter, name, description, unit);
-        this.valueWithAttributes = new AtomicReference<>(new ValueWithAttributes(0.0, Collections.emptyMap()));
     }
 
     @Override
@@ -36,8 +40,15 @@ public class DoubleGaugeAdapter extends AbstractInstrument<io.opentelemetry.api.
             .setDescription(getDescription())
             .setUnit(getUnit())
             .buildWithCallback(measurement -> {
-                var localValueWithAttributed = valueWithAttributes.get();
-                measurement.record(localValueWithAttributed.value(), OtelHelper.fromMap(localValueWithAttributed.attributes()));
+                //will progress and finish
+                // Queue<ValueWithAttributes> andSet = valueWithAttributes.getAndSet(new ConcurrentLinkedQueue<>());
+
+                //might be keep on looping
+                while (valueWithAttributes.peek() != null) {
+                    var v = valueWithAttributes.poll();
+                    measurement.record(v.value(), OtelHelper.fromMap(v.attributes()));
+                }
+
             });
     }
 
@@ -48,8 +59,9 @@ public class DoubleGaugeAdapter extends AbstractInstrument<io.opentelemetry.api.
 
     @Override
     public void record(double value, Map<String, Object> attributes) {
-        this.valueWithAttributes.set(new ValueWithAttributes(value, attributes));
+        valueWithAttributes.offer(new ValueWithAttributes(value, attributes));
     }
 
-    private record ValueWithAttributes(double value, Map<String, Object> attributes) {}
+    private record ValueWithAttributes(double value, Map<String, Object> attributes) {
+    }
 }
