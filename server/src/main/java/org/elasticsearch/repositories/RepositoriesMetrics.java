@@ -25,11 +25,11 @@ public record RepositoriesMetrics(
 
     public static RepositoriesMetrics NOOP = new RepositoriesMetrics(MeterRegistry.NOOP);
 
-    public static final String METRIC_REQUESTS_TOTAL = "es.repositories.requests.total";
-    public static final String METRIC_EXCEPTIONS_TOTAL = "es.repositories.exceptions.total";
-    public static final String METRIC_THROTTLES_TOTAL = "es.repositories.throttles.total";
-    public static final String METRIC_OPERATIONS_TOTAL = "es.repositories.operations.total";
-    public static final String METRIC_UNSUCCESSFUL_OPERATIONS_TOTAL = "es.repositories.operations.unsuccessful.total";
+    public static final String METRIC_REQUESTS_TOTAL = "es.repositories.requests.count";
+    public static final String METRIC_EXCEPTIONS_TOTAL = "es.repositories.exceptions.count";
+    public static final String METRIC_THROTTLES_TOTAL = "es.repositories.throttles.count";
+    public static final String METRIC_OPERATIONS_TOTAL = "es.repositories.operations.count";
+    public static final String METRIC_UNSUCCESSFUL_OPERATIONS_TOTAL = "es.repositories.operations.unsuccessful.count";
     public static final String METRIC_EXCEPTIONS_HISTOGRAM = "es.repositories.exceptions.histogram";
     public static final String METRIC_THROTTLES_HISTOGRAM = "es.repositories.throttles.histogram";
     public static final String HTTP_REQUEST_TIME_IN_MICROS_HISTOGRAM = "es.repositories.requests.http_request_time.histogram";
