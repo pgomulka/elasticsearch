@@ -23,8 +23,8 @@ import java.util.Objects;
  * breakers).
  *
  * The circuit breaker name is part of the (long) counter metric name instead of being an attribute because aggregating distinct circuit
- * breakers trip counter values does not make sense, as for instance, summing es.breaker.field_data.trip.total and
- * es.breaker.in_flight_requests.trip.total.
+ * breakers trip counter values does not make sense, as for instance, summing es.breaker.field_data.trip.count and
+ * es.breaker.in_flight_requests.trip.count.
  * Those counters trip for different reasons even if the underlying reason is "too much memory usage". Aggregating them together results in
  * losing the ability to understand where the underlying issue is (too much field data, too many concurrent requests, too large concurrent
  * requests?). Aggregating each one of them separately to get, for instance, cluster level or cloud region level statistics is perfectly
@@ -39,12 +39,12 @@ import java.util.Objects;
  */
 public class CircuitBreakerMetrics {
     public static final CircuitBreakerMetrics NOOP = new CircuitBreakerMetrics(TelemetryProvider.NOOP, Collections.emptyMap());
-    public static final String ES_BREAKER_PARENT_TRIP_COUNT_TOTAL = "es.breaker.parent.trip.total";
-    public static final String ES_BREAKER_FIELD_DATA_TRIP_COUNT_TOTAL = "es.breaker.field_data.trip.total";
-    public static final String ES_BREAKER_REQUEST_TRIP_COUNT_TOTAL = "es.breaker.request.trip.total";
-    public static final String ES_BREAKER_IN_FLIGHT_REQUESTS_TRIP_COUNT_TOTAL = "es.breaker.in_flight_requests.trip.total";
+    public static final String ES_BREAKER_PARENT_TRIP_COUNT_TOTAL = "es.breaker.parent.trip.count";
+    public static final String ES_BREAKER_FIELD_DATA_TRIP_COUNT_TOTAL = "es.breaker.field_data.trip.count";
+    public static final String ES_BREAKER_REQUEST_TRIP_COUNT_TOTAL = "es.breaker.request.trip.count";
+    public static final String ES_BREAKER_IN_FLIGHT_REQUESTS_TRIP_COUNT_TOTAL = "es.breaker.in_flight_requests.trip.count";
 
-    private static final String ES_BREAKER_CUSTOM_TRIP_COUNT_TOTAL_TEMPLATE = "es.breaker.%s.trip.total";
+    private static final String ES_BREAKER_CUSTOM_TRIP_COUNT_TOTAL_TEMPLATE = "es.breaker.%s.trip.count";
     private final MeterRegistry registry;
     private final LongCounter parentTripCountTotal;
     private final LongCounter fielddataTripCountTotal;

@@ -62,7 +62,7 @@ public class NodeMetrics extends AbstractLifecycleComponent {
         this.stats = new NodeStatsCache(TimeValue.timeValueMinutes(1));
         metrics.add(
             registry.registerLongAsyncCounter(
-                "es.node.stats.indices.get.total",
+                "es.node.stats.indices.get.count",
                 "Total number of get operations",
                 "operation",
                 () -> new LongWithAttributes(stats.getOrRefresh().getIndices().getGet().getCount())
@@ -80,7 +80,7 @@ public class NodeMetrics extends AbstractLifecycleComponent {
 
         metrics.add(
             registry.registerLongAsyncCounter(
-                "es.node.stats.indices.search.fetch.total",
+                "es.node.stats.indices.search.fetch.count",
                 "Total number of fetch operations.",
                 "operation",
                 () -> new LongWithAttributes(stats.getOrRefresh().getIndices().getSearch().getTotal().getFetchCount())
@@ -98,7 +98,7 @@ public class NodeMetrics extends AbstractLifecycleComponent {
 
         metrics.add(
             registry.registerLongAsyncCounter(
-                "es.node.stats.indices.merge.total",
+                "es.node.stats.indices.merge.count",
                 "Total number of merge operations.",
                 "operation",
                 () -> new LongWithAttributes(stats.getOrRefresh().getIndices().getMerge().getTotal())
@@ -116,7 +116,7 @@ public class NodeMetrics extends AbstractLifecycleComponent {
 
         metrics.add(
             registry.registerLongAsyncCounter(
-                "es.node.stats.indices.translog.operation.total",
+                "es.node.stats.indices.translog.operation.count",
                 "Number of transaction log operations.",
                 "count",
                 () -> new LongWithAttributes(stats.getOrRefresh().getIndices().getTranslog().estimatedNumberOfOperations())
@@ -134,7 +134,7 @@ public class NodeMetrics extends AbstractLifecycleComponent {
 
         metrics.add(
             registry.registerLongGauge(
-                "es.node.stats.indices.translog.uncommitted_operation.current",
+                "es.node.stats.indices.translog.uncommitted_operation.count",
                 "Number of uncommitted transaction log operations.",
                 "operations",
                 () -> new LongWithAttributes(stats.getOrRefresh().getIndices().getTranslog().getUncommittedOperations())
@@ -206,7 +206,7 @@ public class NodeMetrics extends AbstractLifecycleComponent {
 
         metrics.add(
             registry.registerLongAsyncCounter(
-                "es.node.stats.fs.io_stats.io_time.total",
+                "es.node.stats.fs.io_stats.io.time",
                 "The total time in millis spent performing I/O operations across all devices used by Elasticsearch.",
                 "milliseconds",
                 () -> new LongWithAttributes(stats.getOrRefresh().getFs().getIoStats().getTotalIOTimeMillis())
@@ -215,7 +215,7 @@ public class NodeMetrics extends AbstractLifecycleComponent {
 
         metrics.add(
             registry.registerLongAsyncCounter(
-                "es.node.stats.indices.indexing.docs.total",
+                "es.node.stats.indices.indexing.docs.count",
                 "Total number of indexed documents",
                 "documents",
                 () -> new LongWithAttributes(stats.getOrRefresh().getIndices().getIndexing().getTotal().getIndexCount())
@@ -224,7 +224,7 @@ public class NodeMetrics extends AbstractLifecycleComponent {
 
         metrics.add(
             registry.registerLongGauge(
-                "es.node.stats.indices.indexing.docs.current.total",
+                "es.node.stats.indices.indexing.docs.current.count",
                 "Current number of in-flight indexing documents",
                 "documents",
                 () -> new LongWithAttributes(stats.getOrRefresh().getIndices().getIndexing().getTotal().getIndexCurrent())
@@ -233,7 +233,7 @@ public class NodeMetrics extends AbstractLifecycleComponent {
 
         metrics.add(
             registry.registerLongAsyncCounter(
-                "es.node.stats.indices.indexing.failed.total",
+                "es.node.stats.indices.indexing.failed.count",
                 "Total number of failed indexing operations",
                 "operations",
                 () -> new LongWithAttributes(stats.getOrRefresh().getIndices().getIndexing().getTotal().getIndexFailedCount())
@@ -242,7 +242,7 @@ public class NodeMetrics extends AbstractLifecycleComponent {
 
         metrics.add(
             registry.registerLongAsyncCounter(
-                "es.node.stats.indices.deletion.docs.total",
+                "es.node.stats.indices.deletion.docs.count",
                 "Total number of deleted documents",
                 "documents",
                 () -> new LongWithAttributes(stats.getOrRefresh().getIndices().getIndexing().getTotal().getDeleteCount())
@@ -251,7 +251,7 @@ public class NodeMetrics extends AbstractLifecycleComponent {
 
         metrics.add(
             registry.registerLongAsyncCounter(
-                "es.node.stats.indices.deletion.docs.current.total",
+                "es.node.stats.indices.deletion.docs.current.count",
                 "Current number of in-flight deleting documents",
                 "documents",
                 () -> new LongWithAttributes(stats.getOrRefresh().getIndices().getIndexing().getTotal().getDeleteCurrent())
@@ -287,7 +287,7 @@ public class NodeMetrics extends AbstractLifecycleComponent {
 
         metrics.add(
             registry.registerLongAsyncCounter(
-                "es.node.stats.indices.noop.total",
+                "es.node.stats.indices.noop.count",
                 "Total number of noop shard operations",
                 "operations",
                 () -> new LongWithAttributes(stats.getOrRefresh().getIndices().getIndexing().getTotal().getNoopUpdateCount())
@@ -305,7 +305,7 @@ public class NodeMetrics extends AbstractLifecycleComponent {
 
         metrics.add(
             registry.registerLongAsyncCounter(
-                "es.node.stats.indices.indexing.coordinating_operations.total",
+                "es.node.stats.indices.indexing.coordinating_operations.count",
                 "Total number of coordinating operations",
                 "operations",
                 () -> new LongWithAttributes(stats.getOrRefresh().getIndexingPressureStats().getTotalCoordinatingOps())
@@ -323,7 +323,7 @@ public class NodeMetrics extends AbstractLifecycleComponent {
 
         metrics.add(
             registry.registerLongGauge(
-                "es.node.stats.indices.indexing.coordinating_operations.current",
+                "es.node.stats.indices.indexing.coordinating_operations.count",
                 "Current number of coordinating operations",
                 "operations",
                 () -> new LongWithAttributes(stats.getOrRefresh().getIndexingPressureStats().getCurrentCoordinatingOps())
@@ -332,7 +332,7 @@ public class NodeMetrics extends AbstractLifecycleComponent {
 
         metrics.add(
             registry.registerLongAsyncCounter(
-                "es.node.stats.indices.indexing.coordinating_operations.rejections.total",
+                "es.node.stats.indices.indexing.coordinating_operations.rejections.count",
                 "Total number of coordinating operations rejections",
                 "operations",
                 () -> new LongWithAttributes(stats.getOrRefresh().getIndexingPressureStats().getCoordinatingRejections())
@@ -350,7 +350,7 @@ public class NodeMetrics extends AbstractLifecycleComponent {
 
         metrics.add(
             registry.registerLongAsyncCounter(
-                "es.node.stats.indices.indexing.primary_operations.total",
+                "es.node.stats.indices.indexing.primary_operations.count",
                 "Total number of primary operations",
                 "operations",
                 () -> new LongWithAttributes(stats.getOrRefresh().getIndexingPressureStats().getTotalPrimaryOps())
@@ -368,7 +368,7 @@ public class NodeMetrics extends AbstractLifecycleComponent {
 
         metrics.add(
             registry.registerLongGauge(
-                "es.node.stats.indices.indexing.primary_operations.current",
+                "es.node.stats.indices.indexing.primary_operations.count",
                 "Current number of primary operations",
                 "operations",
                 () -> new LongWithAttributes(stats.getOrRefresh().getIndexingPressureStats().getCurrentPrimaryOps())
@@ -377,7 +377,7 @@ public class NodeMetrics extends AbstractLifecycleComponent {
 
         metrics.add(
             registry.registerLongAsyncCounter(
-                "es.node.stats.indices.indexing.primary_operations.rejections.total",
+                "es.node.stats.indices.indexing.primary_operations.rejections.count",
                 "Total number of primary operations rejections",
                 "operations",
                 () -> new LongWithAttributes(stats.getOrRefresh().getIndexingPressureStats().getPrimaryRejections())
@@ -386,7 +386,7 @@ public class NodeMetrics extends AbstractLifecycleComponent {
 
         metrics.add(
             registry.registerLongGauge(
-                "es.node.stats.indices.indexing.memory_limit.current",
+                "es.node.stats.indices.indexing.memory_limit.count",
                 "Current memory limit for primary and coordinating operations",
                 "bytes",
                 () -> new LongWithAttributes(stats.getOrRefresh().getIndexingPressureStats().getMemoryLimit())

@@ -20,12 +20,12 @@ public class BlobCacheMetrics {
     public BlobCacheMetrics(MeterRegistry meterRegistry) {
         this(
             meterRegistry.registerLongCounter(
-                "es.blob_cache.miss_that_triggered_read.total",
+                "es.blob_cache.miss_that_triggered_read.count",
                 "The number of times there was a cache miss that triggered a read from the blob store",
                 "count"
             ),
             meterRegistry.registerLongCounter(
-                "es.blob_cache.evicted_used_regions.total",
+                "es.blob_cache.evicted_used_regions.count",
                 "The number of times a cache entry was evicted where the frequency was not zero",
                 "entries"
             ),

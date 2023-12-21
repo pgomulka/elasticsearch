@@ -17,8 +17,7 @@ import java.util.stream.Collectors;
 public class MetricNameValidator {
     private static final Pattern ALLOWED_CHARACTERS = Pattern.compile("[a-z][a-z0-9_]*");
     static final Set<String> ALLOWED_SUFFIXES = Set.of(
-        "total",
-        "current",
+        "count",
         "ratio",
         "status" /*a workaround for enums */,
         "usage",
