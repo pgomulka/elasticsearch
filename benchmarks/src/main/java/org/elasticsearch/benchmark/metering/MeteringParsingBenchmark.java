@@ -59,14 +59,14 @@ public class MeteringParsingBenchmark {
     }
 
     @Benchmark
-    public AtomicLong constantTextParser(Blackhole blackhole) throws IOException {
+    public AtomicLong constantValuePerCharacter(Blackhole blackhole) throws IOException {
         AtomicLong counter = new AtomicLong();
         parse((XContentParser p, AtomicLong l) -> new MeteringLengthParser(p, l), blackhole);
         return counter;
     }
 
     @Benchmark
-    public AtomicLong calculatedLengthParser(Blackhole blackhole) throws IOException {
+    public AtomicLong variableValuePerCharacter(Blackhole blackhole) throws IOException {
         return parse((XContentParser p, AtomicLong l) -> new MeteringLengthParser(p, l),blackhole);
     }
 
