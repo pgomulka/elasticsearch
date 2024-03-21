@@ -8,6 +8,8 @@
 
 package org.elasticsearch.benchmark.metering;
 
+import co.elastic.elasticsearch.metering.ingested_size.MeteringConstantUnsupportedOperationParser;
+
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.xcontent.XContentParser;
@@ -62,6 +64,13 @@ public class MeteringParsingBenchmark {
     public AtomicLong constantValuePerCharacter(Blackhole blackhole) throws IOException {
         AtomicLong counter = new AtomicLong();
         parse((XContentParser p, AtomicLong l) -> new MeteringLengthParser(p, l), blackhole);
+        return counter;
+    }
+
+    @Benchmark
+    public AtomicLong constantValuePerCharacterUOE(Blackhole blackhole) throws IOException {
+        AtomicLong counter = new AtomicLong();
+        parse((XContentParser p, AtomicLong l) -> new MeteringConstantUnsupportedOperationParser(p, l), blackhole);
         return counter;
     }
 
