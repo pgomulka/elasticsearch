@@ -8,6 +8,7 @@
 
 package org.elasticsearch.reservedstate.service;
 
+import org.elasticsearch.Version;
 import org.elasticsearch.action.admin.cluster.repositories.get.GetRepositoriesAction;
 import org.elasticsearch.action.admin.cluster.repositories.get.GetRepositoriesRequest;
 import org.elasticsearch.action.admin.cluster.repositories.put.PutRepositoryRequest;
@@ -34,10 +35,14 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
@@ -168,14 +173,14 @@ public class RepositoriesFileSettingsIT extends ESIntegTestCase {
     }
 
     public void testSettingsApplied() throws Exception {
-        final var barrier = new CyclicBarrier(2);
+        final var clusterStateUpdateBarrier = new CyclicBarrier(2);
 
 
         final var blockingTask = new ClusterStateUpdateTask() {
             @Override
             public ClusterState execute(ClusterState currentState) throws Exception {
-                barrier.await(10, TimeUnit.SECONDS);
-                barrier.await(10, TimeUnit.SECONDS);
+                clusterStateUpdateBarrier.await(20, TimeUnit.SECONDS);
+                clusterStateUpdateBarrier.await(20, TimeUnit.SECONDS);
                 return currentState;
             }
 
@@ -184,7 +189,18 @@ public class RepositoriesFileSettingsIT extends ESIntegTestCase {
                 fail();
             }
         };
+        final var fileSettingBarrier = new CyclicBarrier(2);
 
+        var blockingListener = new FileChangedListener(){
+            @Override
+            public void watchedFileChanged() {
+                try {
+                    fileSettingBarrier.await(10, TimeUnit.SECONDS);
+                } catch (Throwable e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        };
         internalCluster().setBootstrapMasterNodeIndex(0);
         logger.info("--> start data node / non master node");
         var dataNode = internalCluster().startNode(Settings.builder().put(dataOnlyNode()).put("discovery.initial_state_timeout", "1s"));
@@ -200,11 +216,49 @@ public class RepositoriesFileSettingsIT extends ESIntegTestCase {
         assertMasterNode(internalCluster().nonMasterClient(), masterNode);
         internalCluster().clusterService(internalCluster().getMasterName()).getMasterService()
             .submitUnbatchedStateUpdateTask("block", blockingTask);
-        barrier.await(10, TimeUnit.SECONDS);
-        writeJSONFile(dataNode, testJSON);
+        clusterStateUpdateBarrier.await(10, TimeUnit.SECONDS);
 
+        internalCluster().getInstance(FileSettingsService.class, masterNode)
+            .addFileChangedListener(blockingListener);
+
+        writeJSONFile(masterNode, testJSON);
+        fileSettingBarrier.await(10, TimeUnit.SECONDS);
+        writeJSONFile(masterNode, testJSON2);
+
+        fileSettingBarrier.await(10, TimeUnit.SECONDS);
+
+//        clusterStateUpdateBarrier.await(10, TimeUnit.SECONDS);
+        Thread.sleep(10000);
         assertClusterStateSaveOK(savedClusterState.v1(), savedClusterState.v2());
     }
+
+    /*
+     internalCluster().getInstance(ReservedClusterStateService.class, masterNode)
+            .updateTaskQueue.submitTask("block", new ReservedStateUpdateTask(
+                "namespace",
+                new ReservedStateChunk(Map.of(), missingVersion),
+                List.of(),
+                Map.of(),
+                List.of(),
+                // error state should not be possible since there is no metadata being parsed or processed
+                errorState -> { throw new AssertionError(); },
+                null
+            ){
+                @Override
+                protected ClusterState execute(ClusterState currentState) {
+                    try {
+                        fileSettingBarrier.await(10, TimeUnit.SECONDS);
+                        //
+                        fileSettingBarrier.await(10, TimeUnit.SECONDS);
+
+                    } catch (Throwable e) {
+                        throw new RuntimeException(e);
+                    }
+                    return super.execute(currentState);
+                }
+            },null);
+        fileSettingBarrier.await(10, TimeUnit.SECONDS);
+     */
 
     private Tuple<CountDownLatch, AtomicLong> setupClusterStateListenerForError(String node) {
         ClusterService clusterService = internalCluster().clusterService(node);

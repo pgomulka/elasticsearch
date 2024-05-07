@@ -63,7 +63,7 @@ public class ReservedClusterStateService {
 
     final Map<String, ReservedClusterStateHandler<?>> handlers;
     final ClusterService clusterService;
-    private final MasterServiceTaskQueue<ReservedStateUpdateTask> updateTaskQueue;
+    public final MasterServiceTaskQueue<ReservedStateUpdateTask> updateTaskQueue;
     private final MasterServiceTaskQueue<ReservedStateErrorTask> errorTaskQueue;
 
     @SuppressWarnings("unchecked")
