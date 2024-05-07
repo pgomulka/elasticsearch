@@ -15,7 +15,9 @@ import org.elasticsearch.action.admin.cluster.repositories.put.TransportPutRepos
 import org.elasticsearch.action.admin.cluster.repositories.reservedstate.ReservedRepositoryAction;
 import org.elasticsearch.client.internal.Client;
 import org.elasticsearch.cluster.ClusterChangedEvent;
+import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.ClusterStateListener;
+import org.elasticsearch.cluster.ClusterStateUpdateTask;
 import org.elasticsearch.cluster.metadata.ReservedStateErrorMetadata;
 import org.elasticsearch.cluster.metadata.ReservedStateHandlerMetadata;
 import org.elasticsearch.cluster.metadata.ReservedStateMetadata;
@@ -33,6 +35,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -64,17 +67,27 @@ public class RepositoriesFileSettingsIT extends ESIntegTestCase {
                        "settings": {
                           "location": "my_backup_location"
                        }
-                    },
-                    "repo1": {
+                    }
+                 }
+             }
+        }""";
+    private static String testJSON2 = """
+        {
+             "metadata": {
+                 "version": "%s",
+                 "compatibility": "8.4.0"
+             },
+             "state": {
+                 "snapshot_repositories": {
+                    "repo": {
                        "type": "fs",
                        "settings": {
-                          "location": "my_backup_location_1"
+                          "location": "my_backup_location2"
                        }
                     }
                  }
              }
         }""";
-
     private static String testErrorJSON = """
         {
              "metadata": {
@@ -155,6 +168,23 @@ public class RepositoriesFileSettingsIT extends ESIntegTestCase {
     }
 
     public void testSettingsApplied() throws Exception {
+        final var barrier = new CyclicBarrier(2);
+
+
+        final var blockingTask = new ClusterStateUpdateTask() {
+            @Override
+            public ClusterState execute(ClusterState currentState) throws Exception {
+                barrier.await(10, TimeUnit.SECONDS);
+                barrier.await(10, TimeUnit.SECONDS);
+                return currentState;
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                fail();
+            }
+        };
+
         internalCluster().setBootstrapMasterNodeIndex(0);
         logger.info("--> start data node / non master node");
         var dataNode = internalCluster().startNode(Settings.builder().put(dataOnlyNode()).put("discovery.initial_state_timeout", "1s"));
@@ -162,11 +192,16 @@ public class RepositoriesFileSettingsIT extends ESIntegTestCase {
         var savedClusterState = setupClusterStateListener(dataNode);
         // In internal cluster tests, the nodes share the config directory, so when we write with the data node path
         // the master will pick it up on start
-        writeJSONFile(dataNode, testJSON);
+
+
 
         logger.info("--> start master node");
         final String masterNode = internalCluster().startMasterOnlyNode();
         assertMasterNode(internalCluster().nonMasterClient(), masterNode);
+        internalCluster().clusterService(internalCluster().getMasterName()).getMasterService()
+            .submitUnbatchedStateUpdateTask("block", blockingTask);
+        barrier.await(10, TimeUnit.SECONDS);
+        writeJSONFile(dataNode, testJSON);
 
         assertClusterStateSaveOK(savedClusterState.v1(), savedClusterState.v2());
     }

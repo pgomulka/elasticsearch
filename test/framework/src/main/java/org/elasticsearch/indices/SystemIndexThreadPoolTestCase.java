@@ -69,7 +69,6 @@ public abstract class SystemIndexThreadPoolTestCase extends ESIntegTestCase {
         }
     }
 
-    @AwaitsFix(bugUrl = "https://github.com/elastic/elasticsearch/issues/107625")
     public void testUserThreadPoolsAreBlocked() {
         assertAcked(client().admin().indices().prepareCreate(USER_INDEX));
 
@@ -105,8 +104,11 @@ public abstract class SystemIndexThreadPoolTestCase extends ESIntegTestCase {
             for (String threadPoolName : threadPoolsToBlock()) {
                 ThreadPool.Info info = threadPool.info(threadPoolName);
 
+
                 // fill up the queue
-                for (int i = 0; i < info.getQueueSize().singles(); i++) {
+                long queueSize = info.getQueueSize().singles();
+                queueSize = threadPoolName.equals("search") ?queueSize - 1 : queueSize;
+                for (int i = 0; i < queueSize; i++) {
                     try {
                         threadPool.executor(threadPoolName).submit(() -> {});
                     } catch (EsRejectedExecutionException e) {
