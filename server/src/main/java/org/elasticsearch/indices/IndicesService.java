@@ -134,6 +134,7 @@ import org.elasticsearch.node.Node;
 import org.elasticsearch.plugins.FieldPredicate;
 import org.elasticsearch.plugins.IndexStorePlugin;
 import org.elasticsearch.plugins.PluginsService;
+import org.elasticsearch.plugins.internal.DocumentParsingProvider;
 import org.elasticsearch.repositories.RepositoriesService;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.search.aggregations.support.ValuesSourceRegistry;
@@ -247,6 +248,7 @@ public class IndicesService extends AbstractLifecycleComponent
     private final IndexStorePlugin.IndexFoldersDeletionListener indexFoldersDeletionListeners;
     final AbstractRefCounted indicesRefCount; // pkg-private for testing
     private final CountDownLatch closeLatch = new CountDownLatch(1);
+    private final DocumentParsingProvider documentParsingProvider;
     private volatile boolean idFieldDataEnabled;
     private volatile boolean allowExpensiveQueries;
 
@@ -376,6 +378,7 @@ public class IndicesService extends AbstractLifecycleComponent
         clusterService.getClusterSettings().addSettingsUpdateConsumer(ALLOW_EXPENSIVE_QUERIES, this::setAllowExpensiveQueries);
 
         this.timestampFieldMapperService = new TimestampFieldMapperService(settings, threadPool, this);
+        this.documentParsingProvider = builder.documentParsingProvider;
     }
 
     private static final String DANGLING_INDICES_UPDATE_THREAD_NAME = "DanglingIndices#updateTask";
@@ -747,7 +750,8 @@ public class IndicesService extends AbstractLifecycleComponent
             indexNameExpressionResolver,
             recoveryStateFactories,
             loadSlowLogFieldProvider(),
-            mapperMetrics
+            mapperMetrics,
+            documentParsingProvider
         );
         for (IndexingOperationListener operationListener : indexingOperationListeners) {
             indexModule.addIndexOperationListener(operationListener);
@@ -825,7 +829,8 @@ public class IndicesService extends AbstractLifecycleComponent
             indexNameExpressionResolver,
             recoveryStateFactories,
             loadSlowLogFieldProvider(),
-            mapperMetrics
+            mapperMetrics,
+            documentParsingProvider
         );
         pluginsService.forEach(p -> p.onIndexModule(indexModule));
         return indexModule.newIndexMapperService(clusterService, parserConfig, mapperRegistry, scriptService);

@@ -30,6 +30,7 @@ import org.elasticsearch.indices.breaker.CircuitBreakerService;
 import org.elasticsearch.plugins.EnginePlugin;
 import org.elasticsearch.plugins.IndexStorePlugin;
 import org.elasticsearch.plugins.PluginsService;
+import org.elasticsearch.plugins.internal.DocumentParsingProvider;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.search.aggregations.support.ValuesSourceRegistry;
 import org.elasticsearch.search.internal.ShardSearchRequest;
@@ -73,6 +74,7 @@ public class IndicesServiceBuilder {
     @Nullable
     CheckedBiConsumer<ShardSearchRequest, StreamOutput, IOException> requestCacheKeyDifferentiator;
     MapperMetrics mapperMetrics;
+    DocumentParsingProvider documentParsingProvider;
 
     public IndicesServiceBuilder settings(Settings settings) {
         this.settings = settings;
@@ -176,6 +178,11 @@ public class IndicesServiceBuilder {
         return this;
     }
 
+    public IndicesServiceBuilder documentParsingProvider(DocumentParsingProvider documentParsingProvider) {
+        this.documentParsingProvider = documentParsingProvider;
+        return this;
+    }
+
     public IndicesService build() {
         Objects.requireNonNull(settings);
         Objects.requireNonNull(pluginsService);
@@ -200,6 +207,7 @@ public class IndicesServiceBuilder {
         Objects.requireNonNull(indexFoldersDeletionListeners);
         Objects.requireNonNull(snapshotCommitSuppliers);
         Objects.requireNonNull(mapperMetrics);
+        Objects.requireNonNull(documentParsingProvider);
 
         // collect engine factory providers from plugins
         engineFactoryProviders = pluginsService.filterPlugins(EnginePlugin.class)

@@ -58,6 +58,7 @@ import org.elasticsearch.indices.breaker.CircuitBreakerService;
 import org.elasticsearch.indices.fielddata.cache.IndicesFieldDataCache;
 import org.elasticsearch.indices.recovery.RecoveryState;
 import org.elasticsearch.plugins.IndexStorePlugin;
+import org.elasticsearch.plugins.internal.DocumentParsingProvider;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.search.aggregations.support.ValuesSourceRegistry;
 import org.elasticsearch.threadpool.ThreadPool;
@@ -164,6 +165,7 @@ public final class IndexModule {
     private final IndexSettings indexSettings;
     private final AnalysisRegistry analysisRegistry;
     private final EngineFactory engineFactory;
+    private final DocumentParsingProvider documentParsingProvider;
     private final SetOnce<DirectoryWrapper> indexDirectoryWrapper = new SetOnce<>();
     private final SetOnce<Function<IndexService, CheckedFunction<DirectoryReader, DirectoryReader, IOException>>> indexReaderWrapper =
         new SetOnce<>();
@@ -184,10 +186,11 @@ public final class IndexModule {
      * Construct the index module for the index with the specified index settings. The index module contains extension points for plugins
      * via {@link org.elasticsearch.plugins.Plugin#onIndexModule(IndexModule)}.
      *
-     * @param indexSettings      the index settings
-     * @param analysisRegistry   the analysis registry
-     * @param engineFactory      the engine factory
-     * @param directoryFactories the available store types
+     * @param indexSettings           the index settings
+     * @param analysisRegistry        the analysis registry
+     * @param engineFactory           the engine factory
+     * @param directoryFactories      the available store types
+     * @param documentParsingProvider
      */
     public IndexModule(
         final IndexSettings indexSettings,
@@ -198,7 +201,8 @@ public final class IndexModule {
         final IndexNameExpressionResolver expressionResolver,
         final Map<String, IndexStorePlugin.RecoveryStateFactory> recoveryStateFactories,
         final SlowLogFieldProvider slowLogFieldProvider,
-        final MapperMetrics mapperMetrics
+        final MapperMetrics mapperMetrics,
+        final DocumentParsingProvider documentParsingProvider
     ) {
         this.indexSettings = indexSettings;
         this.analysisRegistry = analysisRegistry;
@@ -210,6 +214,7 @@ public final class IndexModule {
         this.expressionResolver = expressionResolver;
         this.recoveryStateFactories = recoveryStateFactories;
         this.mapperMetrics = mapperMetrics;
+        this.documentParsingProvider = documentParsingProvider;
     }
 
     /**
@@ -541,7 +546,8 @@ public final class IndexModule {
                 indexFoldersDeletionListener,
                 snapshotCommitSupplier,
                 indexCommitListener.get(),
-                mapperMetrics
+                mapperMetrics,
+                documentParsingProvider
             );
             success = true;
             return indexService;

@@ -60,6 +60,7 @@ import org.elasticsearch.indices.IndicesService;
 import org.elasticsearch.indices.breaker.CircuitBreakerService;
 import org.elasticsearch.indices.recovery.RecoveryState;
 import org.elasticsearch.plugins.Plugin;
+import org.elasticsearch.plugins.internal.DocumentParsingProvider;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.test.DummyShardLock;
 import org.elasticsearch.test.ESSingleNodeTestCase;
@@ -97,7 +98,6 @@ import static org.elasticsearch.cluster.routing.TestShardRouting.shardRoutingBui
 import static org.elasticsearch.index.shard.IndexShardTestCase.closeShardNoCheck;
 import static org.elasticsearch.index.shard.IndexShardTestCase.getTranslog;
 import static org.elasticsearch.index.shard.IndexShardTestCase.recoverFromStore;
-import static org.elasticsearch.indices.cluster.AbstractIndicesClusterStateServiceTestCase.awaitIndexShardCloseAsyncTasks;
 import static org.elasticsearch.test.LambdaMatchers.falseWith;
 import static org.elasticsearch.test.LambdaMatchers.trueWith;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertAcked;
@@ -635,7 +635,8 @@ public class IndexShardIT extends ESSingleNodeTestCase {
             IndexModule.DEFAULT_SNAPSHOT_COMMIT_SUPPLIER,
             System::nanoTime,
             null,
-            MapperMetrics.NOOP
+            MapperMetrics.NOOP,
+            DocumentParsingProvider.EMPTY_INSTANCE
         );
     }
 

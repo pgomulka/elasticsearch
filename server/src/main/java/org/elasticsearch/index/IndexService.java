@@ -84,6 +84,7 @@ import org.elasticsearch.indices.cluster.IndicesClusterStateService;
 import org.elasticsearch.indices.fielddata.cache.IndicesFieldDataCache;
 import org.elasticsearch.indices.recovery.RecoveryState;
 import org.elasticsearch.plugins.IndexStorePlugin;
+import org.elasticsearch.plugins.internal.DocumentParsingProvider;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.search.aggregations.support.ValuesSourceRegistry;
 import org.elasticsearch.threadpool.ThreadPool;
@@ -134,6 +135,7 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
     private final SimilarityService similarityService;
     private final EngineFactory engineFactory;
     private final IndexWarmer warmer;
+    private final DocumentParsingProvider documentParsingProvider;
     private volatile Map<Integer, IndexShard> shards = Map.of();
     private final AtomicBoolean closed = new AtomicBoolean(false);
     private final AtomicBoolean deleted = new AtomicBoolean(false);
@@ -195,7 +197,8 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
         IndexStorePlugin.IndexFoldersDeletionListener indexFoldersDeletionListener,
         IndexStorePlugin.SnapshotCommitSupplier snapshotCommitSupplier,
         Engine.IndexCommitListener indexCommitListener,
-        MapperMetrics mapperMetrics
+        MapperMetrics mapperMetrics,
+        DocumentParsingProvider documentParsingProvider
     ) {
         super(indexSettings);
         assert indexCreationContext != IndexCreationContext.RELOAD_ANALYZERS
@@ -278,6 +281,7 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
             this.retentionLeaseSyncTask = new AsyncRetentionLeaseSyncTask(this);
         }
         updateFsyncTaskIfNecessary();
+        this.documentParsingProvider = documentParsingProvider;
     }
 
     static boolean needsMapperService(IndexSettings indexSettings, IndexCreationContext indexCreationContext) {
@@ -552,7 +556,8 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
                 snapshotCommitSupplier,
                 System::nanoTime,
                 indexCommitListener,
-                mapperMetrics
+                mapperMetrics,
+                documentParsingProvider
             );
             eventListener.indexShardStateChanged(indexShard, null, indexShard.state(), "shard created");
             eventListener.afterIndexShardCreated(indexShard);

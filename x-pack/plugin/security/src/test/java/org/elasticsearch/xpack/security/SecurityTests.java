@@ -56,6 +56,7 @@ import org.elasticsearch.persistent.PersistentTasksService;
 import org.elasticsearch.plugins.ExtensiblePlugin;
 import org.elasticsearch.plugins.FieldPredicate;
 import org.elasticsearch.plugins.MapperPlugin;
+import org.elasticsearch.plugins.internal.DocumentParsingProvider;
 import org.elasticsearch.plugins.internal.RestExtension;
 import org.elasticsearch.rest.RestHandler;
 import org.elasticsearch.rest.RestRequest;
@@ -378,7 +379,8 @@ public class SecurityTests extends ESTestCase {
             TestIndexNameExpressionResolver.newInstance(threadPool.getThreadContext()),
             Collections.emptyMap(),
             mock(SlowLogFieldProvider.class),
-            MapperMetrics.NOOP
+            MapperMetrics.NOOP,
+            DocumentParsingProvider.EMPTY_INSTANCE
         );
         security.onIndexModule(indexModule);
         // indexReaderWrapper is a SetOnce so if Security#onIndexModule had already set an ReaderWrapper we would get an exception here
